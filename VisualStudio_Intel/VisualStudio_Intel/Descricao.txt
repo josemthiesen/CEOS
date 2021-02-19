@@ -1,0 +1,14 @@
+Cubo com dois materiais
+
+Caso Multiescala 
+
+Exemplo para testes
+
+Condição de contorno multiescala TAYLOR
+obs.: Modelo multiescala de Taylor aplica automaticamente condições de contorno em todos os nós (Boundary não importa).
+
+Malha:
+
+Nós: 729
+Elementos: 512
+Contorno: Todos os nós do contorno.

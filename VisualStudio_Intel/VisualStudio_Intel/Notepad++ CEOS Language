@@ -1,0 +1,64 @@
+<NotepadPlus>
+    <UserLang name="CEOS - Notepad++" ext=".dat" udlVersion="2.1">
+        <Settings>
+            <Global caseIgnored="yes" allowFoldOfComments="no" foldCompact="no" forcePureLC="0" decimalSeparator="0" />
+            <Prefix Keywords1="no" Keywords2="no" Keywords3="no" Keywords4="no" Keywords5="no" Keywords6="no" Keywords7="no" Keywords8="no" />
+        </Settings>
+        <KeywordLists>
+            <Keywords name="Comments">00! 01 02 03 04</Keywords>
+            <Keywords name="Numbers, prefix1"></Keywords>
+            <Keywords name="Numbers, prefix2"></Keywords>
+            <Keywords name="Numbers, extras1"></Keywords>
+            <Keywords name="Numbers, extras2"></Keywords>
+            <Keywords name="Numbers, suffix1"></Keywords>
+            <Keywords name="Numbers, suffix2"></Keywords>
+            <Keywords name="Numbers, range"></Keywords>
+            <Keywords name="Operators1">=</Keywords>
+            <Keywords name="Operators2"></Keywords>
+            <Keywords name="Folders in code1, open"></Keywords>
+            <Keywords name="Folders in code1, middle"></Keywords>
+            <Keywords name="Folders in code1, close"></Keywords>
+            <Keywords name="Folders in code2, open"></Keywords>
+            <Keywords name="Folders in code2, middle"></Keywords>
+            <Keywords name="Folders in code2, close"></Keywords>
+            <Keywords name="Folders in comment, open"></Keywords>
+            <Keywords name="Folders in comment, middle"></Keywords>
+            <Keywords name="Folders in comment, close"></Keywords>
+            <Keywords name="Keywords1">pause&#x000D;&#x000A;disp&#x000D;&#x000A;</Keywords>
+            <Keywords name="Keywords2">ANALYSIS &#x000D;&#x000A;SETTINGS &#x000D;&#x000A;END&#x000D;&#x000A;LINEAR&#x000D;&#x000A;SOLVER&#x000D;&#x000A;multiscale&#x000D;&#x000A;macroscale&#x000D;&#x000A;NONLINEAR&#x000D;&#x000A;Is &#x000D;&#x000A;a &#x000D;&#x000A;Microstructure?&#x000D;&#x000A;MATERIAL&#x000D;&#x000A;MESH&#x000D;&#x000A;AND&#x000D;&#x000A;BOUNDARY&#x000D;&#x000A;CONDITIONS&#x000D;&#x000A;TIME&#x000D;&#x000A;DISCRETIZATION&#x000D;&#x000A;LOAD&#x000D;&#x000A;CASE&#x000D;&#x000A;TABLES&#x000D;&#x000A;OF&#x000D;&#x000A;PRESCRIBED &#x000D;&#x000A;LOADS&#x000D;&#x000A;DISPLACEMENTS&#x000D;&#x000A;Problem&#x000D;&#x000A;Type&#x000D;&#x000A;Nonlinear&#x000D;&#x000A;Analysis&#x000D;&#x000A;Element&#x000D;&#x000A;File&#x000D;&#x000A;Technology&#x000D;&#x000A;Young&#x000D;&#x000A;Modulus&#x000D;&#x000A;Poisson&#x000D;&#x000A;Number&#x000D;&#x000A;of&#x000D;&#x000A;Yield Stress&#x000D;&#x000A;Hardening&#x000D;&#x000A;tol&#x000D;&#x000A;maxiter&#x000D;&#x000A;load&#x000D;&#x000A;cases&#x000D;&#x000A;Table&#x000D;&#x000A;Name&#x000D;&#x000A;file_name&#x000D;&#x000A;C10&#x000D;&#x000A;Bulk&#x000D;&#x000A;Case&#x000D;&#x000A;Initial &#x000D;&#x000A;Time&#x000D;&#x000A;Final&#x000D;&#x000A;Steps&#x000D;&#x000A;Load&#x000D;&#x000A;Activate&#x000D;&#x000A;Value&#x000D;&#x000A; Nodal&#x000D;&#x000A; Loads &#x000D;&#x000A;Displacements&#x000D;&#x000A;Tables&#x000D;&#x000A;End&#x000D;&#x000A;GiD&#x000D;&#x000A; Mesh&#x000D;&#x000A;cases&#x000D;&#x000A;CONNECTIVITY&#x000D;&#x000A;id&#x000D;&#x000A;fixed&#x000D;&#x000A;supports&#x000D;&#x000A;displacement&#x000D;&#x000A;nnodes&#x000D;&#x000A;nelem&#x000D;&#x000A;ndime&#x000D;&#x000A;coordinates&#x000D;&#x000A;maximum&#x000D;&#x000A;cut&#x000D;&#x000A;backs&#x000D;&#x000A;materials&#x000D;&#x000A;Deformation &#x000D;&#x000A;Gradient&#x000D;&#x000A;history&#x000D;&#x000A;scale&#x000D;&#x000A;the&#x000D;&#x000A;Macroscopic&#x000D;&#x000A;?&#x000D;&#x000A;Microstructure&#x000D;&#x000A;scale?&#x000D;&#x000A;components&#x000D;&#x000A;PROBE&#x000D;&#x000A;Location&#x000D;&#x000A;Variable&#x000D;&#x000A;Node&#x000D;&#x000A;Gauss&#x000D;&#x000A;Point&#x000D;&#x000A;Cauchy&#x000D;&#x000A;Logarithmic&#x000D;&#x000A;Strain&#x000D;&#x000A;Deformation&#x000D;&#x000A;Gradient&#x000D;&#x000A;Temperature&#x000D;&#x000A;External&#x000D;&#x000A;Force&#x000D;&#x000A;Internal&#x000D;&#x000A;Hypothesis&#x000D;&#x000A;probes&#x000D;&#x000A;preprocessor&#x000D;&#x000A;von &#x000D;&#x000A;Mises&#x000D;&#x000A;user&#x000D;&#x000A;defined&#x000D;&#x000A;default&#x000D;&#x000A;almansi&#x000D;&#x000A;&#x000D;&#x000A;&#x000D;&#x000A;&#x000D;&#x000A;&#x000D;&#x000A;&#x000D;&#x000A;&#x000D;&#x000A;&#x000D;&#x000A;</Keywords>
+            <Keywords name="Keywords3"></Keywords>
+            <Keywords name="Keywords4"></Keywords>
+            <Keywords name="Keywords5"></Keywords>
+            <Keywords name="Keywords6"></Keywords>
+            <Keywords name="Keywords7"></Keywords>
+            <Keywords name="Keywords8"></Keywords>
+            <Keywords name="Delimiters"></Keywords>
+        </KeywordLists>
+        <Styles>
+            <WordsStyle name="DEFAULT" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />
+            <WordsStyle name="COMMENTS" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />
+            <WordsStyle name="LINE COMMENTS" fgColor="008040" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />
+            <WordsStyle name="NUMBERS" fgColor="FF0080" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />
+            <WordsStyle name="KEYWORDS1" fgColor="FF00FF" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />
+            <WordsStyle name="KEYWORDS2" fgColor="0000FF" bgColor="FFFFFF" fontName="" fontStyle="3" nesting="0" />
+            <WordsStyle name="KEYWORDS3" fgColor="0000FF" bgColor="FFFFFF" fontName="" fontStyle="2" nesting="0" />
+            <WordsStyle name="KEYWORDS4" fgColor="0000FF" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />
+            <WordsStyle name="KEYWORDS5" fgColor="0000FF" bgColor="FFFFFF" fontName="" fontStyle="4" nesting="0" />
+            <WordsStyle name="KEYWORDS6" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />
+            <WordsStyle name="KEYWORDS7" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />
+            <WordsStyle name="KEYWORDS8" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />
+            <WordsStyle name="OPERATORS" fgColor="FF0000" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />
+            <WordsStyle name="FOLDER IN CODE1" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />
+            <WordsStyle name="FOLDER IN CODE2" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />
+            <WordsStyle name="FOLDER IN COMMENT" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />
+            <WordsStyle name="DELIMITERS1" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />
+            <WordsStyle name="DELIMITERS2" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />
+            <WordsStyle name="DELIMITERS3" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />
+            <WordsStyle name="DELIMITERS4" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />
+            <WordsStyle name="DELIMITERS5" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />
+            <WordsStyle name="DELIMITERS6" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />
+            <WordsStyle name="DELIMITERS7" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />
+            <WordsStyle name="DELIMITERS8" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />
+        </Styles>
+    </UserLang>
+</NotepadPlus>

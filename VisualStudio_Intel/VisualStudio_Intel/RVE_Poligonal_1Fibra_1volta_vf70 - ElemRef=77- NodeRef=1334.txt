@@ -1,0 +1,10 @@
+! Parâmetros da Hélice
+R = 2.30d-3     !0.1d0            !1 fibra de 3 voltas: 2.30d-3 mm
+L = 99.3d-3     !1.00d0           !1 fibra de 3 voltas: 297.90d-3 / 1 volta: 99.3d-3 mm
+pitch =  1.0d0
+hand  = -1.0d0
+theta =  0.0d0   !CUIDAR A ORDEM DO DESENHO NO SOLIDWORKS!!!!!   !1 fibra de 3 voltas: 0.0d0
+
+! Elemento e Nó de Referência
+ElemRef = 77                      
+NodeRef = 1334          

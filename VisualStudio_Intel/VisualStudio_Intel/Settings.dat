@@ -1,0 +1,194 @@
+!################################ SCRIPT DE EXEMPLO PARA O CODIGO #########################
+! DATA DE CRIAÇÃO  7/1/2015
+! o caractere para comentários é !
+! Este script é "case insensitive" , e ignora espaços (verticais e horizontais)
+! o caractere para determinar atribuições é o =
+!aceita o comando pause e disp para poder debugar
+!exemplo: 
+!disp=mostrar este texto
+!pause 
+! ########################################################################################
+
+			
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+ANALYSIS SETTINGS
+
+	Multiscale Analysis =  False
+	Multiscale Model = Linear !Linear !Taylor !Minimal Phases !Minimal  
+	Problem Type = Biphasic!Mechanical !
+	Multiscale Model Fluid = Linear !Linear !Taylor 
+	Fiber Reinforced Analysis = False !True!False
+	Fiber Data File = Fiber_Data.dat
+	Analysis Type = Quasi Static
+	Nonlinear Analysis = True !False !
+	Hypothesis of Analysis = 3D ! Axisymmetric ! Plane Strain !  
+	Element Technology = Full Integration !Mean Dilatation ! Reduced Integration
+	Maximum Cut Backs = 15
+	
+END ANALYSIS SETTINGS
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+LINEAR SOLVER
+
+	PARDISO
+	
+END LINEAR SOLVER
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+NONLINEAR SOLVER
+
+	Newton_Raphson_Full
+	
+	Tol = 1.0e-8
+	MaxIter = 15
+
+	
+END NONLINEAR SOLVER
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+MATERIAL
+
+	Number of Materials = 1
+		
+	
+	!Material ID = 1
+	!compressible_neo_hookean_Biphasic
+	!Mu = 2.0e-3 !1.10e-3
+	!Lambda = 110e-3 !110.0e-3
+	!k0 = 5.0e2
+	!PhiF = 0.7
+	!M    = 0 !2
+	!L    = 0 !0.1
+
+
+	!Material ID = 2
+	!compressible_neo_hookean_Biphasic
+	!Mu = 2.0e-3 !1.10e-3
+	!Lambda = 110e-3 !110.0e-3
+	!k0 = 5.0e2
+	!PhiF = 0.7
+	!M    = 0 !2
+	!L    = 0 !0.1
+
+	!Material ID = 1
+	!Matrix_And_Fiber_Viscoelastic_Biphasic_Trans_Iso
+	!Fiber_Volume_Fraction = 0.75e0
+	!Matrix - K_inf = 1.0e0
+	!Matrix - Mu_inf = 12.50e0 
+	!Matrix - Lambda_inf = 50.0e0 
+	!Matrix - K_e = 1.0e0
+	!Matrix - Mu_e = 100.0e0 
+	!Matrix - Ni_v = 400.0e0
+	!Fiber - C1_inf = 970.174e0 
+	!Fiber - C2_inf = 2.828e0 
+	!Fiber - C1_e = 194.162e0
+	!Fiber - C2_e = 2.397e0
+	!Fiber - Ni_v = 565.612e0
+	!ka0          = 1.52e-1
+	!kt0          = 1.52e-2
+	!Theta        = 0
+	!PhiF		  = 0.7
+	!M 			  = 2
+	!L 			  = 0.1
+	
+	!Material ID = 2
+	!Matrix_Viscoelastic_Biphasic
+    !K_inf = 1.0e0
+	!Mu_inf = 1.10e-3
+	!Lambda_inf = 110.0e-3
+	!K_e = 1.0e0
+	!Mu_e = 2.40e-3 
+	!Ni_v = 12.80e-3
+	!k0 = 3e-1
+	!PhiF		  = 0.7
+	!M 			  = 2
+	!L 			  = 0.1
+		
+	!Hyper_Isotropic_Biphasic_Spilker
+	!alpha0 = 0.1084e6
+	!alpha1 = 0.592		 
+	!alpha2 = 0.0848	
+	!k0 = 2.519e-10!2.519e-15
+	!PhiF =  0.8
+	!M = 4.638
+	!L = 0.0848
+	
+	!st_venant_kirchhoff_Biphasic
+	!YoungModulus = 1.0e8
+	!Poisson = 0.30	
+	!k0 = 1.0e-5
+		
+	Material ID = 1
+	neo_hookean_isochoric_biphasic
+	G = 0.343
+	BulkModulus = 0.243
+	k0 = 0.8e-2!0.76e-4 !0.76e-3 ! 0.5e-2 ! 0.76e-2
+	
+	!Compressible_Neo_Hookean_Biphasic
+	!Mu = 3.8e6		 
+	!Lambda = 5.8e8	
+	!k0 = 2.519e-15
+	!PhiF =  0.8
+	!M = 4.638
+	!L = 0.0848
+
+  	!Material ID = 1
+	!Compressible_Neo_Hookean_Biphasic
+	!Mu = 3.8e2		 
+	!Lambda = 5.8e3	
+	!k1 = 1.0E-3
+	!k2 = 1.0E-3
+	!k3 = 1.0E-3
+	
+	!Material ID = 1
+	!Compressible_Neo_Hookean
+	!Mu = 3.8e2		 
+	!Lambda = 5.8e3	
+	
+END MATERIAL 
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+MESH AND BOUNDARY CONDITIONS
+
+	Mesh File =  quarto_cilindro_cartilagem_u20p8_refino1.cdb!Quarto_Cilindro_Cartilagem_Trial.cdb!quarto_cilindro_cartilagem_u20p8_refino1.cdb!Quarto_Cilindro_Cartilagem_Trial.cdb!quarto_cilindro_cartilagem_u20p8_refino1.cdb!Quarto_Cilindro_Cartilagem_Trial.cdb!quarto_cilindro_cartilagem_u20p8_refino1.cdb!Quarto_Cilindro_Cartilagem_Trial.cdb!quarto_cilindro_cartilagem_u20p8_refino1.cdb!Quarto_Cilindro_Cartilagem_Trial.cdb!teste_hexa20_4.cdb 
+	Preprocessor = HyperMesh 
+	Time Discretization File = Time_Discretization.dat
+		
+END MESH AND BOUNDARY CONDITIONS
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+MACROSCOPIC DEFORMATION GRADIENT
+
+	F11 = F11.dat !One !
+	F12 = Zero !F12.dat !  
+	F13 = Zero 
+	F21 = Zero
+	F22 = F22.dat  !One !
+	F23 = Zero
+	F31 = Zero
+	F32 = Zero
+	F33 = F33.dat !One !One	
+		
+END MACROSCOPIC DEFORMATION GRADIENT
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+MACROSCOPIC PRESSURE AND GRADIENT
+
+	P = P.dat 
+	GradP1 = GradP1.dat
+	GradP2 = GradP2.dat
+	GradP3 = GradP3.dat	
+	
+		
+END MACROSCOPIC PRESSURE AND GRADIENT
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX

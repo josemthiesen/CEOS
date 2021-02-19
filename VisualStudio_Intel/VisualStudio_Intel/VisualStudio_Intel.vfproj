@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VisualStudioProject ProjectCreator="Intel Fortran" Keyword="Console Application" Version="11.0" ProjectIdGuid="{D211A0AD-499F-41B0-B387-12D13869BD5D}">
+	<Platforms>
+		<Platform Name="Win32"/>
+		<Platform Name="x64"/></Platforms>
+	<Configurations>
+		<Configuration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklParallel"/>
+				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateDebugInformation="true" SubSystem="subSystemConsole" StackReserveSize="100000000"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
+				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool"/>
+				<Tool Name="VFPostBuildEventTool"/>
+				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
+		<Configuration Name="Release|Win32">
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Optimization="optimizeFull" Parallelization="true" UseMkl="mklParallel"/>
+				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" SubSystem="subSystemConsole" StackReserveSize="100000000"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
+				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool"/>
+				<Tool Name="VFPostBuildEventTool"/>
+				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
+		<Configuration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" MultiProcessorCompilation="true" Optimization="optimizeFull" Parallelization="true" FixedFormLineLength="fixedLength132" OpenMP="OpenMPParallelCode" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" UseMkl="mklParallel"/>
+				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateDebugInformation="true" SubSystem="subSystemConsole" StackReserveSize="100000000"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool"/>
+				<Tool Name="VFPostBuildEventTool"/>
+				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
+		<Configuration Name="Release|x64">
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" MultiProcessorCompilation="true" Optimization="optimizeFull" Parallelization="true" OpenMP="OpenMPParallelCode" UseMkl="mklParallel"/>
+				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" SubSystem="subSystemConsole" StackReserveSize="100000000"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool"/>
+				<Tool Name="VFPostBuildEventTool"/>
+				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration></Configurations>
+	<Files>
+		<Filter Name="Header Files" Filter="fi;fd"/>
+		<Filter Name="Resource Files" Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"/>
+		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
+		<Filter Name="ConstitutiveLibrary">
+		<Filter Name="ConstitutiveModelsLibrary">
+		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModCompressibleNeoHookean.f90"/>
+		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModCompressibleNeoHookeanBiphasic.f90"/>
+		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModCompressibleNeoHookeanBiphasicTransIso.f90"/>
+		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModConstitutiveModelLibrary.f90"/>
+		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModGeneralizedHookesLaw .f90"/>
+		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModGlassy.f90"/>
+		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModHyperelasticQ1P0.f90"/>
+		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModHyperelasticTransIso.f90"/>
+		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModHyperelasticTransIsoBiphasicTransIso.f90"/>
+		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModHyperelasticTransIsoComp.f90"/>
+		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModHyperIsotropicBiphasicSpilker.f90"/>
+		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModJ2Plasticity.f90"/>
+		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModNeoHookean.f90"/>
+		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModNeoHookeanIsochoric.f90"/>
+		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModNeoHookeanIsochoricBiphasic.f90"/>
+		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModNeoHookeanIsochoricBiphasicTransIso.f90"/>
+		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModNeoHookeanQ1P0.f90"/>
+		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModStVenantKirchhoff.f90"/>
+		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModStVenantKirchhoffBiphasic.f90"/>
+		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModVariationalViscoHydrolysis.f90"/>
+		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModViscoelasticFiber.f90"/>
+		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModViscoelasticMatrix.f90"/>
+		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModViscoelasticMatrixBiphasic.f90"/>
+		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModViscoelasticMatrixFiber.f90"/>
+		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModViscoelasticMatrixFiberBiphasicTransIso.f90"/>
+		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModVVHW.f90"/></Filter>
+		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ModConstitutiveModel.f90"/>
+		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\SubMaterialConstructor.f90"/>
+		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\SubMaterialConstructorFluid.f90"/></Filter>
+		<Filter Name="FEM">
+		<Filter Name="BoundaryConditions">
+		<File RelativePath="..\..\SourceCode\FEM\BoundaryConditions\ModBoundaryConditions.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\BoundaryConditions\ModBoundaryConditionsBiphasic.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\BoundaryConditions\ModLoadHistoryData.f90"/></Filter>
+		<Filter Name="Elements">
+		<Filter Name="ElementLibrary">
+		<File RelativePath="..\..\SourceCode\FEM\Elements\ElementLibrary\ModElementHexa20.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\elements\ElementLibrary\ModElementHexa8.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\Elements\ElementLibrary\ModElementHexaU20P8.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\elements\ElementLibrary\ModElementLibrary.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\elements\ElementLibrary\ModElementQuad4.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\Elements\ElementLibrary\ModElementTetra10.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\elements\ElementLibrary\ModElementTetra4.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\Elements\ElementLibrary\ModElementTetraU10P4.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\elements\ElementLibrary\ModElementTri3.f90"/></Filter>
+		<Filter Name="ElementMethod">
+		<File RelativePath="..\..\SourceCode\FEM\elements\ElementMethods\ModElement.f90"/></Filter></Filter>
+		<Filter Name="Input">
+		<File RelativePath="..\..\SourceCode\FEM\Input\ModReadInputFile.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\Input\SubAnalyzeLoadCaseTables.f90"/></Filter>
+		<Filter Name="Modules">
+		<File RelativePath="..\..\SourceCode\FEM\Modules\ModAnalysis.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\Modules\ModFEMSystemOfEquations.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\Modules\ModFEMSystemOfEquationsFluid.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\Modules\ModFEMSystemOfEquationsSolid.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\Modules\ModInterfaces.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\Modules\ModMultiscaleMinimalFEMSoE.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\Modules\ModMultiscaleMinimalLinearD1FEMSoE.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\Modules\ModMultiscaleMinimalLinearD3FEMSoE.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\Modules\ModNodes.f90"/></Filter>
+		<Filter Name="Subroutines">
+		<File RelativePath="..\..\SourceCode\FEM\Subroutines\SubArgumentHandler.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\Subroutines\SubAssembleGlobalMatrix.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\Subroutines\SubAssembleGlobalMatrixUpperTriangular.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\Subroutines\SubExternalForceMultiscaleMinimal.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\Subroutines\SubExternalForceMultiscaleMinimalLinearD1.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\Subroutines\SubExternalForceMultiscaleMinimalLinearD3.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\Subroutines\SubInternalForce.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\Subroutines\SubInternalForceFluid.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\Subroutines\SubInternalForceSolid.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\Subroutines\SubNodeIDFluidConstructor.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\Subroutines\SubSolveConstitutiveModel.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\Subroutines\SubTangentStiffnessMatrix.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\Subroutines\SubTangentStiffnessMatrixFluid.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\Subroutines\SubTangentStiffnessMatrixSolid.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\Subroutines\SubUpdateMeshCoordinates.f90"/></Filter>
+		<File RelativePath="..\..\SourceCode\FEM\ModFEMAnalysis.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\ModFEMAnalysisBiphasic.f90"/></Filter>
+		<Filter Name="Multiscale">
+		<File RelativePath="..\..\SourceCode\MultiScale\ModMultiscaleAnalysis.f90"/>
+		<File RelativePath="..\..\SourceCode\MultiScale\ModMultiscaleAnalysisBiphasic.f90"/>
+		<File RelativePath="..\..\SourceCode\MultiScale\ModMultiscaleBoundaryConditions.f90"/>
+		<File RelativePath="..\..\SourceCode\MultiScale\ModMultiscaleBoundaryConditionsBiphasic.f90"/></Filter>
+		<Filter Name="PostProcessing">
+		<File RelativePath="..\..\SourceCode\FEM\PostProcessing\ModExportResultFile.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\PostProcessing\ModGiD.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\PostProcessing\ModHyperView.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\PostProcessing\ModPostProcessors.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\PostProcessing\ModProbe.f90"/></Filter>
+		<Filter Name="Tools">
+		<Filter Name="MathTools">
+		<Filter Name="LinearSolver">
+		<File RelativePath="..\..\SourceCode\Tools\MathTools\LinearSolver\ModFullLinearSolver.f90"/>
+		<File RelativePath="..\..\SourceCode\Tools\MathTools\LinearSolver\ModLinearSolver.f90"/>
+		<File RelativePath="..\..\SourceCode\Tools\MathTools\LinearSolver\ModLinearSolverLibrary.f90"/>
+		<File RelativePath="..\..\SourceCode\Tools\MathTools\LinearSolver\ModPardisoSolver.f90"/></Filter>
+		<Filter Name="NonLinearSolver">
+		<File RelativePath="..\..\SourceCode\Tools\MathTools\NonlinearSolver\ModNewtonRaphsonFull.f90"/>
+		<File RelativePath="..\..\SourceCode\Tools\MathTools\NonlinearSolver\ModNonLinearSolver.f90"/>
+		<File RelativePath="..\..\SourceCode\Tools\MathTools\NonlinearSolver\ModNonLinearSolverLibrary.f90"/></Filter>
+		<Filter Name="SparseMatrixRoutines">
+		<File RelativePath="..\..\SourceCode\Tools\MathTools\SparseMatrixRoutines\ModGlobalSparseMatrix.f90"/>
+		<File RelativePath="..\..\SourceCode\Tools\MathTools\SparseMatrixRoutines\ModSparseMatrixRoutines.f90"/>
+		<File RelativePath="..\..\SourceCode\Tools\MathTools\SparseMatrixRoutines\ModSparseVectorRoutines.f90"/></Filter>
+		<File RelativePath="..\..\SourceCode\Tools\MathTools\ModMathRoutines.f90"/>
+		<File RelativePath="..\..\SourceCode\Tools\MathTools\ModMathRoutines_NEW.f90"/>
+		<File RelativePath="..\..\SourceCode\Tools\MathTools\ModNonLinearSystemOfEquations.f90"/>
+		<File RelativePath="..\..\SourceCode\Tools\MathTools\ModTensorAlgebra.f90"/>
+		<File RelativePath="..\..\SourceCode\Tools\MathTools\ModVoigtNotation.f90"/></Filter>
+		<File RelativePath="..\..\SourceCode\Tools\ModCharacter.f90"/>
+		<File RelativePath="..\..\SourceCode\Tools\ModContinuumMechanics.f90"/>
+		<File RelativePath="..\..\SourceCode\Tools\ModIO.f90"/>
+		<File RelativePath="..\..\SourceCode\Tools\ModParser.f90"/>
+		<File RelativePath="..\..\SourceCode\Tools\ModStatus.f90"/>
+		<File RelativePath="..\..\SourceCode\Tools\ModTimer.f90"/>
+		<File RelativePath="..\..\SourceCode\Tools\ModTools.f90"/>
+		<File RelativePath="..\..\SourceCode\Tools\SubError.f90"/></Filter>
+		<File RelativePath="..\..\SourceCode\MAIN.f90"/>
+		<File RelativePath="..\..\SourceCode\ModAnalysisManager.f90"/></Filter></Files>
+	<Globals/></VisualStudioProject>
