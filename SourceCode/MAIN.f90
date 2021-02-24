@@ -59,6 +59,7 @@ program MAIN
     type(ClassParser)                             :: Comp
     character(len=255)                            :: SettingsFileName , PostProcessingFileName
     Logical                                       :: TaskSolve , TaskPostProcess
+    integer                                       :: NumberOfNodes, NumberOfElements
    
 	!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
@@ -98,8 +99,18 @@ program MAIN
     ! Reading settings file and Create Analysis (FEM or Multiscale)
     ! ---------------------------------------------------------------------------------------------
 	call ReadAndCreateAnalysis(Analysis, SettingsFileName)
-
-
+    
+    
+    ! Printing Mesh Data (Number of Elements and Nodes)
+    ! ---------------------------------------------------------------------------------------------
+    write(*,*)
+    
+    NumberOfElements = size((Analysis%ElementList),1)
+    NumberOfNodes    = size((Analysis%GlobalNodesList),1)
+    
+    write(*,'(1x,a,i8)') 'Number of Elements: ',NumberOfElements
+    write(*,'(1x,a,i8)') 'Number of Nodes: ',NumberOfNodes
+    
 	if (TaskSolve) then
         !**********************************************************************************************
         ! SOLVING A FINITE ELEMENT ANALYSIS

@@ -724,16 +724,16 @@ module ModExportResultFile
           
        !---------------------------------------------------------------------------------
        
-       NumberOfThreads = omp_get_max_threads()
+       !NumberOfThreads = omp_get_max_threads()
                
-       call omp_set_num_threads( NumberOfThreads )
+       !call omp_set_num_threads( NumberOfThreads )
           
-       !$OMP PARALLEL DEFAULT(PRIVATE)                                &
-                      Shared( FEA, P, Psolid, NodalNaturalCoord)           
-                      !Private( i, j, k, Elem )                        &
-                      !FirstPrivate ( )
+       !!$OMP PARALLEL DEFAULT(PRIVATE)                                &
+       !               Shared( FEA, P, Psolid, NodalNaturalCoord)           
+       !               !Private( i, j, k, Elem )                        &
+       !               !FirstPrivate ( )
    
-       !$OMP DO
+       !!$OMP DO
        
        do i=1, size(FEA%GlobalNodesList)
            
@@ -771,8 +771,8 @@ module ModExportResultFile
            endif
            
        end do
-       !$OMP END DO
-       !$OMP END PARALLEL
+       !!$OMP END DO
+       !!$OMP END PARALLEL
        !---------------------------------------------------------------------------------
         
         

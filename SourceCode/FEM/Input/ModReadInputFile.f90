@@ -34,9 +34,9 @@ module ModReadInputFile
 
     type (ClassPreprocessors) , parameter :: PreProcessors = ClassPreprocessors()
 
-    integer,parameter :: iAnalysisSettings=1, iLinearSolver=2, iNonLinearSolver=3, iMaterial=4, &
-                         iMeshAndBC=5, iMacroscopicDeformationGradient=6, iMacroscopicPressureAndGradient=7, &
-                         nblocks=7
+    integer,parameter :: iAnalysisSettings=1, iLinearSolver=2, iNonLinearSolver=3, iStaggeredSplittingScheme=4, iMaterial=5, &
+                         iMeshAndBC=6, iMacroscopicDeformationGradient=7, iMacroscopicPressureAndGradient=8, &
+                         nblocks=8
     logical,dimension(nblocks)::BlockFound=.false.
     character(len=100),dimension(nblocks)::BlockName
 
@@ -66,10 +66,11 @@ contains
         BlockName(1)="Analysis Settings"
         BlockName(2)="Linear Solver"
         BlockName(3)="NonLinear Solver"
-        BlockName(4)="Material"
-        BlockName(5)="Mesh and Boundary Conditions"
-        BlockName(6)="Macroscopic Deformation Gradient"
-        BlockName(7)="Macroscopic Pressure And Gradient"
+        BlockName(4)="Staggered Splitting Scheme"
+        BlockName(5)="Material"
+        BlockName(6)="Mesh and Boundary Conditions"
+        BlockName(7)="Macroscopic Deformation Gradient"
+        BlockName(8)="Macroscopic Pressure And Gradient"
 
         BlockFound=.false.
 
@@ -110,6 +111,10 @@ contains
                 case (iNonLinearSolver)
                     if (.not.BlockFound(iLinearSolver)) call DataFile%RaiseError("Linear Solver must be specified before the NonLinear solver")
                     call ReadNonLinearSolver(DataFile,LinearSolver,NLSolver)
+    !---------------------------------------------------------------------------------------------------------------------------------------------------------
+                case (iStaggeredSplittingScheme)
+                    if (.not.BlockFound(iNonLinearSolver)) call DataFile%RaiseError("Staggered Spliting Scheme must be specified after the NonLinear solver")
+                    call ReadStaggeredSplittingScheme(DataFile, AnalysisSettings, NLSolver)
 
     !---------------------------------------------------------------------------------------------------------------------------------------------------------
                 case (iMaterial)
@@ -344,6 +349,92 @@ contains
 
     end subroutine
     !=======================================================================================================================
+    
+    subroutine ReadStaggeredSplittingScheme(DataFile,AnalysisSettings, NLSolver)
+
+        implicit none
+
+        type(ClassParser)::DataFile
+        type (ClassAnalysis) :: AnalysisSettings
+        class (ClassNonlinearSolver), pointer :: NLSolver
+        character(len=255)::string
+
+        character(len=100),dimension(6)::ListOfOptions,ListOfValues
+        logical,dimension(6)::FoundOption
+        integer :: i
+
+
+        ListOfOptions=["Splitting Scheme", "Stability Constant", "Mechanical Newton Scale Tolerance", "Flux Newton Scale Tolerance", &
+	                    "Mechanical Staggered Tolerance", "Flux Staggered Tolerance"]
+
+        call DataFile%FillListOfOptions(ListOfOptions,ListOfValues,FoundOption)
+
+        if (DataFile%ERROR) then
+            write(*,*) "Error was found in the ReadStaggeredSplittingScheme. There is probably a missing option in the Settings file!"
+        endif
+        call DataFile%CheckError
+
+        do i=1,size(FoundOption)
+            if (.not.FoundOption(i)) then
+                write(*,*) "Staggered Splitting Scheme :: Option not found ["//trim(ListOfOptions(i))//"]"
+                stop
+            endif
+        enddo      
+
+        ! Option Splitting Scheme
+        if (DataFile%CompareStrings(ListOfValues(1),"Drained")) then
+            AnalysisSettings%SplittingScheme=SplittingScheme%Drained
+            
+            AnalysisSettings%StaggeredParameters%UndrainedActivator = 0
+            AnalysisSettings%StaggeredParameters%FixedStressActivator = 0
+            
+        elseif (DataFile%CompareStrings(ListOfValues(1),"Undrained")) then
+            AnalysisSettings%SplittingScheme=SplittingScheme%Undrained
+            
+            AnalysisSettings%StaggeredParameters%UndrainedActivator = 1
+            AnalysisSettings%StaggeredParameters%FixedStressActivator = 0
+            
+        elseif (DataFile%CompareStrings(ListOfValues(1),"Fixed Stress")) then
+            AnalysisSettings%SplittingScheme=SplittingScheme%FixedStress
+            
+            AnalysisSettings%StaggeredParameters%UndrainedActivator = 0
+            AnalysisSettings%StaggeredParameters%FixedStressActivator = 1
+            
+        elseif (DataFile%CompareStrings(ListOfValues(1),"Fixed Strain")) then
+            AnalysisSettings%SplittingScheme=SplittingScheme%FixedStrain
+            
+            AnalysisSettings%StaggeredParameters%UndrainedActivator = 0
+            AnalysisSettings%StaggeredParameters%FixedStressActivator = 0
+            
+        else
+            call Error( "Splitting Scheme not identified" )
+        endif
+        
+        AnalysisSettings%StaggeredParameters%StabilityConst = ListOfValues(2)
+        AnalysisSettings%StaggeredParameters%SolidStaggTol = ListOfValues(5)
+        AnalysisSettings%StaggeredParameters%FluidStaggTol = ListOfValues(6)
+        
+        select type (NLSolver)
+            class is (ClassNewtonRaphsonFull)
+                if (AnalysisSettings%ProblemType == ProblemTypes%Biphasic) then
+                    NLSolver%SolidScaleTol = ListOfValues(3)
+                    NLSolver%FluidScaleTol = ListOfValues(4)
+                else
+                    NLSolver%SolidScaleTol = 1.0d0
+                    NLSolver%FluidScaleTol = 1.0d0
+                end if
+            class default
+                stop 'Error: Non linear solver is not defined'
+        end select
+            
+        BlockFound(iStaggeredSplittingScheme)=.true.
+        call DataFile%GetNextString(string)
+        if (.not.DataFile%CompareStrings(string,'end'//trim(BlockName(iStaggeredSplittingScheme)))) then
+            call DataFile%RaiseError("End of block was expected. BlockName="//trim(BlockName(iStaggeredSplittingScheme)))
+        endif
+
+    end subroutine
+    
 
     !=======================================================================================================================
     subroutine ReadMeshAndBC(DataFile,GlobalNodesList,ElementList,AnalysisSettings,MaterialList,BC,TimeFileName)
@@ -2250,4 +2341,5 @@ contains
     !=======================================================================================================================
 
    
-end module
+    end module
+

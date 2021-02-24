@@ -17,6 +17,8 @@ module ModNewtonRaphsonFull
 
     type, extends(ClassNonlinearSolver) :: ClassNewtonRaphsonFull
         real(8) :: tol
+        real(8) :: SolidScaleTol = 1.0d0
+        real(8) :: FluidScaleTol = 1.0d0
         integer :: itmax
         integer :: NormType = 2 , MatrixType = 2
         logical :: ShowInfo = .true.
@@ -78,9 +80,9 @@ contains
         
         ! tolerance adjustment 
         if (Phase .eq. 1) then
-            tol = this%tol*1.0d0
+            tol = this%tol*this%SolidScaleTol
         elseif (Phase .eq. 2) then
-           tol = this%tol*1.0d0
+            tol = this%tol*this%FluidScaleTol
         endif
 
 

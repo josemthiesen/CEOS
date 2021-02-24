@@ -21,6 +21,15 @@ module ModConstitutiveModel
         real(8) :: w(3)     ! Relative velocity on biphasic model
 
     endtype
+    
+    type :: ClassStaggeredVariables
+    	
+        real(8) ::  J_PreviousStaggered = 1.0d0
+        real(8) ::  Press_PreviousStaggered = 0.0d0
+        real(8) ::  Kd_PreviousStaggered = 1.0d0
+        real(8) ::  DeltaTime = 1.0d0
+        
+    end type ClassStaggeredVariables
 
 	!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     ! ClassConstitutiveModel: Common definitions to all Constitutive Models
@@ -33,10 +42,11 @@ module ModConstitutiveModel
         real(8)                             :: Time = 0.0d0
         real(8)                             :: FluidCauchyStress(6)=0.0d0 ! Fluid Stress on voigt notation (posprocess)
 
-        type (ClassAdditionalVariables) :: AdditionalVariables
+        type (ClassAdditionalVariables) ::  AdditionalVariables
+        type (ClassStaggeredVariables)  ::  StaggeredVariables
 
         contains
-
+        
             ! Class Methods
             !------------------------------------------------------------------------------------
 

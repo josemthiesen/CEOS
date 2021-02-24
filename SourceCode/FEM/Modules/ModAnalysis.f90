@@ -55,8 +55,21 @@ module ModAnalysis
         integer  :: Taylor=1 , Linear=2 , Periodic=3, Minimal=4, MinimalLinearD1 = 5, MinimalLinearD3 = 6
     end type
     type (ClassMultiscaleModels), parameter :: MultiscaleModels = ClassMultiscaleModels()
-
-
+    
+    !Splitting Algorithms
+    type :: ClassSplittingScheme
+    	integer ::  Drained = 1, Undrained = 2, FixedStress = 3, FixedStrain = 4 
+    end type ClassSplittingScheme
+    type (ClassSplittingScheme), parameter :: SplittingScheme = ClassSplittingScheme() 
+    
+    type :: ClassStaggeredParameters
+    	real(8) :: SolidStaggTol   
+        real(8) :: FluidStaggTol   
+        real(8) :: StabilityConst  
+        integer :: UndrainedActivator
+        integer :: FixedStressActivator
+    end type ClassStaggeredParameters
+    
     ! Parameters of the analysis type.
     !----------------------------------------------------------------------------------------------
     integer , parameter :: MaxElementNumberDOF=200 , MaxTensorComponents=6, MaxElementNodes=100
@@ -88,6 +101,7 @@ module ModAnalysis
     
     real(8) , target , dimension( MaxElementNumberDOF , MaxElementNumberDOF)    :: KeF_Memory       ! Memory for Ke Fluid
     real(8) , target , dimension( MaxElementNumberDOF)                          :: Nf_Memory        ! Fluid functions
+    real(8) , target , dimension( MaxElementNumberDOF, MaxElementNumberDOF)     :: N_Memory         ! Fluid functions (matrix format)
     real(8) , target , dimension( MaxElementNumberDOF)                          :: hs_Memory        ! Vector h (tr(e) = h^Tq)
     real(8) , target , dimension( MaxElementNumberDOF,1)                        :: bs_Memory        ! Vector bs (div(u) = b^Tq)
     real(8) , target , dimension( 3 , MaxElementNumberDOF)                      :: H_Memory         ! Matrix H (grad p = H p)
@@ -123,6 +137,7 @@ module ModAnalysis
     
     !$OMP THREADPRIVATE(KeF_Memory)
     !$OMP THREADPRIVATE(Nf_Memory)
+    !$OMP THREADPRIVATE(N_Memory)
     !$OMP THREADPRIVATE(hs_Memory)
     !$OMP THREADPRIVATE(bs_Memory)
     !$OMP THREADPRIVATE(H_Memory)
@@ -147,6 +162,7 @@ module ModAnalysis
         integer ::  MultiscaleModel
         integer ::  MultiscaleModelFluid
         integer ::  MultiscaleModelSolid
+        integer ::  SplittingScheme
         logical ::  NLAnalysis
         logical ::  MultiscaleAnalysis
         
@@ -159,9 +175,10 @@ module ModAnalysis
         integer ::  GRowSize   , SSize 
         integer ::  MaxCutBack
 
-        
         integer ::  Pdof
 
+        type(ClassStaggeredParameters) :: StaggeredParameters
+        
         contains
 
             ! Class Methods

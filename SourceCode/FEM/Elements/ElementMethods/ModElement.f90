@@ -615,6 +615,8 @@ module ModElement
             real(8)                             :: FactorAxi
             real(8) , pointer , dimension(:)    :: Nf
             real(8) , pointer , dimension(:,:)  :: bs
+            real(8)                             :: StabilityConst, J_CurrentStaggered, J_PreviousStaggered, P_CurrentStaggered, alpha
+            integer                             :: UndrainedActivator
 
 		    !************************************************************************************
 
@@ -723,18 +725,37 @@ module ModElement
                 ! G(8,[(i,i=3,nDOFel,3)])=DifSF(:,2) !d_Displacement3/d_x2
                 ! G(9,[(i,i=3,nDOFel,3)])=DifSF(:,3) !d_Displacement3/d_x3
                 ! ***********************************************************************************************
-         
+                
+                ! **********************************************************
+                ! Undrained  and Drained Splitting Method -
+                ! UndrainedActivator = 1 -> undrained split
+                ! UndrainedActivator = 0 -> drained, fixed stress, fixed strain
+                ! alpha -> algorithmic constant (related to biot's modulus)
+                ! **********************************************************
+                
+                UndrainedActivator   = AnalysisSettings%StaggeredParameters%UndrainedActivator
+                alpha = AnalysisSettings%StaggeredParameters%StabilityConst
+                J_CurrentStaggered = det(this%GaussPoints(gp)%F)
+                J_PreviousStaggered = this%GaussPoints(gp)%StaggeredVariables%J_PreviousStaggered
+                
+                P_CurrentStaggered = dot_product(Nf,Pe) - UndrainedActivator*alpha*(J_CurrentStaggered - J_PreviousStaggered)
+                
+                !write(*,'(12x,a,i3,a,e16.9)') 'gp: ',gp ,'  subtraction: ',(J_CurrentStaggered - J_PreviousStaggered)
                 
                 !Sum the Matrix: Ke = Ke - Kes
                 !Ke = Ke - matmul(bs,transpose(bs))*dot_product(Nf,Pe)*Weight(gp)*detJ*FactorAxi
-                call MatrixMatrixMultiply_TransB ( bs, bs, Ke, -dot_product(Nf,Pe)*Weight(gp)*detJ*FactorAxi, 1.0d0 ) !C := alpha*(A)*B^T + beta*C
+                call MatrixMatrixMultiply_TransB ( bs, bs, Ke, -P_CurrentStaggered*Weight(gp)*detJ*FactorAxi, 1.0d0 ) !C := alpha*(A)*B^T + beta*C
                 
                 ! Computes Sfluid*G
-                call MatrixMatrixMultiply_Sym ( I9, G, SfG, dot_product(Nf,Pe), 0.0d0 ) ! C := alpha*A*B + beta*C - A=Sym and upper triangular
+                call MatrixMatrixMultiply_Sym ( I9, G, SfG, P_CurrentStaggered, 0.0d0 ) ! C := alpha*A*B + beta*C - A=Sym and upper triangular
                 
                 !Matrix Sum the Matrix: Ke = Ke - Kesf
                 call MatrixMatrixMultiply_Trans ( G, SfG, Ke, -Weight(gp)*detJ*FactorAxi, 1.0d0 ) !C := alpha*(A^T)*B + beta*C    
-                            
+                                             
+                !******************************************
+                !Ke = Ke + matmul(bs,transpose(bs))*StabilityConst*J_currentStaggered*Weight(gp)*detJ*FactorAxi                
+                call MatrixMatrixMultiply_TransB (bs, bs, Ke, UndrainedActivator*alpha*J_CurrentStaggered*Weight(gp)*detJ*FactorAxi, 1.0d0 ) !C := alpha*(A)*B^T + beta*C
+                
             enddo                    
 
 		    !************************************************************************************
@@ -771,10 +792,12 @@ module ModElement
             ! -----------------------------------------------------------------------------------
             integer							    :: NDOFel_fluid, gp
             real(8)							    :: detJ
-            real(8) , pointer , dimension(:)    :: Weight
+            real(8) , pointer , dimension(:)    :: Weight, Nf
             real(8) , pointer , dimension(:,:)  :: NaturalCoord
-            real(8) , pointer , dimension(:,:)  :: H, Kf
+            real(8) , pointer , dimension(:,:)  :: H, Kf, N
             real(8)                             :: FactorAxi
+            real(8)                             :: DeltaTime, alpha, P_PreviousStaggered, Kd_PreviousStaggered
+            integer                             :: FixedStressActivator
 
 		    !************************************************************************************
 
@@ -795,8 +818,13 @@ module ModElement
 
             ! Allocating permeability tensor
             Kf => Kf_Memory(1:3, 1:3)
-
-
+            
+            ! Allocating matrix Nf
+            Nf => Nf_Memory( 1:NDOFel_fluid)
+            
+            ! Allocating matrix N
+            N  => N_Memory(1:NDOFel_fluid, 1:1)
+            
             ! Retrieving gauss points parameters for numerical integration
             !call this%GetGaussPoints(NaturalCoord,Weight)
             call this%GetGaussPoints_fluid(NaturalCoord,Weight)
@@ -810,10 +838,34 @@ module ModElement
 
                 !Get matrix H
                 call this%MatrixH_ThreeDimensional(AnalysisSettings, NaturalCoord(gp,:), H, detJ , FactorAxi)
+                
 
-                !Compute the Element internal force vector
+                !Compute the Element stiffness matrix
 
                 Ke = Ke + matmul( matmul( transpose(H), Kf ), H )*Weight(gp)*detJ*FactorAxi
+                
+                ! **********************************************************
+                ! Fixed Stress and Fixed Strain Splitting Methods
+                ! FixedStressActivator = 1 -> Fixed Stress Split
+                ! FixedStressActivator = 0 -> undrained, drained, fixed strain
+                ! alpha -> algorithmic constant 
+                ! **********************************************************
+                
+                FixedStressActivator   = AnalysisSettings%StaggeredParameters%FixedStressActivator
+                DeltaTime = this%GaussPoints_fluid(gp)%StaggeredVariables%DeltaTime
+                alpha = AnalysisSettings%StaggeredParameters%StabilityConst/DeltaTime
+                P_PreviousStaggered = this%GaussPoints_fluid(gp)%StaggeredVariables%Press_PreviousStaggered
+                Kd_PreviousStaggered = this%GaussPoints_fluid(gp)%StaggeredVariables%Kd_PreviousStaggered
+                
+                !Get the matrix Nf
+                Nf=0.0d0
+                call this%GetShapeFunctions_fluid(NaturalCoord(gp,:) , Nf )   
+                
+                !Convert Nf (vector form) to N (matrix form) to use matmul
+                N = 0.0d0
+                N(:, 1) = Nf
+                
+                Ke = Ke + matmul( N, transpose(N) )*FixedStressActivator*alpha*(1/(Kd_PreviousStaggered-P_PreviousStaggered))*Weight(gp)*detJ*FactorAxi
 
             enddo
 
@@ -934,6 +986,9 @@ module ModElement
             real(8) , pointer , dimension(:,:)  :: B, G
             real(8) , pointer , dimension(:)    :: Nf, hs
             real(8)                             :: FactorAxi
+            real(8)                             :: alpha, P_CurrentStaggered, J_CurrentStaggered, J_PreviousStaggered
+            integer                             :: UndrainedActivator
+
 		    !************************************************************************************
 		    !************************************************************************************
             ! ELEMENT SOLID INTERNAL FORCE CALCULATION
@@ -1008,13 +1063,24 @@ module ModElement
 
                 Nf=0.0d0
                 call this%GetShapeFunctions_fluid(NaturalCoord(gp,:) , Nf )
-
+                
+                ! **********************************************************
+                ! Undrained  and Drained Splitting Method -
+                ! UndrainedActivator = 1 -> undrained split
+                ! UndrainedActivator = 0 -> drained, fixed stress, fixed strain
+                ! alpha -> algorithmic constant (related to biot's modulus)
+                ! **********************************************************
+                
+                UndrainedActivator   = AnalysisSettings%StaggeredParameters%UndrainedActivator
+                alpha = AnalysisSettings%StaggeredParameters%StabilityConst
+                J_CurrentStaggered = det(this%GaussPoints(gp)%F)
+                J_PreviousStaggered = this%GaussPoints(gp)%StaggeredVariables%J_PreviousStaggered
+                
+                P_CurrentStaggered = dot_product(Nf,Pe) - UndrainedActivator*alpha*(J_CurrentStaggered - J_PreviousStaggered)
+                
                 !******************************************
-                !******************************************
-                Fe = Fe - (dot_product(Nf,Pe)*FactorAxi*Weight(gp)*detJ)*hs
-                !Fe = Fe - matmul(matmul(hs,transpose(Nf)),Pe)*FactorAxi*Weight(gp)*detJ
-                !******************************************
-                !******************************************  
+                
+                Fe = Fe - (P_CurrentStaggered*FactorAxi*Weight(gp)*detJ)*hs
 
             enddo
 		    !************************************************************************************
@@ -1054,8 +1120,10 @@ module ModElement
             real(8) , pointer , dimension(:,:)  :: NaturalCoord
             real(8) , pointer , dimension(:,:)  :: B , G, Kf, H, bs
             real(8) , pointer , dimension(:)    :: Nf
-            real(8)                             :: FactorAxi
+            real(8)                             :: FactorAxi, P_PreviousStaggered, P_CurrentStaggered, Kd_PreviousStaggered, DeltaTime, alpha
+            real(8)                             :: div_vs_CurrentStaggered
             real(8) , dimension(4,4)            :: Kaux
+            integer                             :: FixedStressActivator
 		    !************************************************************************************
 
 		    !************************************************************************************
@@ -1072,7 +1140,7 @@ module ModElement
 
             ! Allocating matrix N
             Nf => Nf_Memory( 1:NDOFel_fluid)
-
+            
             ! Allocating matrix B
             B => B_Memory(  1:AnalysisSettings%BrowSize , 1:NDOFel_solid )
 
@@ -1135,11 +1203,31 @@ module ModElement
                 ! G(8,[(i,i=3,nDOFel,3)])=DifSF(:,2) !d_Displacement3/d_x2
                 ! G(9,[(i,i=3,nDOFel,3)])=DifSF(:,3) !d_Displacement3/d_x3
                 ! ***********************************************************************************************
-
+                
+                ! **********************************************************
+                ! Fixed Stress and Fixed Strain Splitting Methods
+                ! FixedStressActivator = 1 -> Fixed Stress Split
+                ! FixedStressActivator = 0 -> undrained, drained, fixed strain
+                ! alpha -> algorithmic constant 
+                ! **********************************************************
+                
+                FixedStressActivator   = AnalysisSettings%StaggeredParameters%FixedStressActivator
+                DeltaTime = this%GaussPoints_fluid(gp)%StaggeredVariables%DeltaTime
+                alpha = AnalysisSettings%StaggeredParameters%StabilityConst/DeltaTime
+                P_PreviousStaggered = this%GaussPoints_fluid(gp)%StaggeredVariables%Press_PreviousStaggered
+                Kd_PreviousStaggered = this%GaussPoints_fluid(gp)%StaggeredVariables%Kd_PreviousStaggered
+                
+                P_CurrentStaggered = dot_product(Nf,Pe)
+                
+                div_vs_CurrentStaggered = (FixedStressActivator*alpha*(P_CurrentStaggered-P_PreviousStaggered)/(Kd_PreviousStaggered - P_PreviousStaggered)) + &
+                                            dot_product(bs(:,1),VSe)
+                
+                !******************************************
+                
                 !Compute the Element internal force vector
-
+                
                 !Kaux = matmul( matmul( transpose(H), Kf ), H )
-                Fe = Fe + matmul(matmul( matmul( transpose(H), Kf ), H ), Pe)*Weight(gp)*detJ*FactorAxi + (dot_product(bs(:,1),VSe)*FactorAxi*Weight(gp)*detJ)*Nf
+                Fe = Fe + matmul(matmul( matmul( transpose(H), Kf ), H ), Pe)*Weight(gp)*detJ*FactorAxi + (div_vs_CurrentStaggered*FactorAxi*Weight(gp)*detJ)*Nf
 
             enddo
 		    !************************************************************************************
