@@ -313,20 +313,22 @@ module ModFEMAnalysisBiphasic
             real(8), allocatable, dimension(:) :: P , RFluid , DeltaFluxExt, DeltaPPresc, FluxExt_alpha0, Pbar_alpha0, Pconverged  ! Fluid
             real(8), allocatable, dimension(:) :: Ustaggered, Pstaggered   ! Internal variables of staggered prcedure
             real(8) :: DeltaTime , Time_alpha0
-            real(8) :: NormStagSolid, NormStagFluid, TolSTSolid, TolSTFluid, InitialNormStagSolid, InitialNormStagFluid, InitialNormStagMin
+            real(8) :: NormStagSolid, NormStagFluid, TolSTSolid, TolSTFluid, InitialNormStagSolid, InitialNormStagFluid, InitialNormStagMin, NormStagUndrained !trial
             real(8) :: alpha !, alpha_max, alpha_min, alpha_aux
-            integer :: LC , ST , nSteps, nLoadCases , SubStep, e, gp
+            integer :: LC , ST , nSteps, nLoadCases , SubStep, e, gp, stagg
             integer :: FileID_FEMAnalysisResultsSolid, FileID_FEMAnalysisResultsFluid
            !integer :: CutBack, Flag_EndStep
             integer :: nDOFSolid, nDOFFluid
             real(8), parameter :: GR= (1.0d0 + dsqrt(5.0d0))/2.0d0
+            real(8), allocatable, dimension(:) :: P_Int_Staggered, P_Int ! trial
+            real(8) :: AuxInitialNormStagSolid, AuxInitialNormStagFluid
 
             integer, allocatable, dimension(:) :: KgSolidValZERO, KgSolidValONE
             integer :: contZEROSolid, contONESolid
             integer, allocatable, dimension(:) :: KgFluidValZERO, KgFluidValONE
             integer :: contZEROFluid, contONEFluid
-            integer :: SubstepsMAX
-            integer :: Phase ! Indicates the material phase (1 = Solid; 2 = Fluid)
+            integer :: SubstepsMAX, nDOFel
+            integer :: Phase ! Indicates the material phase (1 = Solid; 2 = Fluid)  
 
             type(ClassFEMSystemOfEquationsSolid) :: FEMSoESolid
             type(ClassFEMSystemOfEquationsFluid) :: FEMSoEFluid
@@ -376,6 +378,8 @@ module ModFEMAnalysisBiphasic
             allocate( P(nDOFFluid)  , DeltaPPresc(nDOFFluid), Pbar_alpha0(nDOFFluid), Pconverged(nDOFFluid)  )
             ! Allocating staggered variables
             allocate( Ustaggered(nDOFSolid) , Pstaggered(nDOFFluid)   )
+            allocate(P_Int_Staggered(size(elementlist)*size(elementlist(1)%el%GaussPoints))) ! trial
+            allocate(P_Int(size(elementlist)*size(elementlist(1)%el%GaussPoints)))  ! trial
 
             SubstepsMAX = 1000
             U = 0.0d0
@@ -584,37 +588,62 @@ module ModFEMAnalysisBiphasic
                             endif
                         endif
                         
-                        ! Teste bisseção (mean pressure)
-                        !if (NormStagSolid .ne. 0) then
-                        !    P = (Pstaggered+P)/2
-                        !endif
+                        if (LC .eq. 1 .and. ST .eq. 1 .and. subStep .eq. 2) then
+                            AuxInitialNormStagSolid = maxval(dabs(Ustaggered-U))
+                            if (AuxInitialNormStagSolid .gt. InitialNormStagSolid) then 
+                                InitialNormStagSolid = AuxInitialNormStagSolid
+                            endif
+                            AuxInitialNormStagFluid = maxval(dabs(Pstaggered-P))
+                            if (AuxInitialNormStagFluid .gt. InitialNormStagFluid) then 
+                                InitialNormStagFluid = AuxInitialNormStagFluid
+                            endif
+                        endif
                         
-                        !U = (Ustaggered+U)/2
-                        !P = (Ustaggered+P)/2
+                        select case (AnalysisSettings%SplittingScheme)
+                            case (SplittingScheme%Drained)
+                            ! Teste bisseção (mean pressure)
+                                if (NormStagSolid .ne. 0) then
+                                    P = (Pstaggered+P)/2
+                                    !U = (Ustaggered+U)/2
+                                endif
+                            case default
+
+                        end select
                         
                        ! Update staggered variables : StateVariable_i := StateVariable_i+1
+                        
+                        stagg = 0 !trial
                         do e=1,size(elementlist)
                             do gp=1,size(elementlist(e)%el%GaussPoints)
+                                stagg = stagg + 1 ! trial
                                 ElementList(e)%el%GaussPoints(gp)%StaggeredVariables%J_PreviousStaggered = det(ElementList(e)%el%GaussPoints(gp)%F)
+                                P_Int_Staggered(stagg) = ElementList(e)%el%GaussPoints(gp)%StaggeredVariables%Press_PreviousStaggered ! trial
+                                P_Int(stagg) =  ElementList(e)%el%GaussPoints(gp)%StaggeredVariables%Press_CurrentStaggered! trial
+                                ElementList(e)%el%GaussPoints(gp)%StaggeredVariables%P_InfNorm = maxval(dabs(P))
                             enddo
                         enddo
+                        
+                        NormStagUndrained = maxval(dabs(P_Int_Staggered-P_Int)) !trial
                         
                         if (NormStagSolid .lt. InitialNormStagSolid*TolSTSolid .and. NormStagFluid .lt. InitialNormStagFluid*TolSTFluid) then
                             write(*,'(12x,a,i3,a)') 'Staggered procedure converged in', SubStep ,' substeps'
                             write(*,'(12x,a,i3,a,i3)') 'Step', ST ,' of Load Case', LC
                             write(*,'(12x,a,i3,a,e16.9)') 'Substep: ',SubStep ,'  NORM_SOLID: ',NormStagSolid
                             write(*,'(12x,a,i3,a,e16.9)') 'Substep: ',SubStep ,'  NORM_FLUID: ',NormStagFluid
+                            write(*,'(12x,a,i3,a,e16.9)') 'Substep: ',SubStep ,'  NORM_UNDRAINED: ',NormStagUndrained ! trial
                             exit SUBSTEPS
                         elseif (Substep .ge. SubstepsMAX) then
                             write(*,'(12x,a)') 'Error: Maximum Number of Iterations of staggered procedure is reached!'
                             write(*,'(12x,a,i3,a,i3)') 'Error in Step', ST ,' of Load Case', LC
                             write(*,'(12x,a,i3,a,e16.9)') 'Substep: ',SubStep ,'  NORM_SOLID: ',NormStagSolid
                             write(*,'(12x,a,i3,a,e16.9)') 'Substep: ',SubStep ,'  NORM_FLUID: ',NormStagFluid
+                            write(*,'(12x,a,i3,a,e16.9)') 'Substep: ',SubStep ,'  NORM_UNDRAINED: ',NormStagUndrained ! trial
                             stop
                         else 
                             write(*,'(12x,a,i3,a,i3)') 'Step', ST ,' of Load Case', LC
                             write(*,'(12x,a,i3,a,e16.9)') 'Substep: ',SubStep ,'  NORM_SOLID: ',NormStagSolid
                             write(*,'(12x,a,i3,a,e16.9)') 'Substep: ',SubStep ,'  NORM_FLUID: ',NormStagFluid
+                            write(*,'(12x,a,i3,a,e16.9)') 'Substep: ',SubStep ,'  NORM_UNDRAINED: ',NormStagUndrained ! trial
                             SubStep = SubStep + 1
                             
                         endif     
@@ -698,7 +727,12 @@ module ModFEMAnalysisBiphasic
            !integer :: CutBack, Flag_EndStep
             integer :: nDOFSolid, nDOFFluid
             real(8), parameter :: GR= (1.0d0 + dsqrt(5.0d0))/2.0d0
-
+            real(8) :: AuxInitialNormStagSolid, AuxInitialNormStagFluid
+            
+            !integer :: stagg
+            !real(8), allocatable, dimension(:) :: DivV_Staggered, DivV 
+            real(8)                             :: NormStagFixedStress
+            
             integer, allocatable, dimension(:) :: KgSolidValZERO, KgSolidValONE
             integer :: contZEROSolid, contONESolid
             integer, allocatable, dimension(:) :: KgFluidValZERO, KgFluidValONE
@@ -754,6 +788,9 @@ module ModFEMAnalysisBiphasic
             allocate( P(nDOFFluid)  , DeltaPPresc(nDOFFluid), Pbar_alpha0(nDOFFluid), Pconverged(nDOFFluid)  )
             ! Allocating staggered variables
             allocate( Ustaggered(nDOFSolid) , Pstaggered(nDOFFluid)   )
+            
+            !allocate(DivV_Staggered(size(elementlist)*size(elementlist(1)%el%GaussPoints))) ! trial
+            !allocate(DivV(size(elementlist)*size(elementlist(1)%el%GaussPoints)))  ! trial
 
             SubstepsMAX = 1000
             U = 0.0d0
@@ -766,8 +803,8 @@ module ModFEMAnalysisBiphasic
             ! Staggered variables
             NormStagSolid       = 0.0d0
             NormStagFluid       = 0.0d0
-            TolSTSolid          = 1.0d-3
-            TolSTFluid          = 1.0d-3
+            TolSTSolid          = AnalysisSettings%StaggeredParameters%SolidStaggTol
+            TolSTFluid          = AnalysisSettings%StaggeredParameters%FluidStaggTol
             InitialNormStagMin  = 1.0d-12
             
             nLoadCases = BC%GetNumberOfLoadCases() !Verificar
@@ -876,17 +913,19 @@ module ModFEMAnalysisBiphasic
                     select case (AnalysisSettings%SplittingScheme)
                         
                     case (SplittingScheme%FixedStress)
-                        write(*,'(12x,a)') 'Begin of Drained Split Staggered procedure '
+                        write(*,'(12x,a)') 'Begin of Fixed Stress Split Staggered procedure '
                     case(SplittingScheme%FixedStrain)
-                        write(*,'(12x,a)') 'Begin of Undrained Split Staggered procedure '
+                        write(*,'(12x,a)') 'Begin of Fixed Strain Split Staggered procedure '
                     case default
                         stop 'Error: Staggered procedure not identified.'
                     end select
                     
+                    call ComputeInitialKd( ElementList, AnalysisSettings)
+                    
                     SUBSTEPS: do while(.true.)   !Staggered procedure
 
                         ! Update staggered variables : StateVariable_i := StateVariable_i+1
-                        call UpdateStaggeredVariables_ComputeKd( ElementList, P, AnalysisSettings, DeltaTime)
+                        call UpdateStaggeredVariables_ComputeKd( ElementList, P, Pconverged, AnalysisSettings, DeltaTime)
                         
                         ! Update the staggerd variables
                         Ustaggered = U
@@ -922,7 +961,7 @@ module ModFEMAnalysisBiphasic
                         FEMSoESolid % Time = Time_alpha0 + alpha*DeltaTime
                         FEMSoESolid % Fext = Fext_alpha0 + alpha*DeltaFext
                         FEMSoESolid % Ubar = Ubar_alpha0 + alpha*DeltaUPresc
-                        FEMSoESolid % Pfluid = Pstaggered
+                        FEMSoESolid % Pfluid = P           !FEMSoESolid % Pfluid = Pstaggered
 
                         write(*,'(12x,a)') 'Solve the Solid system of equations '
                         call NLSolver%Solve( FEMSoESolid , XGuess = Ustaggered , X = U, Phase = 1 )
@@ -951,32 +990,56 @@ module ModFEMAnalysisBiphasic
                             endif
                         endif
                         
-                        ! Teste bisseção (mean pressure)
-                        !if (NormStagSolid .ne. 0) then
-                        !    P = (Pstaggered+P)/2
-                        !endif
+                        if (LC .eq. 1 .and. ST .eq. 1 .and. subStep .eq. 2) then
+                            AuxInitialNormStagSolid = maxval(dabs(Ustaggered-U))
+                            if (AuxInitialNormStagSolid .gt. InitialNormStagSolid) then 
+                                InitialNormStagSolid = AuxInitialNormStagSolid
+                            endif
+                            AuxInitialNormStagFluid = maxval(dabs(Pstaggered-P))
+                            if (AuxInitialNormStagFluid .gt. InitialNormStagFluid) then 
+                                InitialNormStagFluid = AuxInitialNormStagFluid
+                            endif
+                        endif
                         
-                        !U = (Ustaggered+U)/2
-                        !P = (Ustaggered+P)/2
-                                            
+                        ! Update fixed stress staggered variables
+                        
+                        !stagg = 0 !trial
+                        !do e=1,size(elementlist)
+                         !   do gp=1,size(elementlist(e)%el%GaussPoints)
+                          !      stagg = stagg + 1 ! trial
+                          !      DivV_Staggered(stagg) = ElementList(e)%el%GaussPoints(gp)%StaggeredVariables%Div_Velocity_PreviousStaggered ! trial
+                          !      DivV(stagg) =  ElementList(e)%el%GaussPoints(gp)%StaggeredVariables%Div_Velocity_CurrentStaggered! trial
+                          !  enddo
+                        !enddo
+                        
+                        !NormStagFixedStress = maxval(dabs(DivV_Staggered-DivV)) !trial
+                        
+                        NormStagFixedStress = FEMSoEFluid%AnalysisSettings%StaggeredParameters%FixedStressNorm
+                        
                         if (NormStagSolid .lt. InitialNormStagSolid*TolSTSolid .and. NormStagFluid .lt. InitialNormStagFluid*TolSTFluid) then
-                            write(*,'(12x,a,i3,a)') 'Staggered procedure converged in', SubStep ,' substeps'
-                            write(*,'(12x,a,i3,a,i3)') 'Step', ST ,' of Load Case', LC
-                            write(*,'(12x,a,i3,a,e16.9)') 'Substep: ',SubStep ,'  NORM_SOLID: ',NormStagSolid
-                            write(*,'(12x,a,i3,a,e16.9)') 'Substep: ',SubStep ,'  NORM_FLUID: ',NormStagFluid
-                            exit SUBSTEPS
+                                write(*,'(12x,a,i3,a,i3)') 'Step', ST ,' of Load Case', LC
+                                write(*,'(12x,a,i3,a,e16.9)') 'Substep: ',SubStep ,'  NORM_SOLID: ',NormStagSolid
+                                write(*,'(12x,a,i3,a,e16.9)') 'Substep: ',SubStep ,'  NORM_FLUID: ',NormStagFluid
+                                write(*,'(12x,a,i3,a,e16.9)') 'Substep: ',SubStep ,'  NORM_FIXED_STRESS: ', NormStagFixedStress
+                            !if (NormStagFixedStress.lt.InitialNormStagFluid*TolSTFluid) then 
+                                write(*,'(12x,a,i3,a)') 'Staggered procedure converged in', SubStep ,' substeps'
+                                FEMSoEFluid%AnalysisSettings%StaggeredParameters%FixedStressNorm = 1.0d-15
+                                exit SUBSTEPS
+                            !end if
                         elseif (Substep .ge. SubstepsMAX) then
                             write(*,'(12x,a)') 'Error: Maximum Number of Iterations of staggered procedure is reached!'
                             write(*,'(12x,a,i3,a,i3)') 'Error in Step', ST ,' of Load Case', LC
                             write(*,'(12x,a,i3,a,e16.9)') 'Substep: ',SubStep ,'  NORM_SOLID: ',NormStagSolid
                             write(*,'(12x,a,i3,a,e16.9)') 'Substep: ',SubStep ,'  NORM_FLUID: ',NormStagFluid
+                            write(*,'(12x,a,i3,a,e16.9)') 'Substep: ',SubStep ,'  NORM_FIXED_STRESS: ', FEMSoEFluid%AnalysisSettings%StaggeredParameters%FixedStressNorm
                             stop
                         else 
                             write(*,'(12x,a,i3,a,i3)') 'Step', ST ,' of Load Case', LC
                             write(*,'(12x,a,i3,a,e16.9)') 'Substep: ',SubStep ,'  NORM_SOLID: ',NormStagSolid
                             write(*,'(12x,a,i3,a,e16.9)') 'Substep: ',SubStep ,'  NORM_FLUID: ',NormStagFluid
+                            write(*,'(12x,a,i3,a,e16.9)') 'Substep: ',SubStep ,'  NORM_FIXED_STRESS: ', FEMSoEFluid%AnalysisSettings%StaggeredParameters%FixedStressNorm
+                            FEMSoEFluid%AnalysisSettings%StaggeredParameters%FixedStressNorm = 1.0d-15
                             SubStep = SubStep + 1
-                            
                         endif     
                         
                          
@@ -1014,7 +1077,7 @@ module ModFEMAnalysisBiphasic
 
         end subroutine
                                             
-        subroutine UpdateStaggeredVariables_ComputeKd( ElementList, P, AnalysisSettings, DeltaTime)
+        subroutine UpdateStaggeredVariables_ComputeKd( ElementList, P, Pconverged, AnalysisSettings, DeltaTime)
 
             !************************************************************************************
             ! DECLARATIONS OF VARIABLES
@@ -1031,7 +1094,7 @@ module ModFEMAnalysisBiphasic
             ! -----------------------------------------------------------------------------------
             type(ClassElementsWrapper) , dimension(:)  :: ElementList
             type(ClassAnalysis)                        :: AnalysisSettings
-            real(8) , dimension(:)                     :: P
+            real(8) , dimension(:)                     :: P, Pconverged
             
             ! Internal variables
             ! -----------------------------------------------------------------------------------
@@ -1039,7 +1102,7 @@ module ModFEMAnalysisBiphasic
             integer , pointer , dimension(:)    :: GM_fluid
             real(8) , pointer , dimension(:,:)  :: NaturalCoord_fluid, NaturalCoord_solid, D
             real(8) , pointer , dimension(:)    :: Nf, Weight_fluid, Weight_solid
-            real(8) , pointer , dimension(:)    :: Pe
+            real(8) , pointer , dimension(:)    :: Pe, Pe_converged
             real(8), dimension(6)               :: Id_voigt, DdotI
             real(8)                             :: Kd, DeltaTime
 
@@ -1054,18 +1117,23 @@ module ModFEMAnalysisBiphasic
             Id_voigt(2) = 1.0d0
             Id_voigt(3) = 1.0d0
             
-            !$OMP PARALLEL DEFAULT(PRIVATE) SHARED(AnalysisSettings, ElementList, P, Id_voigt, DeltaTime)
+            !$OMP PARALLEL DEFAULT(PRIVATE) SHARED(AnalysisSettings, ElementList, P, Pconverged, Id_voigt, DeltaTime)
             !$OMP DO
             
             do e = 1, size(ElementList)
                 
                 call ConvertElementToElementBiphasic(ElementList(e)%el,  ElBiphasic) ! Aponta o objeto ElBiphasic para o ElementList(e)%El mas com o type correto ClassElementBiphasic        
                 call ElBiphasic%GetElementNumberDOF_fluid(AnalysisSettings, nDOFel_fluid)
+                
                 Pe => Pe_Memory(1:nDOFel_fluid)
+                
+                Pe_converged => Pe_converged_Memory(1:nDOFel_fluid)
+                
                 GM_fluid => GMfluid_Memory(1:nDOFel_fluid)
         
                 call ElBiphasic%GetGlobalMapping_fluid(AnalysisSettings, GM_fluid)
                 Pe = P(GM_fluid)
+                Pe_converged = Pconverged(GM_fluid)
                 
                 ! Allocating tangent modulus
                 D => D_Memory(  1:AnalysisSettings%DSize, 1:AnalysisSettings%DSize )
@@ -1099,10 +1167,100 @@ module ModFEMAnalysisBiphasic
 
                     Nf=0.0d0
                     call ElBiphasic%GetShapeFunctions_fluid(NaturalCoord_fluid(gp,:) , Nf )
-                    ElBiphasic%GaussPoints_fluid(gp)%StaggeredVariables%Press_PreviousStaggered = dot_product(Nf,Pe) 
+                    ElBiphasic%GaussPoints_fluid(gp)%StaggeredVariables%Press_PreviousStaggered = dot_product(Nf,Pe)
+                    ElBiphasic%GaussPoints_fluid(gp)%StaggeredVariables%Press_PreviousStep = dot_product(Nf,Pe_converged)
                     ElBiphasic%GaussPoints_fluid(gp)%StaggeredVariables%Kd_PreviousStaggered = Kd
                     ElBiphasic%GaussPoints_fluid(gp)%StaggeredVariables%DeltaTime = DeltaTime
 
+                enddo                
+                
+            enddo
+            !$OMP END DO
+            !$OMP END PARALLEL
+
+            !************************************************************************************
+
+        end subroutine
+        
+        subroutine ComputeInitialKd( ElementList, AnalysisSettings)
+
+            !************************************************************************************
+            ! DECLARATIONS OF VARIABLES
+            !************************************************************************************
+            ! Modules and implicit declarations
+            ! -----------------------------------------------------------------------------------
+            use ModAnalysis
+            use ModElementLibrary
+            use ModStatus
+
+            implicit none
+
+            ! Input variables
+            ! -----------------------------------------------------------------------------------
+            type(ClassElementsWrapper) , dimension(:)  :: ElementList
+            type(ClassAnalysis)                        :: AnalysisSettings
+            
+            ! Internal variables
+            ! -----------------------------------------------------------------------------------
+            integer							    :: NDOFel_solid, NDOFel_fluid , gp, i, e
+            integer , pointer , dimension(:)    :: GM_fluid
+            real(8) , pointer , dimension(:,:)  :: NaturalCoord_fluid, NaturalCoord_solid, D
+            real(8) , pointer , dimension(:)    :: Nf, Weight_fluid, Weight_solid
+            real(8), dimension(6)               :: Id_voigt, DdotI
+            real(8)                             :: Kd, DeltaTime
+
+
+            class(ClassElementBiphasic), pointer :: ElBiphasic
+
+            !************************************************************************************
+
+            Id_voigt = 0.0d0
+            ! Identity matrix in voigt symmetric notation
+            Id_voigt(1) = 1.0d0
+            Id_voigt(2) = 1.0d0
+            Id_voigt(3) = 1.0d0
+            
+            !$OMP PARALLEL DEFAULT(PRIVATE) SHARED(AnalysisSettings, ElementList, Id_voigt)
+            !$OMP DO
+            
+            do e = 1, size(ElementList)
+                
+                call ConvertElementToElementBiphasic(ElementList(e)%el,  ElBiphasic) ! Aponta o objeto ElBiphasic para o ElementList(e)%El mas com o type correto ClassElementBiphasic        
+                call ElBiphasic%GetElementNumberDOF_fluid(AnalysisSettings, nDOFel_fluid)
+                GM_fluid => GMfluid_Memory(1:nDOFel_fluid)
+        
+                call ElBiphasic%GetGlobalMapping_fluid(AnalysisSettings, GM_fluid)
+                
+                ! Allocating tangent modulus
+                D => D_Memory(  1:AnalysisSettings%DSize, 1:AnalysisSettings%DSize )
+                
+                ! Allocating matrix N
+                Nf => Nf_Memory( 1:NDOFel_fluid)
+
+                ! Retrieving gauss points parameters for numerical integration
+                call ElBiphasic%GetGaussPoints_fluid(NaturalCoord_fluid,Weight_fluid)
+
+                !Loop over solid gauss points
+                Kd = 0.0d0
+                
+                call ElBiphasic%GetGaussPoints(NaturalCoord_solid,Weight_solid)
+                
+                do gp = 1, size(NaturalCoord_solid,dim=1)
+                    DdotI = 0.0d0
+                    !Get tangent modulus
+                    call ElBiphasic%GaussPoints(gp)%GetTangentModulus(D)
+                    call MatrixVectorMultiply( 'N', D, Id_voigt, DdotI, 1.0d0, 0.0d0 )
+                    
+                    ! Kd = (1/9) I: D : I (D -> fourth order linearized elasticity tensor; I -> Identity matrix)
+                    
+                    Kd = Kd + (1.0d0/9.0d0)*(dot_product(Id_voigt,DdotI))
+                enddo
+                
+                Kd = Kd/size(NaturalCoord_solid,dim=1)
+
+                !Loop over fluid gauss points
+                do gp = 1, size(NaturalCoord_fluid,dim=1)
+                    ElBiphasic%GaussPoints_fluid(gp)%StaggeredVariables%Kd_PreviousStep = Kd
                 enddo                
                 
             enddo
@@ -1144,18 +1302,18 @@ module ModFEMAnalysisBiphasic
             
             
             ! Update the solid aceleration
-            !aux1 = (1/(Beta*(DeltaTime**2)))*(U(1)-Uconverged(1))
-            !aux2 = (1/(Beta*DeltaTime))*VSolidconverged(1) 
-            !aux3 = ((0.5 - Beta)/Beta)*ASolidconverged(1)
+            aux1 = (1/(Beta*(DeltaTime**2)))*(U(1)-Uconverged(1))
+            aux2 = (1/(Beta*DeltaTime))*VSolidconverged(1) 
+            aux3 = ((0.5 - Beta)/Beta)*ASolidconverged(1)
            
-            !ASolid = (1/(Beta*(DeltaTime**2)))*(U-Uconverged) -  (1/(Beta*DeltaTime))*VSolidconverged - ((0.5 - Beta)/Beta)*ASolidconverged  !*******
+            ASolid = (1/(Beta*(DeltaTime**2)))*(U-Uconverged) -  (1/(Beta*DeltaTime))*VSolidconverged - ((0.5 - Beta)/Beta)*ASolidconverged  !*******
             
             ! Update the solid velocity         
-            !VSolid  = VSolidconverged + DeltaTime*(1-Gamma)*ASolidconverged + Gamma*DeltaTime*ASolid
+            VSolid  = VSolidconverged + DeltaTime*(1-Gamma)*ASolidconverged + Gamma*DeltaTime*ASolid
             
             !****************************************************************************
             ! Diferenças Finitas
-            VSolid = (U-Uconverged)/DeltaTime
+            !VSolid = (U-Uconverged)/DeltaTime
             
             !****************************************************************************
             ! Regra do Trapézio

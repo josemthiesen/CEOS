@@ -65,7 +65,8 @@ module ModAnalysis
     type :: ClassStaggeredParameters
     	real(8) :: SolidStaggTol   
         real(8) :: FluidStaggTol   
-        real(8) :: StabilityConst  
+        real(8) :: StabilityConst
+        real(8) :: FixedStressNorm = 1.0d-15
         integer :: UndrainedActivator
         integer :: FixedStressActivator
     end type ClassStaggeredParameters
@@ -107,6 +108,7 @@ module ModAnalysis
     real(8) , target , dimension( 3 , MaxElementNumberDOF)                      :: H_Memory         ! Matrix H (grad p = H p)
     real(8) , target , dimension( MaxTensorComponents,MaxTensorComponents)      :: Kf_Memory        ! Stiffeness matrix Kf
     real(8) , target , dimension( MaxElementNumberDOF )                         :: Pe_Memory        ! Vector P element
+    real(8) , target , dimension( MaxElementNumberDOF )                         :: Pe_converged_Memory        ! Vector P converged 
     real(8) , target , dimension( MaxElementNumberDOF )                         :: Vse_Memory       ! Vector solid velocity element
     integer , target , dimension( MaxElementNumberDOF )                         :: GMfluid_Memory   ! Global Maping Fluid
     real(8) , target , dimension( 9 , MaxElementNumberDOF)                      :: SfG_Memory       ! Cauchy for fluid
@@ -143,6 +145,7 @@ module ModAnalysis
     !$OMP THREADPRIVATE(H_Memory)
     !$OMP THREADPRIVATE(Kf_Memory)
     !$OMP THREADPRIVATE(Pe_Memory)
+    !$OMP THREADPRIVATE(Pe_converged_Memory)
     !$OMP THREADPRIVATE(VSe_Memory)
     !$OMP THREADPRIVATE(GMfluid_Memory)
     !$OMP THREADPRIVATE(SfG_Memory)

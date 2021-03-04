@@ -26,8 +26,12 @@ module ModConstitutiveModel
     	
         real(8) ::  J_PreviousStaggered = 1.0d0
         real(8) ::  Press_PreviousStaggered = 0.0d0
+        real(8) ::  Press_CurrentStaggered = 0.0d0
+        real(8) ::  Press_PreviousStep = 0.0d0
         real(8) ::  Kd_PreviousStaggered = 1.0d0
+        real(8) ::  Kd_PreviousStep = 1.0d0
         real(8) ::  DeltaTime = 1.0d0
+        real(8) ::  P_InfNorm = 1.0d0
         
     end type ClassStaggeredVariables
 

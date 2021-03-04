@@ -615,7 +615,7 @@ module ModElement
             real(8)                             :: FactorAxi
             real(8) , pointer , dimension(:)    :: Nf
             real(8) , pointer , dimension(:,:)  :: bs
-            real(8)                             :: StabilityConst, J_CurrentStaggered, J_PreviousStaggered, P_CurrentStaggered, alpha
+            real(8)                             :: StabilityConst, J_CurrentStaggered, J_PreviousStaggered, P_CurrentStaggered, P_PreviousStaggered, alpha
             integer                             :: UndrainedActivator
 
 		    !************************************************************************************
@@ -734,14 +734,16 @@ module ModElement
                 ! **********************************************************
                 
                 UndrainedActivator   = AnalysisSettings%StaggeredParameters%UndrainedActivator
-                alpha = AnalysisSettings%StaggeredParameters%StabilityConst
+                StabilityConst = AnalysisSettings%StaggeredParameters%StabilityConst
                 J_CurrentStaggered = det(this%GaussPoints(gp)%F)
                 J_PreviousStaggered = this%GaussPoints(gp)%StaggeredVariables%J_PreviousStaggered
                 
-                P_CurrentStaggered = dot_product(Nf,Pe) - UndrainedActivator*alpha*(J_CurrentStaggered - J_PreviousStaggered)
+                P_PreviousStaggered = dot_product(Nf,Pe)
                 
-                !write(*,'(12x,a,i3,a,e16.9)') 'gp: ',gp ,'  subtraction: ',(J_CurrentStaggered - J_PreviousStaggered)
+                alpha = StabilityConst*abs(P_PreviousStaggered)/this%GaussPoints(gp)%StaggeredVariables%P_InfNorm
                 
+                P_CurrentStaggered = P_PreviousStaggered - UndrainedActivator*alpha*(J_CurrentStaggered - J_PreviousStaggered)
+                                            
                 !Sum the Matrix: Ke = Ke - Kes
                 !Ke = Ke - matmul(bs,transpose(bs))*dot_product(Nf,Pe)*Weight(gp)*detJ*FactorAxi
                 call MatrixMatrixMultiply_TransB ( bs, bs, Ke, -P_CurrentStaggered*Weight(gp)*detJ*FactorAxi, 1.0d0 ) !C := alpha*(A)*B^T + beta*C
@@ -796,10 +798,11 @@ module ModElement
             real(8) , pointer , dimension(:,:)  :: NaturalCoord
             real(8) , pointer , dimension(:,:)  :: H, Kf, N
             real(8)                             :: FactorAxi
-            real(8)                             :: DeltaTime, alpha, P_PreviousStaggered, Kd_PreviousStaggered
+            real(8)                             :: DeltaTime, alpha, P_PreviousStaggered, Kd_PreviousStaggered, P_PreviousStep, Kd_PreviousStep
             integer                             :: FixedStressActivator
 
 		    !************************************************************************************
+        
 
 		    !************************************************************************************
             ! ELEMENT FLUID STIFFNESS MATRIX CALCULATION
@@ -856,6 +859,8 @@ module ModElement
                 alpha = AnalysisSettings%StaggeredParameters%StabilityConst/DeltaTime
                 P_PreviousStaggered = this%GaussPoints_fluid(gp)%StaggeredVariables%Press_PreviousStaggered
                 Kd_PreviousStaggered = this%GaussPoints_fluid(gp)%StaggeredVariables%Kd_PreviousStaggered
+                P_PreviousStep = this%GaussPoints_fluid(gp)%StaggeredVariables%Press_PreviousStep
+                Kd_PreviousStep = this%GaussPoints_fluid(gp)%StaggeredVariables%Kd_PreviousStep
                 
                 !Get the matrix Nf
                 Nf=0.0d0
@@ -865,7 +870,7 @@ module ModElement
                 N = 0.0d0
                 N(:, 1) = Nf
                 
-                Ke = Ke + matmul( N, transpose(N) )*FixedStressActivator*alpha*(1/(Kd_PreviousStaggered-P_PreviousStaggered))*Weight(gp)*detJ*FactorAxi
+                Ke = Ke + matmul( N, transpose(N) )*FixedStressActivator*alpha*(1/(Kd_PreviousStep-P_PreviousStep))*Weight(gp)*detJ*FactorAxi
 
             enddo
 
@@ -986,7 +991,7 @@ module ModElement
             real(8) , pointer , dimension(:,:)  :: B, G
             real(8) , pointer , dimension(:)    :: Nf, hs
             real(8)                             :: FactorAxi
-            real(8)                             :: alpha, P_CurrentStaggered, J_CurrentStaggered, J_PreviousStaggered
+            real(8)                             :: alpha, StabilityConst, P_CurrentStaggered, J_CurrentStaggered, J_PreviousStaggered, P_PreviousStaggered
             integer                             :: UndrainedActivator
 
 		    !************************************************************************************
@@ -1072,12 +1077,17 @@ module ModElement
                 ! **********************************************************
                 
                 UndrainedActivator   = AnalysisSettings%StaggeredParameters%UndrainedActivator
-                alpha = AnalysisSettings%StaggeredParameters%StabilityConst
+                StabilityConst = AnalysisSettings%StaggeredParameters%StabilityConst
+                                                
                 J_CurrentStaggered = det(this%GaussPoints(gp)%F)
                 J_PreviousStaggered = this%GaussPoints(gp)%StaggeredVariables%J_PreviousStaggered
                 
-                P_CurrentStaggered = dot_product(Nf,Pe) - UndrainedActivator*alpha*(J_CurrentStaggered - J_PreviousStaggered)
+                P_PreviousStaggered = dot_product(Nf,Pe) 
+                alpha = StabilityConst*abs(P_PreviousStaggered)/this%GaussPoints(gp)%StaggeredVariables%P_InfNorm
+                P_CurrentStaggered = P_PreviousStaggered - UndrainedActivator*alpha*(J_CurrentStaggered - J_PreviousStaggered)
                 
+                this%GaussPoints(gp)%StaggeredVariables%Press_CurrentStaggered = P_CurrentStaggered !trial
+                this%GaussPoints(gp)%StaggeredVariables%Press_PreviousStaggered = P_PreviousStaggered ! trial
                 !******************************************
                 
                 Fe = Fe - (P_CurrentStaggered*FactorAxi*Weight(gp)*detJ)*hs
@@ -1120,8 +1130,8 @@ module ModElement
             real(8) , pointer , dimension(:,:)  :: NaturalCoord
             real(8) , pointer , dimension(:,:)  :: B , G, Kf, H, bs
             real(8) , pointer , dimension(:)    :: Nf
-            real(8)                             :: FactorAxi, P_PreviousStaggered, P_CurrentStaggered, Kd_PreviousStaggered, DeltaTime, alpha
-            real(8)                             :: div_vs_CurrentStaggered
+            real(8)                             :: FactorAxi, P_PreviousStaggered, P_CurrentStaggered, Kd_PreviousStaggered, DeltaTime, alpha, Kd_PreviousStep
+            real(8)                             :: div_vs_CurrentStaggered, FixedStressDif, P_PreviousStep
             real(8) , dimension(4,4)            :: Kaux
             integer                             :: FixedStressActivator
 		    !************************************************************************************
@@ -1215,12 +1225,21 @@ module ModElement
                 DeltaTime = this%GaussPoints_fluid(gp)%StaggeredVariables%DeltaTime
                 alpha = AnalysisSettings%StaggeredParameters%StabilityConst/DeltaTime
                 P_PreviousStaggered = this%GaussPoints_fluid(gp)%StaggeredVariables%Press_PreviousStaggered
+                P_PreviousStep = this%GaussPoints_fluid(gp)%StaggeredVariables%Press_PreviousStep
                 Kd_PreviousStaggered = this%GaussPoints_fluid(gp)%StaggeredVariables%Kd_PreviousStaggered
+                Kd_PreviousStep = this%GaussPoints_fluid(gp)%StaggeredVariables%Kd_PreviousStep
                 
                 P_CurrentStaggered = dot_product(Nf,Pe)
                 
-                div_vs_CurrentStaggered = (FixedStressActivator*alpha*(P_CurrentStaggered-P_PreviousStaggered)/(Kd_PreviousStaggered - P_PreviousStaggered)) + &
+                div_vs_CurrentStaggered = (FixedStressActivator*alpha*(P_CurrentStaggered-P_PreviousStaggered)/(Kd_PreviousStep - P_PreviousStep)) + &
                                             dot_product(bs(:,1),VSe)
+                
+                FixedStressDif = dabs(div_vs_CurrentStaggered - dot_product(bs(:,1),VSe))
+                
+                AnalysisSettings%StaggeredParameters%FixedStressNorm = max(AnalysisSettings%StaggeredParameters%FixedStressNorm, FixedStressDif)
+                
+                !this%GaussPoints(gp)%StaggeredVariables%Div_Velocity_CurrentStaggered = div_vs_CurrentStaggered !trial
+                !this%GaussPoints(gp)%StaggeredVariables%Div_Velocity_PreviousStaggered = dot_product(bs(:,1),VSe) ! trial
                 
                 !******************************************
                 

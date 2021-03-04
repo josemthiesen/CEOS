@@ -1000,14 +1000,18 @@ module ModNeoHookIsochoricBiphasic
             class(ClassNeoHookeanIsochoricBiphasic)::this
             real(8),dimension(:,:),intent(inout):: Kf
             real(8)                             :: k0
+        
+            !k0 = this%Properties%k0
+            !Kf = (1/det(this%F))*k0*matmul(this%F, transpose(this%F))
             
+            !----
             k0 = this%Properties%k0
                         
             Kf = 0.0d0
             Kf(1,1) = k0
             Kf(2,2) = k0
             Kf(3,3) = k0
-            
+            ! ---
             !Kf(1,1) = this%Properties%k1
             !Kf(2,2) = this%Properties%k2
             !Kf(3,3) = this%Properties%k3

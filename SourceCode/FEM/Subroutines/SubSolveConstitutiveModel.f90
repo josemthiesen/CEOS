@@ -36,7 +36,7 @@ subroutine SolveConstitutiveModel( ElementList , AnalysisSettings, Time, U, Stat
     ! Internal variables
     ! -----------------------------------------------------------------------------------
     real(8) :: F(3,3)
-    real(8) :: Volume, VolumeX, T
+    real(8) :: Volume, VolumeX, T, J
     integer :: e , gp , nDOFel
     integer , pointer , dimension(:)   :: GM
     real(8) , pointer , dimension(:,:) :: NaturalCoord
@@ -70,7 +70,7 @@ subroutine SolveConstitutiveModel( ElementList , AnalysisSettings, Time, U, Stat
             call ElementList(e)%El%DeformationGradient( NaturalCoord(gp,:) , U(GM) , &
                                                         AnalysisSettings , F, Status )
             ElementList(e)%El%GaussPoints(gp)%F = F
-
+            J = det(ElementList(e)%El%GaussPoints(gp)%F)
             ! AdditionalVariables
             !----------------------------------------------------------------------------
             ElementList(e)%El%GaussPoints(gp)%AdditionalVariables%Jbar = Volume/VolumeX

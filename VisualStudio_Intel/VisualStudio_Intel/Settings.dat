@@ -43,7 +43,7 @@ NONLINEAR SOLVER
 	Newton_Raphson_Full
 	
 	Tol = 1.0e-6
-	MaxIter = 15
+	MaxIter = 200
 
 	
 END NONLINEAR SOLVER
@@ -52,12 +52,12 @@ END NONLINEAR SOLVER
 
 STAGGERED SPLITTING SCHEME
 
-	Splitting Scheme 	 = Undrained ! Fixed Strain! Undrained! Fixed Stress
-	Stability Constant 	 = 1e4 ! Depende do modelo ! 1.0d4 rodou o k = 0.76e-3
+	Splitting Scheme 	 = Fixed Stress !Fixed Stress!Undrained!Drained ! Fixed Strain! Undrained! Fixed Stress
+	Stability Constant 	 =  0.5 ! Depende do modelo ! 1.0d4 rodou o k = 0.76e-3
 	Mechanical Newton Scale Tolerance = 1.0
 	Flux Newton Scale Tolerance 	  = 1.0d-3
-	Mechanical Staggered Tolerance    = 1.0d-3
-	Flux Staggered Tolerance 		  = 1.0d-3
+	Mechanical Staggered Tolerance    = 1.0d-2
+	Flux Staggered Tolerance 		  = 1.0d-2 ! com 1.0d-1 rodou, mas o resultado nao deu boa
 	
 END STAGGERED SPLITTING SCHEME
 
@@ -66,12 +66,18 @@ END STAGGERED SPLITTING SCHEME
 MATERIAL
 
 	Number of Materials = 1
-		
+	
 	Material ID = 1
 	neo_hookean_isochoric_biphasic
 	G = 0.343
 	BulkModulus = 0.243
-	k0 = 0.76e-3!0.76e-4 ! 0.5e-2 ! 0.76e-2
+	k0 = 0.4e-3!0.76e-4 ! 0.5e-2 ! 0.76e-2
+	
+	!Material ID = 1
+	!neo_hookean_isochoric_biphasic
+	!G = 3.846d7
+	!BulkModulus = 8.33d7
+	!k0 = 1.0d-5
 	
 	!Material ID = 1
 	!compressible_neo_hookean_Biphasic
@@ -167,7 +173,7 @@ END MATERIAL
 
 MESH AND BOUNDARY CONDITIONS
 
-	Mesh File =  quarto_cilindro_cartilagem_u20p8_grosseiro.cdb!quarto_cilindro_cartilagem_u20p8_refino1.cdb!teste_u20p8_1elem.cdb!quarto_cilindro_cartilagem_u20p8_refino1.cdb!Quarto_Cilindro_Cartilagem_Trial.cdb!quarto_cilindro_cartilagem_u20p8_refino1.cdb!Quarto_Cilindro_Cartilagem_Trial.cdb!quarto_cilindro_cartilagem_u20p8_refino1.cdb!Quarto_Cilindro_Cartilagem_Trial.cdb!quarto_cilindro_cartilagem_u20p8_refino1.cdb!Quarto_Cilindro_Cartilagem_Trial.cdb!quarto_cilindro_cartilagem_u20p8_refino1.cdb!Quarto_Cilindro_Cartilagem_Trial.cdb!teste_hexa20_4.cdb 
+	Mesh File =  quarto_cilindro_cartilagem_u20p8_grosseiro.cdb!quarto_cilindro_cartilagem_u20p8_grosseiro.cdb!terzaghi_u20p8_refinoemcima.cdb!quarto_cilindro_cartilagem_u20p8_refinoemcima.cdb!quarto_cilindro_cartilagem_u20p8_grosseiro.cdb!quarto_cilindro_cartilagem_u20p8_refino1.cdb!teste_u20p8_1elem.cdb!quarto_cilindro_cartilagem_u20p8_refino1.cdb!Quarto_Cilindro_Cartilagem_Trial.cdb!quarto_cilindro_cartilagem_u20p8_refino1.cdb!Quarto_Cilindro_Cartilagem_Trial.cdb!quarto_cilindro_cartilagem_u20p8_refino1.cdb!Quarto_Cilindro_Cartilagem_Trial.cdb!quarto_cilindro_cartilagem_u20p8_refino1.cdb!Quarto_Cilindro_Cartilagem_Trial.cdb!quarto_cilindro_cartilagem_u20p8_refino1.cdb!Quarto_Cilindro_Cartilagem_Trial.cdb!teste_hexa20_4.cdb 
 	Preprocessor = HyperMesh 
 	Time Discretization File = Time_Discretization.dat
 		
