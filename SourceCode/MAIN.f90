@@ -112,6 +112,7 @@ program MAIN
     write(*,'(1x,a,i8)') 'Number of Nodes: ',NumberOfNodes
     
 	if (TaskSolve) then
+        
         !**********************************************************************************************
         ! SOLVING A FINITE ELEMENT ANALYSIS
         !**********************************************************************************************
@@ -124,29 +125,10 @@ program MAIN
         ! ---------------------------------------------------------------------------------------------
         call AnalysisTime%Start
 
-
         ! Allocating memory for the sparse matrix (pre-assembling)
         ! ---------------------------------------------------------------------------------------------
-        if (Analysis%AnalysisSettings%MultiscaleAnalysis) then
-            if ((Analysis%AnalysisSettings%MultiscaleModel == MultiscaleModels%Taylor) .or. (Analysis%AnalysisSettings%MultiscaleModel == MultiscaleModels%Linear) ) then
-                !call Analysis%AllocateKgSparse
-                call Analysis%AllocateKgSparseUpperTriangular
-            elseif (Analysis%AnalysisSettings%MultiscaleModel == MultiscaleModels%Minimal) then
-                !call Analysis%AllocateKgSparseMultiscaleMinimal
-                call Analysis%AllocateKgSparseMultiscaleMinimalUpperTriangular
-            elseif (Analysis%AnalysisSettings%MultiscaleModel == MultiscaleModels%MinimalLinearD1) then
-                !call Analysis%AllocateKgSparseMultiscaleMinimalLinearD1
-                call Analysis%AllocateKgSparseMultiscaleMinimalLinearD1UpperTriangular
-            elseif (Analysis%AnalysisSettings%MultiscaleModel == MultiscaleModels%MinimalLinearD3) then
-                !call Analysis%AllocateKgSparseMultiscaleMinimalLinearD3
-                call Analysis%AllocateKgSparseMultiscaleMinimalLinearD3UpperTriangular                
-            else
-                STOP 'Error: Multiscale Analysis not found - MAIN.f90'
-            endif
-        else
-            !call Analysis%AllocateKGSparse
-            call Analysis%AllocateKGSparseUpperTriangular
-        endif
+        
+        call Analysis%AllocateKgSparse 
         
         call Analysis%Solve
 

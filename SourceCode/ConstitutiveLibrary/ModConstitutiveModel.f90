@@ -73,6 +73,7 @@ module ModConstitutiveModel
                         
             ! Fluid
             procedure :: GetPermeabilityTensor              => GetPermeabilityTensorBase
+            procedure :: GetTangentPermeabilityTensor       => GetTangentPermeabilityTensorBase
 
         end type
 
@@ -178,6 +179,15 @@ module ModConstitutiveModel
                 stop "Error: Permeability Tensor"
             end subroutine
             !==========================================================================================
+            
+            !==========================================================================================
+            subroutine GetTangentPermeabilityTensorBase(this,Kftg)
+                class(ClassConstitutiveModel)::this
+                real(8),dimension(:,:),intent(inout)::Kftg
+                stop "Error: Tangent Permeability Tensor"
+            end subroutine
+            !==========================================================================================
+            
             
             !==========================================================================================
             subroutine UpdateStressAndStateVariablesBase(this,Status)

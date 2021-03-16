@@ -208,7 +208,71 @@ module ModMathRoutines_NEW
 
         end subroutine
         !==========================================================================================
+        
+        subroutine VectorMultiplyTransposeVector( A, B, C)
 
+            implicit none
+            
+            real(8),dimension(:), intent(in)    :: A
+            real(8),dimension(:), intent(in)      :: B
+            real(8), dimension(:,:), intent(inout) :: C
+            integer                  :: m, n, i, j
+
+            m = size(A, 1)
+            n = size(B, 1)
+            
+            do i = 1, m
+                do j = 1, n
+                    C(i,j) = A(i)*B(j)
+                end do 
+            end do
+  
+        end subroutine
+        
+        subroutine VectorMultiplyTransposeVector_MatrixForm( A, B, C)
+
+            implicit none
+            
+            real(8),dimension(:), intent(in)       :: A
+            real(8),dimension(:,:), intent(in)     :: B
+            real(8), dimension(:,:), intent(inout) :: C
+            integer                  :: m, n, i, j
+
+            m = size(A, 1)
+            n = size(B, 1)
+            
+            do i = 1, m
+                do j = 1, n
+                    C(i,j) = A(i)*B(j,1)
+                end do 
+            end do
+  
+        end subroutine
+        
+        subroutine DotProductMatrixForm_Vector( A, B, C)
+
+            implicit none
+
+            real(8),dimension(:,:), intent(in)    :: A
+            real(8),dimension(:), intent(in)      :: B
+            real(8), intent(inout)                :: C
+            integer                  :: m, n, i, j
+
+            m = size(A, 1)
+            n = size(B, 1)
+            
+            C = 0.0d0
+            if (m == n) then
+                do i = 1, m
+                    C = C +  A(i,1)*B(i)   
+                end do
+            else
+                stop "Wrong dimensions in DotProductMatrixFormVector subroutine"
+            end if
+            
+  
+        end subroutine
+        
         !==========================================================================================
         subroutine MatrixMatrixMultiply_Trans ( A, B, C, alpha, beta )
 

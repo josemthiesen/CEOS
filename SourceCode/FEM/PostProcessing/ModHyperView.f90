@@ -232,11 +232,19 @@ module ModHyperView
 
                     deallocate(GaussPointlValues, Conec)
 
-                 case (VariableNames%BiphasicTotalCauchyStress)
-
+                case (VariableNames%BiphasicTotalCauchyStress)
+                    
                     nelem = size( FEA%ElementList )
-                    ngp = size(FEA%ElementList(1)%el%GaussPoints)
                     nnodes = size(FEA%ElementList(1)%El%ElementNodes)
+
+                    call FEA%ElementList(1)%El%GetProfile(Profile)
+                    if ((Profile%ElementType == 420) .or. (Profile%ElementType == 430)) then! Hexa20 Element
+                        GaussPointsToNodes = 20
+                        ngp = GaussPointsToNodes
+                    else
+                        ngp = size(FEA%ElementList(1)%el%GaussPoints)
+                    end if
+                    
                     allocate( GaussPointlValues( nelem , ngp , 6 ) )
                     allocate( Conec(nelem , nnodes ) )
 

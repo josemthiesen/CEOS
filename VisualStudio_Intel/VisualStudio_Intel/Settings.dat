@@ -15,9 +15,10 @@
 ANALYSIS SETTINGS
 
 	Multiscale Analysis =  False
-	Multiscale Model = Linear !Linear !Taylor !Minimal Phases !Minimal  
-	Problem Type = Biphasic!Mechanical !
-	Multiscale Model Fluid = Linear !Linear !Taylor 
+	Multiscale Model = Linear !MinimalLinearD1 !Linear !Taylor !Minimal  
+	Problem Type = Biphasic !Biphasic!Mechanical !
+	Solution Scheme = Monolithic ! Monolithic
+	Multiscale Model Fluid = Linear !Linear !Taylor
 	Fiber Reinforced Analysis = False !True!False
 	Fiber Data File = Fiber_Data.dat
 	Analysis Type = Quasi Static
@@ -43,7 +44,7 @@ NONLINEAR SOLVER
 	Newton_Raphson_Full
 	
 	Tol = 1.0e-6
-	MaxIter = 200
+	MaxIter = 50
 
 	
 END NONLINEAR SOLVER
@@ -71,7 +72,7 @@ MATERIAL
 	neo_hookean_isochoric_biphasic
 	G = 0.343
 	BulkModulus = 0.243
-	k0 = 0.4e-3!0.76e-4 ! 0.5e-2 ! 0.76e-2
+	k0 = 0.1e-2!0.76e-4 ! 0.5e-2 ! 0.76e-2
 	
 	!Material ID = 1
 	!neo_hookean_isochoric_biphasic

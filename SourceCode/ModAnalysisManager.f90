@@ -12,8 +12,8 @@
 !##################################################################################################
 module ModAnalysisManager
 
-    use ModMultiscaleAnalysis
-    use ModMultiscaleAnalysisBiphasic
+    use ModMultiscaleFEMAnalysis
+    use ModMultiscaleFEMAnalysisBiphasic
     use ModReadInputFile
     use ModAnalysis
     use ModFEMAnalysisBiphasic
@@ -60,7 +60,7 @@ module ModAnalysisManager
         ! Definig and allocating the analysis
         if (AnalysisSettings%ProblemType .eq. ProblemTypes%Mechanical) then
             if (AnalysisSettings%MultiscaleAnalysis) then
-                allocate( ClassMultiscaleAnalysis :: Analysis)
+                allocate( ClassMultiscaleFEMAnalysis :: Analysis)
                 allocate(Analysis%Kg)
             else
                 allocate( ClassFEMAnalysis :: Analysis)
@@ -68,7 +68,7 @@ module ModAnalysisManager
             endif 
         elseif (AnalysisSettings%ProblemType .eq. ProblemTypes%Biphasic) then
             if (AnalysisSettings%MultiscaleAnalysis) then
-                allocate( ClassMultiscaleAnalysisBiphasic :: Analysis)
+                allocate( ClassMultiscaleFEMAnalysisBiphasic :: Analysis)
                 allocate(Analysis%Kg)
                 allocate(Analysis%KgFluid)
             else

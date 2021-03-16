@@ -40,14 +40,36 @@ module ModFEMAnalysisBiphasic
             ! Class Methods
             !----------------------------------------------------------------------------------
             procedure :: Solve => SolveFEMAnalysisBiphasic
-            procedure :: AllocateKgSparseUpperTriangular => AllocateKgSparseUpperTriangularBiphasic 
+            procedure :: AllocateKgSparse => AllocateKgSparseBiphasic!AllocateKgSparseUpperTriangularBiphasic 
             !----------------------------------------------------------------------------------      
 
     end type
 
     contains
 
+        subroutine AllocateKgSparseBiphasic (this)
 
+            !************************************************************************************
+            ! DECLARATIONS OF VARIABLES
+            !************************************************************************************
+            
+            implicit none
+
+            ! Object
+            ! -----------------------------------------------------------------------------------
+            class(ClassFEMAnalysisBiphasic) :: this
+
+            select case (this%AnalysisSettings%SolutionScheme)
+                case(SolutionScheme%Sequential)
+                   call AllocateKgSparseUpperTriangularBiphasicStaggered(this)
+                case(SolutionScheme%Monolithic)
+                    call AllocateKgSparseFullBiphasicMonolithic(this)
+                case default
+                   stop 'Error: Biphasic solution scheme not found - ModFEMAnalysisBiphasic.f90'
+            end select
+        
+
+        end subroutine
 
         !##################################################################################################
         ! This routine pre-allocates the size of the global stiffness matrix in the sparse format.
@@ -63,7 +85,7 @@ module ModFEMAnalysisBiphasic
         ! Date:         Author:
 
         !##################################################################################################
-        subroutine AllocateKgSparseUpperTriangularBiphasic (this)
+        subroutine AllocateKgSparseUpperTriangularBiphasicStaggered (this)
 
             !************************************************************************************
             ! DECLARATIONS OF VARIABLES
@@ -138,6 +160,79 @@ module ModFEMAnalysisBiphasic
             !************************************************************************************
 
         end subroutine
+        
+        subroutine AllocateKgSparseFullBiphasicMonolithic (this)
+
+            !************************************************************************************
+            ! DECLARATIONS OF VARIABLES
+            !************************************************************************************
+            ! Modules and implicit declarations
+            ! -----------------------------------------------------------------------------------
+
+            implicit none
+
+            ! Object
+            ! -----------------------------------------------------------------------------------
+            class(ClassFEMAnalysisBiphasic) :: this
+
+            ! Internal variables
+            ! -----------------------------------------------------------------------------------
+            type(SparseMatrix) :: KgSparse
+            real(8) , pointer , dimension(:,:)  :: Ke
+            integer , pointer , dimension(:)    :: GM
+            integer ::  e, nDOFel_solid, nDOFel_fluid, nDOFel_total, nDOF_solid, nDOF_fluid, nDOF_total
+            class(ClassElementBiphasic), pointer :: ElBiphasic
+            integer , pointer , dimension(:)    :: GMSolid, GMFluid, GM_Monolithic
+
+            !************************************************************************************
+            ! PRE-ALLOCATING THE GLOBAL STIFFNESS MATRIX
+            !************************************************************************************
+
+            !Allocating memory for the sparse matrix (pre-assembling)
+            !************************************************************************************
+            call this%AnalysisSettings%GetTotalNumberOfDOF (this%GlobalNodesList, nDOF_solid)
+            call this%AnalysisSettings%GetTotalNumberOfDOF_fluid (this%GlobalNodesList, nDOF_fluid)
+            
+            nDOF_total = nDOF_solid + nDOF_fluid
+            
+            !Element stiffness matrix used to allocate memory (module Analysis)
+            Ke_Memory = 1.0d0    !  Element stiffness matrix
+
+            !Initializing the sparse global stiffness matrix
+            call SparseMatrixInit( KgSparse , nDOF_total )
+
+            !Loop over elements to mapping the local-global positions in the sparse stiffness matrix
+            do e=1,size( this%ElementList )
+                
+                call ConvertElementToElementBiphasic(this%ElementList(e)%el,  ElBiphasic) ! Aponta o objeto ElBiphasic para o ElementList(e)%El mas com o type correto ClassElementBiphasic
+                call ElBiphasic%GetElementNumberDOF(this%AnalysisSettings , nDOFel_solid)
+                call ElBiphasic%GetElementNumberDOF_fluid(this%AnalysisSettings , nDOFel_fluid)
+                
+                nDOFel_total = nDOFel_solid + nDOFel_fluid
+                
+                Ke => Ke_Memory( 1:nDOFel_total , 1:nDOFel_total )
+                GMSolid => GM_Memory( 1:nDOFel_solid )
+                GMFluid => GMfluid_Memory( 1:nDOFel_fluid)
+                GM_Monolithic => GM_Monolithic_Memory(1:nDOFel_total)
+
+                call ElBiphasic%GetGlobalMapping( this%AnalysisSettings, GMSolid )
+                call ElBiphasic%GetGlobalMapping_fluid( this%AnalysisSettings, GMFluid )
+                
+                GM_Monolithic(1:nDOFel_solid) = GMSolid
+                GM_Monolithic((nDOFel_solid+1):nDOFel_total) = GMFluid + nDOF_solid ! shift no Global Mapping do fluido
+                
+                call SparseMatrixSetArray( GM_Monolithic, GM_Monolithic, Ke, KgSparse, OPT_SET )
+
+            enddo
+
+            !Converting the sparse matrix to coordinate format (used by Pardiso Sparse Solver)
+            call ConvertToCoordinateFormat( KgSparse , this%Kg%Row , this%Kg%Col , this%Kg%Val , this%Kg%RowMap)
+
+            !Releasing memory
+            call SparseMatrixKill(KgSparse)
+            
+        end subroutine
+        
         !##################################################################################################
 
 
@@ -145,8 +240,10 @@ module ModFEMAnalysisBiphasic
         ! Method ClassFEMAnalysis:
         !------------------------------------------------------------------------------------------
         ! Modifications:
-        ! Date:         Author:
-        !==========================================================================================
+        ! Date: 2021/03
+        !
+        ! Authors:  José Luís M. Thiesen
+        !           Bruno Klahr
         subroutine  SolveFEMAnalysisBiphasic( this )
 
 		    !************************************************************************************
@@ -178,32 +275,41 @@ module ModFEMAnalysisBiphasic
             !************************************************************************************
             select case ( this%AnalysisSettings%AnalysisType )
                 case ( AnalysisTypes%Quasi_Static )
-                    select case (this%AnalysisSettings%SplittingScheme)
-                        case (SplittingScheme%Drained)
+                    select case (this%AnalysisSettings%SolutionScheme)
+                        case (SolutionScheme%Sequential)
+                            select case (this%AnalysisSettings%SplittingScheme)
+                                case (SplittingScheme%Drained)
 
-                            call QuasiStaticAnalysisFEM_biphasic_SolidFluid( this%ElementList, this%AnalysisSettings, this%GlobalNodesList , &
-                                                  this%BC, this%Kg, this%KgFluid, this%NLSolver )
-                        case (SplittingScheme%Undrained)
+                                    call QuasiStaticAnalysisFEM_biphasic_SolidFluid( this%ElementList, this%AnalysisSettings, this%GlobalNodesList , &
+                                                          this%BC, this%Kg, this%KgFluid, this%NLSolver )
+                                case (SplittingScheme%Undrained)
                             
-                            call QuasiStaticAnalysisFEM_biphasic_SolidFluid( this%ElementList, this%AnalysisSettings, this%GlobalNodesList , &
-                                                  this%BC, this%Kg, this%KgFluid, this%NLSolver )
+                                    call QuasiStaticAnalysisFEM_biphasic_SolidFluid( this%ElementList, this%AnalysisSettings, this%GlobalNodesList , &
+                                                          this%BC, this%Kg, this%KgFluid, this%NLSolver )
                             
-                        case(SplittingScheme%FixedStress)
+                                case(SplittingScheme%FixedStress)
                             
-                            call QuasiStaticAnalysisFEM_biphasic_FluidSolid( this%ElementList, this%AnalysisSettings, this%GlobalNodesList , &
-                                                  this%BC, this%Kg, this%KgFluid, this%NLSolver )
+                                    call QuasiStaticAnalysisFEM_biphasic_FluidSolid( this%ElementList, this%AnalysisSettings, this%GlobalNodesList , &
+                                                          this%BC, this%Kg, this%KgFluid, this%NLSolver )
                             
-                        case(SplittingScheme%FixedStrain)
+                                case(SplittingScheme%FixedStrain)
                             
-                            call QuasiStaticAnalysisFEM_biphasic_FluidSolid( this%ElementList, this%AnalysisSettings, this%GlobalNodesList , &
-                                                  this%BC, this%Kg, this%KgFluid, this%NLSolver )
+                                    call QuasiStaticAnalysisFEM_biphasic_FluidSolid( this%ElementList, this%AnalysisSettings, this%GlobalNodesList , &
+                                                          this%BC, this%Kg, this%KgFluid, this%NLSolver )
                             
-                        case default    
-                            stop "Error in SplittingScheme - ModFEMAnalysisBiphasic"
+                                case default    
+                                    stop "Error in SplittingScheme - ModFEMAnalysisBiphasic"
+                            end select
+                        case (SolutionScheme%Monolithic)
+                            !call QuasiStaticAnalysisFEM_Biphasic_Monolithic( this%ElementList, this%AnalysisSettings, this%GlobalNodesList , &
+                            !                              this%BC, this%Kg, this%NLSolver )
+                        case default
+                            stop "Error in SolutionScheme - ModFEMAnalysisBiphasic"
                     end select
                 case default
                     stop "Error in AnalysisType - ModFEMAnalysisBiphasic"
             end select
+                
 
 		    !************************************************************************************
 
@@ -727,7 +833,7 @@ module ModFEMAnalysisBiphasic
            !integer :: CutBack, Flag_EndStep
             integer :: nDOFSolid, nDOFFluid
             real(8), parameter :: GR= (1.0d0 + dsqrt(5.0d0))/2.0d0
-            real(8) :: AuxInitialNormStagSolid, AuxInitialNormStagFluid
+            real(8) :: AuxInitialNormStagSolid, AuxInitialNormStagFluid, InitialTolFixedStress, InitialFixedStressNorm
             
             !integer :: stagg
             !real(8), allocatable, dimension(:) :: DivV_Staggered, DivV 
@@ -1014,8 +1120,23 @@ module ModFEMAnalysisBiphasic
                         
                         !NormStagFixedStress = maxval(dabs(DivV_Staggered-DivV)) !trial
                         
-                        NormStagFixedStress = FEMSoEFluid%AnalysisSettings%StaggeredParameters%FixedStressNorm
+                        InitialTolFixedStress = 1.0e-14
                         
+                        if (subStep .eq. 1) then
+                            InitialFixedStressNorm = FEMSoEFluid%AnalysisSettings%StaggeredParameters%FixedStressNorm
+                            if (InitialFixedStressNorm .lt. InitialTolFixedStress) then
+                                InitialFixedStressNorm = 1.0d0
+                            end if
+                        end if
+                        
+                        if(subStep .eq. 2) then
+                            if (InitialFixedStressNorm .eq. 1) then
+                                InitialFixedStressNorm = FEMSoEFluid%AnalysisSettings%StaggeredParameters%FixedStressNorm
+                            end if
+                        end if
+                        
+                        NormStagFixedStress = FEMSoEFluid%AnalysisSettings%StaggeredParameters%FixedStressNorm/InitialFixedStressNorm
+
                         if (NormStagSolid .lt. InitialNormStagSolid*TolSTSolid .and. NormStagFluid .lt. InitialNormStagFluid*TolSTFluid) then
                                 write(*,'(12x,a,i3,a,i3)') 'Step', ST ,' of Load Case', LC
                                 write(*,'(12x,a,i3,a,e16.9)') 'Substep: ',SubStep ,'  NORM_SOLID: ',NormStagSolid
@@ -1031,13 +1152,13 @@ module ModFEMAnalysisBiphasic
                             write(*,'(12x,a,i3,a,i3)') 'Error in Step', ST ,' of Load Case', LC
                             write(*,'(12x,a,i3,a,e16.9)') 'Substep: ',SubStep ,'  NORM_SOLID: ',NormStagSolid
                             write(*,'(12x,a,i3,a,e16.9)') 'Substep: ',SubStep ,'  NORM_FLUID: ',NormStagFluid
-                            write(*,'(12x,a,i3,a,e16.9)') 'Substep: ',SubStep ,'  NORM_FIXED_STRESS: ', FEMSoEFluid%AnalysisSettings%StaggeredParameters%FixedStressNorm
+                            write(*,'(12x,a,i3,a,e16.9)') 'Substep: ',SubStep ,'  NORM_FIXED_STRESS: ', NormStagFixedStress
                             stop
                         else 
                             write(*,'(12x,a,i3,a,i3)') 'Step', ST ,' of Load Case', LC
                             write(*,'(12x,a,i3,a,e16.9)') 'Substep: ',SubStep ,'  NORM_SOLID: ',NormStagSolid
                             write(*,'(12x,a,i3,a,e16.9)') 'Substep: ',SubStep ,'  NORM_FLUID: ',NormStagFluid
-                            write(*,'(12x,a,i3,a,e16.9)') 'Substep: ',SubStep ,'  NORM_FIXED_STRESS: ', FEMSoEFluid%AnalysisSettings%StaggeredParameters%FixedStressNorm
+                            write(*,'(12x,a,i3,a,e16.9)') 'Substep: ',SubStep ,'  NORM_FIXED_STRESS: ', NormStagFixedStress
                             FEMSoEFluid%AnalysisSettings%StaggeredParameters%FixedStressNorm = 1.0d-15
                             SubStep = SubStep + 1
                         endif     

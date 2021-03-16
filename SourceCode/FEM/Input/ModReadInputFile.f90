@@ -206,14 +206,14 @@ contains
         type (ClassAnalysis) :: AnalysisSettings
         character(len=255)::string
 
-        character(len=100),dimension(11)::ListOfOptions,ListOfValues
-        logical,dimension(11)::FoundOption
+        character(len=100),dimension(12)::ListOfOptions,ListOfValues
+        logical,dimension(12)::FoundOption
         integer :: i
 
 
         ListOfOptions=["Problem Type","Analysis Type","Nonlinear Analysis","Hypothesis of Analysis", &
                         "Element Technology","Maximum Cut Backs","Multiscale Analysis","Multiscale Model", &
-                        "Multiscale Model Fluid", "Fiber Reinforced Analysis", "Fiber Data File"]
+                        "Multiscale Model Fluid", "Fiber Reinforced Analysis", "Fiber Data File", "Solution Scheme"]
 
 
         call DataFile%FillListOfOptions(ListOfOptions,ListOfValues,FoundOption)
@@ -338,6 +338,15 @@ contains
         else
             call Error( "Fiber Reinforced Analysis not identified" )
         endif
+        
+        ! Option Solution Scheme
+        if (DataFile%CompareStrings(ListOfValues(12),"Monolithic")) then
+            AnalysisSettings%SolutionScheme=SolutionScheme%Monolithic
+        elseif (DataFile%CompareStrings(ListOfValues(12),"Sequential")) then
+            AnalysisSettings%SolutionScheme=SolutionScheme%Sequential
+        else
+            call Error( "Solution Scheme not identified" )
+        endif
 
         BlockFound(iAnalysisSettings)=.true.
         call DataFile%GetNextString(string)
@@ -380,35 +389,45 @@ contains
                 stop
             endif
         enddo      
-
-        ! Option Splitting Scheme
-        if (DataFile%CompareStrings(ListOfValues(1),"Drained")) then
-            AnalysisSettings%SplittingScheme=SplittingScheme%Drained
+        
+        select case (AnalysisSettings%SolutionScheme)
+            case (SolutionScheme%Sequential)
+                ! Option Splitting Scheme
+                if (DataFile%CompareStrings(ListOfValues(1),"Drained")) then
+                    AnalysisSettings%SplittingScheme=SplittingScheme%Drained
             
-            AnalysisSettings%StaggeredParameters%UndrainedActivator = 0
-            AnalysisSettings%StaggeredParameters%FixedStressActivator = 0
+                    AnalysisSettings%StaggeredParameters%UndrainedActivator = 0
+                    AnalysisSettings%StaggeredParameters%FixedStressActivator = 0
             
-        elseif (DataFile%CompareStrings(ListOfValues(1),"Undrained")) then
-            AnalysisSettings%SplittingScheme=SplittingScheme%Undrained
+                elseif (DataFile%CompareStrings(ListOfValues(1),"Undrained")) then
+                    AnalysisSettings%SplittingScheme=SplittingScheme%Undrained
             
-            AnalysisSettings%StaggeredParameters%UndrainedActivator = 1
-            AnalysisSettings%StaggeredParameters%FixedStressActivator = 0
+                    AnalysisSettings%StaggeredParameters%UndrainedActivator = 1
+                    AnalysisSettings%StaggeredParameters%FixedStressActivator = 0
             
-        elseif (DataFile%CompareStrings(ListOfValues(1),"Fixed Stress")) then
-            AnalysisSettings%SplittingScheme=SplittingScheme%FixedStress
+                elseif (DataFile%CompareStrings(ListOfValues(1),"Fixed Stress")) then
+                    AnalysisSettings%SplittingScheme=SplittingScheme%FixedStress
             
-            AnalysisSettings%StaggeredParameters%UndrainedActivator = 0
-            AnalysisSettings%StaggeredParameters%FixedStressActivator = 1
+                    AnalysisSettings%StaggeredParameters%UndrainedActivator = 0
+                    AnalysisSettings%StaggeredParameters%FixedStressActivator = 1
             
-        elseif (DataFile%CompareStrings(ListOfValues(1),"Fixed Strain")) then
-            AnalysisSettings%SplittingScheme=SplittingScheme%FixedStrain
+                elseif (DataFile%CompareStrings(ListOfValues(1),"Fixed Strain")) then
+                    AnalysisSettings%SplittingScheme=SplittingScheme%FixedStrain
             
-            AnalysisSettings%StaggeredParameters%UndrainedActivator = 0
-            AnalysisSettings%StaggeredParameters%FixedStressActivator = 0
+                    AnalysisSettings%StaggeredParameters%UndrainedActivator = 0
+                    AnalysisSettings%StaggeredParameters%FixedStressActivator = 0
             
-        else
-            call Error( "Splitting Scheme not identified" )
-        endif
+                else
+                    call Error( "Splitting Scheme not identified - ModReadInputFile.f90" )
+                endif
+            case (SolutionScheme%Monolithic)
+                AnalysisSettings%StaggeredParameters%UndrainedActivator = 0
+                AnalysisSettings%StaggeredParameters%FixedStressActivator = 0
+            case default 
+                call Error( "Solution Scheme not identified - ModReadInputFile.f90" )
+            end select
+            
+                
         
         AnalysisSettings%StaggeredParameters%StabilityConst = ListOfValues(2)
         AnalysisSettings%StaggeredParameters%SolidStaggTol = ListOfValues(5)
@@ -1252,7 +1271,10 @@ contains
 
     !=======================================================================================================================
     subroutine ReadLinearSolver(DataFile,LinearSolver)
+    
         implicit none
+        
+        type (ClassAnalysis)                            :: AnalysisSettings
         type(ClassParser)::DataFile
         class(ClassLinearSolver),pointer :: LinearSolver
 
@@ -1264,7 +1286,27 @@ contains
         call datafile%CheckError
         call LinearSolverIdentifier( SType , LinearSolverID )
         call AllocateNewLinearSolver( LinearSolver , LinearSOlverID )
-        call LinearSolver%ReadSolverParameters(DataFile)
+        call LinearSolver%ReadSolverParameters(DataFile)   
+        
+        !****************************************************************
+        ! Defines the matrix type (MatrixTypePARDISO_parameter), which influences the pivoting method.
+        ! The Intel MKL PARDISO solver supports the following matrices:
+        !  1 real and structurally symmetric
+        !  2 real and symmetric positive definite
+        ! -2 real and symmetric indefinite
+        !  3 complex and structurally symmetric
+        !  4 complex and Hermitian positive definite
+        ! -4 complex and Hermitian indefinite
+        !  6 complex and symmetric
+        ! 11 real and nonsymmetric
+        ! 13 complex and nonsymmetric
+        
+        if (AnalysisSettings%SolutionScheme == SolutionScheme%Monolithic.AND.AnalysisSettings%ProblemType == ProblemTypes%Biphasic) then
+            LinearSolver%MatrixTypePARDISO_parameter = 11
+        else
+            LinearSolver%MatrixTypePARDISO_parameter = -2
+        end if
+        
 
         BlockFound(iLinearSolver)=.true.
         call DataFile%GetNextString(string)
@@ -1995,23 +2037,25 @@ contains
             do j = 1,size(Force_Node)
                 call RetrieveLoadHistory( BC%SetOfLoadHistory , Force_Table(j) , BC%NodalForceBC(j)%LoadHistory )
             enddo
+            
+            if (AnalysisSettings%ProblemType .eq. ProblemTypes%Biphasic) then
+
+                allocate(BC%NodalPresBC(size(Pres_Dof,1)))
+                allocate(BC%NodalFluxBC(size(Flux_Dof,1)))
+
+                BC%NodalPresBC%dof  = 1*(Pres_Node(:)-1) + Pres_Dof(:)
+                BC%NodalFluxBC%dof  = 1*(Flux_Node(:)-1) + Flux_Dof(:)
+
+                do j = 1,size(Pres_Node)
+                    call RetrieveLoadHistory( BC%SetOfLoadHistory , Pres_Table(j) , BC%NodalPresBC(j)%LoadHistory )
+                enddo
+
+                do j = 1,size(Flux_Node)
+                    call RetrieveLoadHistory( BC%SetOfLoadHistory , Flux_Table(j) , BC%NodalFluxBC(j)%LoadHistory )
+            enddo
 
         endif
-        if (AnalysisSettings%ProblemType .eq. ProblemTypes%Biphasic) then
-
-            allocate(BC%NodalPresBC(size(Pres_Dof,1)))
-            allocate(BC%NodalFluxBC(size(Flux_Dof,1)))
-
-            BC%NodalPresBC%dof  = 1*(Pres_Node(:)-1) + Pres_Dof(:)
-            BC%NodalFluxBC%dof  = 1*(Flux_Node(:)-1) + Flux_Dof(:)
-
-            do j = 1,size(Pres_Node)
-                call RetrieveLoadHistory( BC%SetOfLoadHistory , Pres_Table(j) , BC%NodalPresBC(j)%LoadHistory )
-            enddo
-
-            do j = 1,size(Flux_Node)
-                call RetrieveLoadHistory( BC%SetOfLoadHistory , Flux_Table(j) , BC%NodalFluxBC(j)%LoadHistory )
-            enddo
+            
 
         endif
 

@@ -5,7 +5,7 @@
 POST PROCESSOR 
 
 	Post Processor = HyperView 12 !None !GiD 7 !
-	Results = Displacements , Cauchy Stress, Pressure !, Pressure  ,  Relative Velocity !, Fiber_Direction! Logarithmic Strain !, Fiber_Direction , Fiber_Dissipation , Matrix_Dissipation !,  
+	Results = Displacements , Cauchy Stress, Pressure, Biphasic Total Cauchy Stress !, Pressure  ,  Relative Velocity !, Fiber_Direction! Logarithmic Strain !, Fiber_Direction , Fiber_Dissipation , Matrix_Dissipation !,  
 	File Name = hypermesh_results.hwascii
 	
 END POST PROCESSOR 

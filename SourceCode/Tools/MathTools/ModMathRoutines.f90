@@ -646,7 +646,7 @@ module ModMathRoutines
     function Square_Voigt (A,B) result(T)
 
         implicit none
-        real(8),dimension(6)   :: A,B
+        real(8),dimension(6)   :: A,B 
         real(8),dimension(6,6) :: T
 
       T(1,1) = A(1) * B(1)
@@ -1138,7 +1138,7 @@ module ModMathRoutines
 !######################################################################################################################################################################################
 
 !######################################################################################################################################################################################
-    subroutine MatrixVectorMultiply ( trans, A, x, y, alpha, beta )
+    subroutine MatrixVectorMultiply ( trans, A, x, y, alpha, beta ) 
 
         implicit none
 

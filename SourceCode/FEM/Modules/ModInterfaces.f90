@@ -41,6 +41,28 @@ module ModInterfaces
         end subroutine
         !==========================================================================================
         
+        subroutine AssembleGlobalMatrixMonolithicBiphasic( GM_i , GM_j,  Ke_ij , Kg )
+
+        !************************************************************************************
+        ! DECLARATIONS OF VARIABLES
+        !************************************************************************************
+        ! Modules and implicit declarations
+        ! -----------------------------------------------------------------------------------
+        use ModGlobalSparseMatrix
+        implicit none
+
+        ! Input variables
+        ! -----------------------------------------------------------------------------------
+        integer , dimension(:) , intent(in)   ::  GM_i, GM_j
+        real(8) , dimension(:,:) , intent(in) :: Ke_ij
+
+        ! Input/Output variables
+        ! -----------------------------------------------------------------------------------
+        type (ClassGlobalSparseMatrix) :: Kg
+
+    
+        end subroutine
+        
         !==========================================================================================
         subroutine AssembleGlobalMatrix( GM , Ke , Kg )
 
@@ -196,7 +218,30 @@ module ModInterfaces
 
         end subroutine
         !==========================================================================================
+        subroutine TangentStiffnessMatrixMonolithic( AnalysisSettings , ElementList , DeltaT, VS, P, Kg )
 
+            !************************************************************************************
+            ! DECLARATIONS OF VARIABLES
+            !************************************************************************************
+            ! Modules and implicit declarations
+            ! -----------------------------------------------------------------------------------
+            use ModAnalysis
+            use ModElementLibrary
+            use ModGlobalSparseMatrix
+            use ModTimer
+
+            implicit none
+
+            ! Input variables
+            ! -----------------------------------------------------------------------------------
+            type(ClassAnalysis)                       , intent(inout) :: AnalysisSettings
+            type(ClassElementsWrapper) , dimension(:) , intent(in)    :: ElementList
+            type(ClassGlobalSparseMatrix)             , intent(in)    :: Kg
+            type(ClassTimer)                                          :: Tempo
+            real(8) ,  dimension(:)                                   :: P, Vs
+            real(8)                                                   :: DeltaT
+            
+        end subroutine
 
         !==========================================================================================
         subroutine TangentStiffnessMatrix( AnalysisSettings , ElementList ,  nDOF, Kg )

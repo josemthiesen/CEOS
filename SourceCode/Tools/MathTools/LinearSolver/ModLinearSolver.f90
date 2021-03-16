@@ -19,6 +19,7 @@ module ModLinearSolver
     type , abstract :: ClassLinearSolver
 
         type(ClassStatus) :: Status
+        integer           :: MatrixTypePARDISO_parameter
 
         contains
             ! Class Methods

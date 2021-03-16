@@ -47,6 +47,7 @@ module ModElement
             procedure :: ElementInternalForce
             !procedure :: ExternalForce
             procedure :: Matrix_B_and_G
+            procedure :: MatrixQLA_ThreeDimensional
             procedure :: GetGlobalMapping
             procedure :: GetElementNumberDOF
             procedure :: DeformationGradient
@@ -83,16 +84,15 @@ module ModElement
             
             ! Class Methods - Fluid
             !------------------------------------------------------------------------------------
-            procedure :: ElementStiffnessMatrix_fluid
-            procedure :: ElementStiffnessMatrix_solid
+            procedure :: ElementStiffnessMatrix_Kpp
+            procedure :: ElementStiffnessMatrix_Kuu
+            procedure :: ElementStiffnessMatrix_Kup
+            procedure :: ElementStiffnessMatrix_Kpu
             procedure :: ElementInternalForce_fluid
             procedure :: ElementInternalForce_solid
             procedure :: MatrixH_ThreeDimensional
             procedure :: GetGlobalMapping_fluid
             procedure :: GetElementNumberDOF_fluid
-            !procedure :: DeformationGradient
-            !procedure :: ElementVolume
-
             
             ! Fluid
             !------------------------------------------------------------------------------------
@@ -580,7 +580,7 @@ module ModElement
 	    
         ! Solid
         !==========================================================================================
-        subroutine ElementStiffnessMatrix_solid( this, Pe, Ke, AnalysisSettings )
+        subroutine ElementStiffnessMatrix_Kuu( this, Pe, Ke, AnalysisSettings )
 
 		    !************************************************************************************
             ! DECLARATIONS OF VARIABLES
@@ -763,10 +763,453 @@ module ModElement
 		    !************************************************************************************
 
         end subroutine
+        
+        subroutine ElementStiffnessMatrix_Kup( this, Ke, AnalysisSettings )
+
+		    !************************************************************************************
+            ! DECLARATIONS OF VARIABLES
+		    !************************************************************************************
+            ! Modules and implicit declarations
+            ! -----------------------------------------------------------------------------------
+            use ModTimer
+            use ModMathRoutines_NEW
+
+            implicit none
+
+            ! Object
+            ! -----------------------------------------------------------------------------------
+            class(ClassElementBiphasic) :: this
+
+            ! Input variables
+            ! -----------------------------------------------------------------------------------
+            type(ClassAnalysis) , intent(inout) :: AnalysisSettings
+            type(ClassTimer)                    :: Tempo
+
+            ! Output variables
+            ! -----------------------------------------------------------------------------------
+            real(8) , pointer , dimension(:,:) , intent(out) :: Ke
+
+            ! Internal variables
+            ! -----------------------------------------------------------------------------------
+            integer							    :: NDOFel_solid, NDOFel_fluid, nDOFel_total, gp, i
+            real(8)							    :: detJ
+            real(8) , pointer , dimension(:)    :: Weight
+            real(8) , pointer , dimension(:,:)  :: NaturalCoord
+            real(8) , pointer , dimension(:,:)  :: B , G
+            real(8)                             :: FactorAxi
+            real(8) , pointer , dimension(:)    :: Nf, hs
+            real(8) , allocatable , dimension(:,:)  :: hs_transNf
+
+		    !************************************************************************************
+
+		    !************************************************************************************
+            ! ELEMENT STIFFNESS MATRIX CALCULATION
+		    !************************************************************************************
+
+            ! Number of degrees of freedom of solid
+            call this%GetElementNumberDOF(AnalysisSettings,NDOFel_solid)
+            ! Number of degrees of freedom of fluid
+            call this%GetElementNumberDOF(AnalysisSettings,NDOFel_fluid)
+            
+            allocate(hs_transNf(nDOFel_solid,nDOFel_fluid))
+            
+            ! Allocating matrix B
+            B => B_Memory(  1:AnalysisSettings%BrowSize , 1:NDOFel_solid )
+
+            ! Allocating matrix G
+            G => G_Memory(  1:AnalysisSettings%GrowSize , 1:NDOFel_solid )
+            
+            
+            ! Allocating element stiffness matrix
+            Ke=> Ke_Memory( 1:NDOFel_solid , 1:NDOFel_fluid )
+            Ke=0.0d0
+
+            ! Allocating matrix hs
+            hs => hs_Memory(1:NDOFel_solid)
+
+            ! Allocating matrix N
+            Nf => Nf_Memory( 1:NDOFel_fluid)
+            
+            ! Retrieving gauss points parameters for numerical integration
+            call this%GetGaussPoints(NaturalCoord,Weight)
+
+            !Loop over gauss points
+            
+            do gp = 1, size(NaturalCoord,dim=1)
+            
+                !Get matrix B, G and the Jacobian determinant
+                call this%Matrix_B_and_G(AnalysisSettings, NaturalCoord(gp,:) , B, G , detJ , FactorAxi )
+        
+                !Get the matrix Nf
+                Nf=0.0d0
+                call this%GetShapeFunctions_fluid(NaturalCoord(gp,:) , Nf )
+
+                !************************************************************************************************
+                !Compute the matrix hs
+                hs=0.0d0
+
+                hs(:) = B(1,:)+B(2,:)+B(3,:) !Strain11+Strain22+Strain33
+                 
+                !B=0.0d0
+                !B(1,[(i,i=1,nDOFel,3)])=DifSF(:,1) !Strain 11
+                !B(2,[(i,i=2,nDOFel,3)])=DifSF(:,2) !Strain 22
+                !B(3,[(i,i=3,nDOFel,3)])=DifSF(:,3) !Strain 33
+                !B(4,[(i,i=1,nDOFel,3)])=DifSF(:,2) ; B(4,[(i,i=2,nDOFel,3)])=DifSF(:,1) !Strain 12
+                !B(5,[(i,i=3,nDOFel,3)])=DifSF(:,2) ; B(5,[(i,i=2,nDOFel,3)])=DifSF(:,3) !Strain 23
+                !B(6,[(i,i=3,nDOFel,3)])=DifSF(:,1) ; B(6,[(i,i=1,nDOFel,3)])=DifSF(:,3) !Strain 13
+                !************************************************************************************************
+                                            
+                call VectorMultiplyTransposeVector(hs, Nf, hs_transNf)
+                
+                Ke = Ke + hs_transNf*Weight(gp)*detJ*FactorAxi
+                
+            enddo                    
+
+		    !************************************************************************************
+
+        end subroutine
+        
+        subroutine ElementStiffnessMatrix_Kpu( this, DeltaT, Pe, Vse, Ke, AnalysisSettings )
+
+		    !************************************************************************************
+            ! DECLARATIONS OF VARIABLES
+		    !************************************************************************************
+            ! Modules and implicit declarations
+            ! -----------------------------------------------------------------------------------
+            use ModTimer
+            use ModMathRoutines_NEW
+            
+            implicit none
+
+            ! Object
+            ! -----------------------------------------------------------------------------------
+            class(ClassElementBiphasic) :: this
+
+            ! Input variables
+            ! -----------------------------------------------------------------------------------
+            type(ClassAnalysis) , intent(inout) :: AnalysisSettings
+            type(ClassTimer)                    :: Tempo
+            real(8)                             :: DeltaT
+            real(8)  , dimension(:)             :: Pe, Vse
+
+            ! Output variables
+            ! -----------------------------------------------------------------------------------
+            real(8) , pointer , dimension(:,:) , intent(out) :: Ke
+
+            ! Internal variables
+            ! -----------------------------------------------------------------------------------
+            integer							    :: NDOFel_solid, NDOFel_fluid , gp, i
+            real(8)							    :: detJ
+            real(8) , pointer , dimension(:)    :: Weight
+            real(8) , pointer , dimension(:,:)  :: NaturalCoord, Kf
+            real(8) , pointer , dimension(:,:)  :: B , G, T , Q,  H
+            real(8)                             :: FactorAxi
+            real(8) , pointer , dimension(:)    :: Nf
+            real(8) , pointer , dimension(:,:)  :: bs
+            real(8) , dimension(9)              :: Q_Vse
+            real(8) , pointer, dimension(:,:)   :: Nf_Q_vse, Nfbs, transHtransT, Kftg, transHtransTKftg
+            real(8)                             :: bsVse 
+            
+		    !************************************************************************************
+            ! ELEMENT STIFFNESS MATRIX CALCULATION 
+		    !************************************************************************************
+
+            ! Number of degrees of freedom of solid
+            call this%GetElementNumberDOF(AnalysisSettings,NDOFel_solid)
+            ! Number of degrees of freedom of fluid
+            call this%GetElementNumberDOF(AnalysisSettings,NDOFel_fluid)
+            
+            ! Allocating intermediate matrices **********************
+            
+            ! Nf*Q*vse
+            Nf_Q_vse => Nf_Q_vse_Memory (1: NDOFel_fluid, 1:  AnalysisSettings%GrowSize )
+            
+            ! Nf*bs
+            Nfbs => Nfbs_Memory (1: NDOFel_fluid, 1:NDOFel_solid)
+            
+            ! H^(T)*T^(T)
+            transHtransT => transHtransT_Memory (1:NDOFel_fluid, 1: AnalysisSettings%AnalysisDimension )
+            
+            ! Tangent Permeability Tensor
+            Kftg => Kftg_Memory (1: AnalysisSettings%BrowSize, 1: AnalysisSettings%BrowSize)
+            
+            ! H^(T)*T^(T)*Kftg
+            transHtransTKftg => transHtransTKftg_Memory (1: NDOFel_fluid, 1: AnalysisSettings%BrowSize)
+            
+            ! ******************************************************* 
+            
+            ! Allocating element stiffness matrix
+            Ke=> Ke_Memory( 1:NDOFel_fluid , 1:NDOFel_solid )
+            Ke=0.0d0
+
+            ! Allocating matrix B
+            B => B_Memory(  1:AnalysisSettings%BrowSize , 1:NDOFel_solid )
+
+            ! Allocating matrix G
+            G => G_Memory(  1:AnalysisSettings%GrowSize , 1:NDOFel_solid )
+            
+            ! Allocating matrix Q
+            Q => Q_Memory(  1:AnalysisSettings%GrowSize , 1:NDOFel_solid )
+            
+            ! Allocating matrix T
+            T => T_Memory(  1:AnalysisSettings%BrowSize , 1:AnalysisSettings%AnalysisDimension )            
+
+            ! Allocating matrix bs
+            bs => bs_Memory(1:NDOFel_solid, 1:1)
+
+            ! Allocating matrix N
+            Nf => Nf_Memory( 1:NDOFel_fluid)
+            
+            ! Allocating matrix H
+            H => H_Memory(  1:AnalysisSettings%AnalysisDimension , 1:NDOFel_fluid )
+            
+            
+            ! Retrieving gauss points parameters for numerical integration
+            call this%GetGaussPoints(NaturalCoord,Weight)
+
+            !Loop over gauss points
+            
+            do gp = 1, size(NaturalCoord,dim=1) 
+                
+                !Get matrix H
+                call this%MatrixH_ThreeDimensional(AnalysisSettings, NaturalCoord(gp,:), H, detJ , FactorAxi)
+                
+                call MatrixT_ThreeDimensional(H, Pe, T)
+            
+                !Get matrix B, G and the Jacobian determinant
+                call this%Matrix_B_and_G(AnalysisSettings, NaturalCoord(gp,:) , B, G , detJ , FactorAxi )
+                
+                ! declarar: Q_Vse (9), Nf_Q_vse (ndof_fluid, 9), Nfbs (ndof_fluid, ndof_solid), HKf (ndof_fluid, 3), HkfH (ndof_fluid, ndof_fluid)
+                ! HKfH_Pe(ndof_fluid,1) HKfH_Pe_bt(ndof_fluid, ndof_solid),  HKfL(ndof_fluid,9), HA(ndof_fluid,9)
+                
+                !Element stiffness matrix (K_pu_1)
+                !---------------------------------------------------------------------------------------------------
+                ! Computes Q*Vse
+                call MatrixVectorMultiply ( "N", Q, Vse, Q_Vse, 1.0d0, 0.0d0 ) 
+                
+                ! Computes Nf*(Q*Vse)^T
+                call VectorMultiplyTransposeVector(Nf, Q_Vse, Nf_Q_vse)
+                
+                ! Computes Ke = Ke + Ke_pu_1
+                ! Computes K_pu_1 = Nf*(Q*Vse)^T * G
+                call MatrixMatrixMultiply ( Nf_Q_vse, G, Ke, -Weight(gp)*detJ*FactorAxi, 1.0d0 )
+                
+                !Element stiffness matrix (K_pu_2)
+                !---------------------------------------------------------------------------------------------------
+                ! Computes Nf*(bs)^T
+                call VectorMultiplyTransposeVector_MatrixForm(Nf, bs, Nfbs)
+                ! Computes Ke = Ke + Ke_pu_2
+                Ke = Ke + (1/DeltaT)*Nfbs*Weight(gp)*detJ*FactorAxi 
+                
+                !Element stiffness matrix (K_pu_3)
+                !--------------------------------------------------------------------------------------------------
+                ! Computes Ke = Ke + Ke_pu_3
+                ! Computes K_pu_3 = Nf*b^(T)*Vse*b^(T)
+                call DotProductMatrixForm_Vector( bs, Vse, bsVse) !dot_product funciona apenas p vetor-vetor
+                Ke = Ke + bsVse*Nfbs*Weight(gp)*detJ*FactorAxi 
+                
+                !Element stiffness matrix (K_pu_4)
+                !--------------------------------------------------------------------------------------------------
+                ! Computes K_pu_4 = H^(T) T^(T) K B ! 
+                call MatrixMatrixMultiply (transpose(H), transpose(T), transHtransT, 1.0d0, 0.0d0 )
+                
+                ! Partial derivative of Kf (second-order permeability tensor) in relation to 
+                ! Euler-Lagrange strain tensor E
+                call this%GaussPoints(gp)%GetTangentPermeabilityTensor(Kftg) 
+                call MatrixMatrixMultiply(transHtransT,Kftg, transHtransTKftg, 1.0d0, 0.0d0 )
+                
+                ! Computes Ke = Ke + Ke_pu_4
+                call MatrixMatrixMultiply(transHtransTKftg, B, Ke, -Weight(gp)*detJ*FactorAxi, 1.0d0 )
+                
+            enddo                    
+
+		    !************************************************************************************
+
+        end subroutine
+        
+        subroutine ElementStiffnessMatrix_Kpu_MUSEUM( this, Pe, Vse, Ke, AnalysisSettings )
+
+		    !************************************************************************************
+            ! DECLARATIONS OF VARIABLES
+		    !************************************************************************************
+            ! Modules and implicit declarations
+            ! -----------------------------------------------------------------------------------
+            use ModTimer
+            use ModMathRoutines_NEW
+            
+            implicit none
+
+            ! Object
+            ! -----------------------------------------------------------------------------------
+            class(ClassElementBiphasic) :: this
+
+            ! Input variables
+            ! -----------------------------------------------------------------------------------
+            type(ClassAnalysis) , intent(inout) :: AnalysisSettings
+            type(ClassTimer)                    :: Tempo
+            real(8)  , dimension(:)             :: Pe, Vse
+
+            ! Output variables
+            ! -----------------------------------------------------------------------------------
+            real(8) , pointer , dimension(:,:) , intent(out) :: Ke
+
+            ! Internal variables
+            ! -----------------------------------------------------------------------------------
+            integer							    :: NDOFel_solid, NDOFel_fluid , gp, i
+            real(8)							    :: detJ
+            real(8) , pointer , dimension(:)    :: Weight
+            real(8) , pointer , dimension(:,:)  :: NaturalCoord, Kf
+            real(8) , pointer , dimension(:,:)  :: B , G, Q, L, A, H
+            real(8)                             :: FactorAxi
+            real(8) , pointer , dimension(:)    :: Nf
+            real(8) , pointer , dimension(:,:)  :: bs
+            real(8) , dimension(9)               :: Q_Vse
+            real(8) , allocatable, dimension(:,:) :: Nf_Q_vse, Nfbs, HKf, HkfH, HKfH_Pe_bt, HKfL, HA
+            real(8) , allocatable, dimension(:)     :: HKfH_Pe
+            real(8)                                 :: bsVse
+            
+		    !************************************************************************************
+            ! ELEMENT STIFFNESS MATRIX CALCULATION
+		    !************************************************************************************
+
+            ! Number of degrees of freedom of solid
+            call this%GetElementNumberDOF(AnalysisSettings,NDOFel_solid)
+            ! Number of degrees of freedom of fluid
+            call this%GetElementNumberDOF(AnalysisSettings,NDOFel_fluid)
+            
+            allocate(Nf_Q_vse(NDOFel_fluid, AnalysisSettings%GrowSize))
+            allocate(Nfbs(NDOFel_fluid, NDOFel_solid))
+            allocate(HKf(NDOFel_fluid, AnalysisSettings%AnalysisDimension))
+            allocate(HkfH(NDOFel_fluid, NDOFel_fluid))
+            allocate(HKfH_Pe(NDOFel_fluid))
+            allocate(HKfH_Pe_bt(NDOFel_fluid, NDOFel_solid))
+            allocate(HKfL(NDOFel_fluid, AnalysisSettings%GrowSize))
+            allocate(HA(NDOFel_fluid, AnalysisSettings%GrowSize))
+            
+            !declarar : Nf_Q_vse (ndof_fluid, 9), Nfbs (ndof_fluid, ndof_solid), HKf (ndof_fluid, 3), HkfH (ndof_fluid, ndof_fluid)
+            ! HKfH_Pe(ndof_fluid,1) HKfH_Pe_bt(ndof_fluid, ndof_solid),  HKfL(ndof_fluid,9), HA(ndof_fluid,9)
+            
+            ! Allocating element stiffness matrix
+            Ke=> Ke_Memory( 1:NDOFel_fluid , 1:NDOFel_solid )
+            Ke=0.0d0
+
+            ! Allocating matrix B
+            B => B_Memory(  1:AnalysisSettings%BrowSize , 1:NDOFel_solid )
+
+            ! Allocating matrix G
+            G => G_Memory(  1:AnalysisSettings%GrowSize , 1:NDOFel_solid )
+
+            ! Allocating matrix bs
+            bs => bs_Memory(1:NDOFel_solid, 1:1)
+
+            ! Allocating matrix N
+            Nf => Nf_Memory( 1:NDOFel_fluid)
+            
+            ! Allocating matrix Q
+            Q => Q_Memory(  1:AnalysisSettings%GrowSize , 1:NDOFel_solid )
+            
+            ! Allocating matrix L
+            L => L_Memory(  1:AnalysisSettings%AnalysisDimension , 1:AnalysisSettings%GrowSize )
+            
+            ! Allocating matrix A
+            A => A_Memory(  1:AnalysisSettings%AnalysisDimension , 1:AnalysisSettings%GrowSize )
+            
+            ! Allocating matrix H
+            H => H_Memory(  1:AnalysisSettings%AnalysisDimension , 1:NDOFel_fluid )
+            
+            ! Allocating permeability tensor
+            Kf => Kf_Memory(1:3, 1:3)
+            
+            ! Retrieving gauss points parameters for numerical integration
+            call this%GetGaussPoints(NaturalCoord,Weight)
+
+            !Loop over gauss points
+            
+            do gp = 1, size(NaturalCoord,dim=1) 
+                
+                !Get the permeability k of the Gauss Point
+                Kf = 0.0d0
+                call this%GaussPoints(gp)%GetPermeabilityTensor(Kf)
+                
+                !Get matrix H
+                call this%MatrixH_ThreeDimensional(AnalysisSettings, NaturalCoord(gp,:), H, detJ , FactorAxi)
+                
+                call this%MatrixQLA_ThreeDimensional(AnalysisSettings, NaturalCoord(gp,:), H, Pe, Kf, Q, L, A, detJ , FactorAxi )
+            
+                !Get matrix B, G and the Jacobian determinant
+                call this%Matrix_B_and_G(AnalysisSettings, NaturalCoord(gp,:) , B, G , detJ , FactorAxi )
+                
+                ! declarar: Q_Vse (9), Nf_Q_vse (ndof_fluid, 9), Nfbs (ndof_fluid, ndof_solid), HKf (ndof_fluid, 3), HkfH (ndof_fluid, ndof_fluid)
+                ! HKfH_Pe(ndof_fluid,1) HKfH_Pe_bt(ndof_fluid, ndof_solid),  HKfL(ndof_fluid,9), HA(ndof_fluid,9)
+                
+                !Element stiffness matrix (K_up_1)
+                !---------------------------------------------------------------------------------------------------
+                ! Computes Q*Vse
+                call MatrixVectorMultiply ( "N", Q, Vse, Q_Vse, 1.0d0, 0.0d0 ) 
+                
+                ! Computes Nf*(Q*Vse)^T
+                call VectorMultiplyTransposeVector(Nf, Q_Vse, Nf_Q_vse)
+                
+                ! Computes Ke = Ke + Ke_pu_1
+                ! Computes K_pu_1 = Nf*(Q*Vse)^T * G
+                call MatrixMatrixMultiply ( Nf_Q_vse, G, Ke, Weight(gp)*detJ*FactorAxi, 1.0d0 )
+                
+                !Element stiffness matrix (K_up_2)
+                !--------------------------------------------------------------------------------------------------
+                ! Computes Nf*(bs)^T
+                call VectorMultiplyTransposeVector_MatrixForm(Nf, bs, Nfbs)
+                
+                ! Computes Ke = Ke + Ke_pu_2
+                ! Computes K_pu_2 = Nf*b^(T)*Vse*b^(T)
+                call DotProductMatrixForm_Vector( bs, Vse, bsVse) !dot_product funciona apenas p vetor-vetor
+                Ke = Ke + bsVse*Nfbs*Weight(gp)*detJ*FactorAxi 
+                
+                !Element stiffness matrix (K_up_3)
+                !--------------------------------------------------------------------------------------------------
+                ! Computes H^(T)*Kf
+                call MatrixMatrixMultiply_Trans ( H, Kf, HKf, 1.0d0, 0.0d0 )
+                
+                ! Computes H^(T)*Kf*H
+                call MatrixMatrixMultiply ( Hkf, H, HKfH, 1.0d0, 0.0d0 )
+                
+                ! Computes H^(T)*Kf*H*Pe
+                call MatrixVectorMultiply ( "N", HKfH, Pe, HKfH_Pe, 1.0d0, 0.0d0 ) !HKfH_Pe_bt
+                
+                ! Computes H^(T)*Kf*H*Pe*b^(T)
+                call VectorMultiplyTransposeVector_MatrixForm(HKfH_Pe, bs, HKfH_Pe_bt)
+                
+                ! Computes Ke = Ke + Ke_pu_3
+                ! Computes K_pu_3 = H^(T)*Kf*H*Pe*b^(T)
+                Ke = Ke + HKfH_Pe_bt*Weight(gp)*detJ*FactorAxi
+                
+                !Element stiffness matrix (K_up_4)
+                !--------------------------------------------------------------------------------------------------
+                ! Computes H^(T)*Ahat
+                call MatrixMatrixMultiply_Trans ( H, A, HA, 1.0d0, 0.0d0 )
+                
+                ! Computes Ke = Ke + Ke_pu_4
+                ! Computes K_pu_4 = H^(T)*Ahat*G
+                call MatrixMatrixMultiply ( HA, G, Ke, Weight(gp)*detJ*FactorAxi, 1.0d0 )
+                
+                !Element stiffness matrix (K_up_5)
+                !--------------------------------------------------------------------------------------------------
+                ! Computes H^(T)*Kf*L
+                call MatrixMatrixMultiply ( HKf, L, HKfL, 1.0d0, 0.0d0 )
+                
+                ! Computes Ke = Ke + Ke_pu_5
+                ! Computes K_pu_5 = H^(T)*Kf*L*Q
+                call MatrixMatrixMultiply ( HKfL, Q, Ke, Weight(gp)*detJ*FactorAxi, 1.0d0 )
+
+                
+            enddo                    
+
+		    !************************************************************************************
+
+        end subroutine
      
         ! Fluid
         !==========================================================================================
-        subroutine ElementStiffnessMatrix_fluid( this, Ke, AnalysisSettings )
+        subroutine ElementStiffnessMatrix_Kpp( this, Ke, AnalysisSettings )
 
 		    !************************************************************************************
             ! DECLARATIONS OF VARIABLES
@@ -821,6 +1264,7 @@ module ModElement
 
             ! Allocating permeability tensor
             Kf => Kf_Memory(1:3, 1:3)
+
             
             ! Allocating matrix Nf
             Nf => Nf_Memory( 1:NDOFel_fluid)
@@ -1177,7 +1621,7 @@ module ModElement
                 !Get the permeability k of the Gauss Point
                 Kf = 0.0d0
                 call this%GaussPoints(gp)%GetPermeabilityTensor(Kf)
-
+                
                 !Get matrix H
                 call this%MatrixH_ThreeDimensional(AnalysisSettings, NaturalCoord(gp,:), H, detJ , FactorAxi)
 
@@ -1231,6 +1675,9 @@ module ModElement
                 
                 P_CurrentStaggered = dot_product(Nf,Pe)
                 
+                !div_vs_CurrentStaggered = (FixedStressActivator*alpha*(P_CurrentStaggered-P_PreviousStaggered)/(Kd_PreviousStep - P_PreviousStep)) + &
+                !                            dot_product(bs(:,1),VSe)
+                
                 div_vs_CurrentStaggered = (FixedStressActivator*alpha*(P_CurrentStaggered-P_PreviousStaggered)/(Kd_PreviousStep - P_PreviousStep)) + &
                                             dot_product(bs(:,1),VSe)
                 
@@ -1252,13 +1699,14 @@ module ModElement
 		    !************************************************************************************
 
         end subroutine
-
+        
         !==========================================================================================
         ! Method MatrixB: Select the linear matrix B depending on the analysis type
         !------------------------------------------------------------------------------------------
         ! Modifications:
         ! Date:         Author:
         !==========================================================================================
+        
         subroutine Matrix_B_and_G( this, AnalysisSettings , NaturalCoord , B , G , detJ , FactorAxi)
 
 		    !************************************************************************************
@@ -1304,7 +1752,7 @@ module ModElement
 		    !************************************************************************************
 
         end subroutine
-        !==========================================================================================
+
 
         !==========================================================================================
         ! Method MatrixB_PlaneStrain_and_PlaneStress: Routine that evaluates the matrix B in plane
@@ -1509,7 +1957,155 @@ module ModElement
 
         end subroutine
         !==========================================================================================
+        
+        subroutine MatrixT_ThreeDimensional(H, Pe, T)
 
+ 		    !************************************************************************************
+            ! DECLARATIONS OF VARIABLES
+		    !************************************************************************************
+            ! Modules and implicit declarations
+            ! -----------------------------------------------------------------------------------
+            implicit none
+
+            ! Input variables
+            ! -----------------------------------------------------------------------------------
+            real(8) , dimension(:) , intent(in) :: Pe
+            real(8) , pointer, dimension(:,:) , intent(in) :: H
+            
+            ! Output variables
+            ! -----------------------------------------------------------------------------------
+            real(8) , pointer, dimension(:,:), intent(out) :: T
+
+            ! Internal variables
+            ! -----------------------------------------------------------------------------------
+            integer                             :: i , j , n , nNodes
+            real(8) , dimension(3)              :: Tvector
+            
+		    !************************************************************************************
+            ! EVALUATE THE MATRIX T IN THREE-DIMENSIONAL CASE
+		    !************************************************************************************
+            
+            Tvector = 0.0d0
+            call MatrixVectorMultiply ( "N", H, Pe, Tvector, 1.0d0, 0.0d0 )
+            
+            T= 0.0d0
+            T(1,1) = Tvector(1)
+            T(2,2) = Tvector(2)
+            T(3,3) = Tvector(3)
+            T(4,1) = Tvector(2)
+            T(4,2) = Tvector(1)            
+            T(5,2) = Tvector(3)
+            T(5,3) = Tvector(2)
+            T(6,1) = Tvector(3)
+            T(6,3) = Tvector(1)
+
+		    !************************************************************************************
+
+        end subroutine
+        
+        
+        subroutine MatrixQLA_ThreeDimensional(this, AnalysisSettings, NaturalCoord, H, Pe, Kf, Q, L, A, detJ , FactorAxi )
+
+ 		    !************************************************************************************
+            ! DECLARATIONS OF VARIABLES
+		    !************************************************************************************
+            ! Modules and implicit declarations
+            ! -----------------------------------------------------------------------------------
+            implicit none
+
+            ! Object
+            ! -----------------------------------------------------------------------------------
+            class(ClassElement) :: this
+
+            ! Input variables
+            ! -----------------------------------------------------------------------------------
+            real(8) , dimension(:) , intent(in) :: NaturalCoord, Pe
+            real(8) , pointer, dimension(:,:) , intent(in) :: Kf, H
+            
+            ! Output variables
+            ! -----------------------------------------------------------------------------------
+            type(ClassAnalysis) , intent(inout) :: AnalysisSettings
+            real(8) , intent(out) :: detJ , FactorAxi
+            real(8) , pointer, dimension(:,:), intent(out) :: Q, L, A
+
+            ! Internal variables
+            ! -----------------------------------------------------------------------------------
+            integer                             :: i , j , n , nNodes , DimProb , nDOFel
+            real(8) , dimension(:,:) , pointer  :: DifSF
+            real(8) , dimension(3)              :: Ahat, Lhat
+            real(8) , dimension(AnalysisSettings%AnalysisDimension,AnalysisSettings%AnalysisDimension) :: Jacob
+            
+		    !************************************************************************************
+            ! EVALUATE THE LINEAR MATRIX B IN THREE-DIMENSIONAL CASE
+		    !************************************************************************************
+            FactorAxi = 1.0d0
+
+            nNodes = this%GetNumberOfNodes()
+
+            DimProb = AnalysisSettings%AnalysisDimension
+
+            DifSF => DifSF_Memory ( 1:nNodes , 1:DimProb )
+
+            call this%GetDifShapeFunctions(NaturalCoord , DifSF )
+
+            !Jacobian
+            Jacob=0.0d0
+            do i=1,DimProb
+                do j=1,DimProb
+                    do n=1,nNodes
+                        Jacob(i,j)=Jacob(i,j) + DifSf(n,i) * this%ElementNodes(n)%Node%Coord(j)
+                    enddo
+                enddo
+            enddo
+
+            !Determinant of the Jacobian
+            detJ = det(Jacob)
+            if (detJ<=1.0d-13 ) then
+                return
+            endif
+
+            !Inverse of the Jacobian
+            Jacob = inverse(Jacob)
+
+            !Convert the derivatives in the natural coordinates to global coordinates.
+            do i=1,size(DifSf,dim=1)
+                !call MatrixVectorMultiply ( 'N', Jacob, DifSf(i,:) , DifSf(i,:), 1.0d0, 0.0d0 ) !y := alpha*op(A)*x + beta*y
+                DifSf(i,:) = matmul( Jacob , DifSf(i,:) )
+            enddo
+
+            Q = 0.0d0
+            Q(1,[(i,i=1,nDOFel,3)])=DifSF(:,1) !d_Displacement1/d_x1
+            Q(2,[(i,i=2,nDOFel,3)])=DifSF(:,1) !d_Displacement2/d_x1
+            Q(3,[(i,i=3,nDOFel,3)])=DifSF(:,1) !d_Displacement3/d_x1
+
+            Q(4,[(i,i=1,nDOFel,3)])=DifSF(:,2) !d_Displacement1/d_x2
+            Q(5,[(i,i=2,nDOFel,3)])=DifSF(:,2) !d_Displacement2/d_x2
+            Q(6,[(i,i=3,nDOFel,3)])=DifSF(:,2) !d_Displacement3/d_x2
+
+            Q(7,[(i,i=1,nDOFel,3)])=DifSF(:,3) !d_Displacement1/d_x3
+            Q(8,[(i,i=2,nDOFel,3)])=DifSF(:,3) !d_Displacement2/d_x3
+            Q(9,[(i,i=3,nDOFel,3)])=DifSF(:,3) !d_Displacement3/d_x3
+            
+            Lhat = 0.0d0
+            call MatrixVectorMultiply ( "N", H, Pe, Lhat, 1.0d0, 0.0d0 )
+            
+            L= 0.0d0
+            L(1,[(i,i=1,3)]) = Lhat(:)
+            L(2,[(i,i=4,6)]) = Lhat(:)
+            L(3,[(i,i=7,9)]) = Lhat(:)
+            
+            Ahat = 0.0d0
+            call MatrixVectorMultiply ( "N", Kf, Lhat, Ahat, 1.0d0, 0.0d0 )
+            
+            A= 0.0d0
+            A(1,[(i,i=1,3)]) = Ahat(:)
+            A(2,[(i,i=4,6)]) = Ahat(:)
+            A(3,[(i,i=7,9)]) = Ahat(:)
+
+		    !************************************************************************************
+
+        end subroutine
+        
 
         !==========================================================================================
         ! Method MatrixH ThreeDimensional: Routine that evaluates the matrix B in Three-Dimensional
@@ -2391,5 +2987,7 @@ module ModElement
 
         end subroutine
 	    !==========================================================================================
+        
+        
 
 end module

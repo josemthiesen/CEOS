@@ -57,7 +57,7 @@ subroutine TangentStiffnessMatrixFluid( AnalysisSettings , ElementList , Kg )
         GM_fluid => GMfluid_Memory( 1:nDOFel_fluid )
 
         call ElBiphasic%GetGlobalMapping_fluid( AnalysisSettings, GM_fluid )
-        call ElBiphasic%ElementStiffnessMatrix_fluid( Ke, AnalysisSettings )
+        call ElBiphasic%ElementStiffnessMatrix_Kpp( Ke, AnalysisSettings )
         !$OMP CRITICAL
         call AssembleGlobalMatrixUpperTriangular( GM_fluid, Ke, Kg )
         !$OMP END CRITICAL

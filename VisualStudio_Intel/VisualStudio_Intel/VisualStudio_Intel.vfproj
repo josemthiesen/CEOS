@@ -113,6 +113,7 @@
 		<Filter Name="Subroutines">
 		<File RelativePath="..\..\SourceCode\FEM\Subroutines\SubArgumentHandler.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Subroutines\SubAssembleGlobalMatrix.f90"/>
+		<File RelativePath=".\SubAssembleGlobalMatrixMonolithicBiphasic.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Subroutines\SubAssembleGlobalMatrixUpperTriangular.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Subroutines\SubExternalForceMultiscaleMinimal.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Subroutines\SubExternalForceMultiscaleMinimalLinearD1.f90"/>
@@ -124,6 +125,7 @@
 		<File RelativePath="..\..\SourceCode\FEM\Subroutines\SubSolveConstitutiveModel.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Subroutines\SubTangentStiffnessMatrix.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Subroutines\SubTangentStiffnessMatrixFluid.f90"/>
+		<File RelativePath=".\SubTangentStiffnessMatrixMonolithic.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Subroutines\SubTangentStiffnessMatrixSolid.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Subroutines\SubUpdateMeshCoordinates.f90"/></Filter>
 		<File RelativePath="..\..\SourceCode\FEM\ModFEMAnalysis.f90"/>

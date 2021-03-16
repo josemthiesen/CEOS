@@ -67,7 +67,7 @@ subroutine TangentStiffnessMatrixSolid( AnalysisSettings , ElementList , P, Kg )
         call ElBiphasic%GetGlobalMapping_fluid(AnalysisSettings, GM_fluid)       
         Pe = P(GM_fluid)
 
-        call ElBiphasic%ElementStiffnessMatrix_solid(Pe, Ke, AnalysisSettings )
+        call ElBiphasic%ElementStiffnessMatrix_Kuu(Pe, Ke, AnalysisSettings )
         !$OMP CRITICAL
         call AssembleGlobalMatrixUpperTriangular( GM_solid, Ke, Kg )
         !$OMP END CRITICAL

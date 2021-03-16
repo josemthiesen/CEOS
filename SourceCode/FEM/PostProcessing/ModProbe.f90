@@ -947,7 +947,7 @@ module ModProbe
             use ModMathRoutines
             use ModParser
             use ModContinuumMechanics
-            use ModMultiscaleAnalysis
+            use ModMultiscaleFEMAnalysis
             use ModVoigtNotation
 
             implicit none
@@ -993,7 +993,7 @@ module ModProbe
 
 
             select type (FEA)
-                class is (ClassMultiscaleAnalysis)
+                class is (ClassMultiscaleFEMAnalysis)
 
                     select case (this%VariableNameID)
 
@@ -1092,8 +1092,8 @@ module ModProbe
             use ModMathRoutines
             use ModParser
             use ModContinuumMechanics
-            use ModMultiscaleAnalysis
-            use ModMultiscaleAnalysisBiphasic
+            use ModMultiscaleFEMAnalysis
+            use ModMultiscaleFEMAnalysisBiphasic
             use ModVoigtNotation
 
             implicit none
@@ -1142,7 +1142,7 @@ module ModProbe
                 class is(ClassFEMAnalysisBiphasic)
 
                     select type (FEA)
-                        class is (ClassMultiscaleAnalysisBiphasic)
+                        class is (ClassMultiscaleFEMAnalysisBiphasic)
 
                             select case (this%VariableNameID)
 

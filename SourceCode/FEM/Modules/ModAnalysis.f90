@@ -62,6 +62,12 @@ module ModAnalysis
     end type ClassSplittingScheme
     type (ClassSplittingScheme), parameter :: SplittingScheme = ClassSplittingScheme() 
     
+    type :: ClassSolutionScheme
+    	integer ::  Monolithic = 1, Sequential = 2
+    end type ClassSolutionScheme
+    type(ClassSolutionScheme), parameter :: SolutionScheme = ClassSolutionScheme()
+    
+    !Staggered Parameters
     type :: ClassStaggeredParameters
     	real(8) :: SolidStaggTol   
         real(8) :: FluidStaggTol   
@@ -71,13 +77,16 @@ module ModAnalysis
         integer :: FixedStressActivator
     end type ClassStaggeredParameters
     
+    
+    
     ! Parameters of the analysis type.
     !----------------------------------------------------------------------------------------------
     integer , parameter :: MaxElementNumberDOF=200 , MaxTensorComponents=6, MaxElementNodes=100
 
     ! Arrays used to allocate memory
     !----------------------------------------------------------------------------------------------
-    real(8) , target , dimension( MaxElementNumberDOF , MaxElementNumberDOF)    :: Ke_Memory
+    real(8) , target , dimension( MaxElementNumberDOF , MaxElementNumberDOF)    :: Ke_Memory, Kuu_Memory, Kup_Memory, &
+                                                                                   Kpu_Memory, Kpp_Memory
     real(8) , target , dimension( MaxTensorComponents , MaxElementNumberDOF)    :: B_Memory
     real(8) , target , dimension( 9 , MaxElementNumberDOF)                      :: G_Memory
     real(8) , target , dimension( 9 , 9)                                        :: S_Memory
@@ -87,6 +96,20 @@ module ModAnalysis
     real(8) , target , dimension( MaxTensorComponents )                         :: Stress_Memory
     real(8) , target , dimension( MaxElementNumberDOF , MaxElementNumberDOF)    :: DifSF_Memory
     integer , target , dimension( MaxElementNumberDOF )                         :: GM_Memory
+    integer , target , dimension( MaxElementNumberDOF )                         :: GM_Monolithic_Memory
+    
+    
+    real(8) , target , dimension( 9 , MaxElementNumberDOF)                      :: Q_Memory
+    real(8) , target , dimension( 9, 9)                                         :: L_Memory    ! Monolithic Q,L,A Finite Element Matrices
+    real(8) , target , dimension( 6, 3)                                         :: T_Memory
+    real(8) , target , dimension( 9, 9)                                         :: A_Memory
+    
+    real(8) , target , dimension( MaxElementNumberDOF , 9)                      :: Nf_Q_vse_Memory
+    real(8) , target , dimension( MaxElementNumberDOF , MaxElementNumberDOF)    :: Nfbs_Memory
+    real(8) , target , dimension( MaxElementNumberDOF , 3)                      :: transHtransT_Memory
+    real(8) , target , dimension( 6 , 6)                                        :: Kftg_Memory
+    real(8) , target , dimension( MaxElementNumberDOF , 6)                      :: transHtransTKftg_Memory
+    
 
     real(8) , target , dimension( MaxTensorComponents , MaxElementNumberDOF)    :: DB_Memory
     real(8) , target , dimension( 9 , MaxElementNumberDOF)                      :: SG_Memory
@@ -166,6 +189,7 @@ module ModAnalysis
         integer ::  MultiscaleModelFluid
         integer ::  MultiscaleModelSolid
         integer ::  SplittingScheme
+        integer ::  SolutionScheme
         logical ::  NLAnalysis
         logical ::  MultiscaleAnalysis
         

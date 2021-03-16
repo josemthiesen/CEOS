@@ -10,22 +10,23 @@
 ! Modifications:
 ! Date:         Author:
 !##################################################################################################
-module ModMultiscaleAnalysis
+module ModMultiscaleFEMAnalysis
 
     use ModFEMAnalysis
     use ModContinuumMechanics
     use ModVoigtNotation
-
+    
     !-----------------------------------------------------------------------------------
-    type, extends(ClassFEMAnalysis) :: ClassMultiscaleAnalysis
+    type, extends(ClassFEMAnalysis) :: ClassMultiscaleFEMAnalysis
 
-        contains
-
+    contains
+        
             procedure :: TranslateCentroidToOrigin
             procedure :: HomogenizeStress
             procedure :: HomogenizeDeformationGradient
             procedure :: Solve => SolveMultiscaleAnalysis
-
+            procedure :: AllocateKgSparse => AllocateKgSparseMultiscale
+            
     end type
     !-----------------------------------------------------------------------------------
 
@@ -47,7 +48,7 @@ module ModMultiscaleAnalysis
 
         ! Object
         ! -----------------------------------------------------------------------------------
-        class(ClassMultiscaleAnalysis) :: this
+        class(ClassMultiscaleFEMAnalysis) :: this
 
         ! Input variables
         ! -----------------------------------------------------------------------------------
@@ -150,7 +151,7 @@ module ModMultiscaleAnalysis
 
         ! Object
         ! -----------------------------------------------------------------------------------
-        class(ClassMultiscaleAnalysis) :: this
+        class(ClassMultiscaleFEMAnalysis) :: this
 
         ! Input variables
         ! -----------------------------------------------------------------------------------
@@ -262,7 +263,7 @@ module ModMultiscaleAnalysis
 
         ! Object
         ! -----------------------------------------------------------------------------------
-        class(ClassMultiscaleAnalysis) :: this
+        class(ClassMultiscaleFEMAnalysis) :: this
 
         ! Input variables
         ! -----------------------------------------------------------------------------------
@@ -372,7 +373,7 @@ module ModMultiscaleAnalysis
 
         ! Object
         ! -----------------------------------------------------------------------------------
-        class(ClassMultiscaleAnalysis) :: this
+        class(ClassMultiscaleFEMAnalysis) :: this
 
         ! Input variables
         ! -----------------------------------------------------------------------------------
@@ -388,7 +389,499 @@ module ModMultiscaleAnalysis
 
     end subroutine
     !=================================================================================================
+    
+    subroutine AllocateKgSparseMultiscale (this)
 
+            !************************************************************************************
+            ! DECLARATIONS OF VARIABLES
+            !************************************************************************************
+            implicit none
+
+            ! Object
+            ! -----------------------------------------------------------------------------------
+            class(ClassMultiscaleFEMAnalysis) :: this
+
+            !************************************************************************************
+            
+            select case (this%AnalysisSettings%MultiscaleModel) 
+                case (MultiscaleModels%Taylor)
+                    !call AllocateKgSparse(this)
+                    call AllocateKgSparseUpperTriangular(this)
+                case (MultiscaleModels%Linear)
+                    !call AllocateKgSparse(this)
+                    call AllocateKgSparseUpperTriangular(this)
+                case (MultiscaleModels%Minimal)
+                    !call AllocateKgSparseMultiscaleMinimal(this)
+                    call AllocateKgSparseMultiscaleMinimalUpperTriangular(this)                
+                case (MultiscaleModels%MinimalLinearD1)
+                     !call AllocateKgSparseMultiscaleMinimalLinearD1(this)
+                    call AllocateKgSparseMultiscaleMinimalLinearD1UpperTriangular(this)               
+                case (MultiscaleModels%MinimalLinearD3)
+                    !call AllocateKgSparseMultiscaleMinimalLinearD3(this)
+                    call AllocateKgSparseMultiscaleMinimalLinearD3UpperTriangular(this)                 
+                case default
+                    STOP 'Error: Multiscale Model not found - ModMultiscaleFEMAnalysis.f90'
+            end select
+            
+        end subroutine
+            
+    subroutine AllocateKgSparseMultiscaleMinimal(this)
+
+            !************************************************************************************
+            ! DECLARATIONS OF VARIABLES
+            !************************************************************************************
+            ! Modules and implicit declarations
+            ! -----------------------------------------------------------------------------------
+
+
+            implicit none
+
+            ! Object
+            ! -----------------------------------------------------------------------------------
+            class(ClassMultiscaleFEMAnalysis) :: this
+
+            ! Internal variables
+            ! -----------------------------------------------------------------------------------
+            type(SparseMatrix) :: KgSparse
+            real(8) , pointer , dimension(:,:)  :: Kte
+            integer , pointer , dimension(:)    :: GM
+            integer ::  i, e, nDOFel, nDOF
+
+            !************************************************************************************
+
+
+            !************************************************************************************
+            ! PRE-ALLOCATING THE GLOBAL STIFFNESS MATRIX
+            !************************************************************************************
+
+            !Allocating memory for the sparse matrix (pre-assembling)
+            !************************************************************************************
+            call this%AnalysisSettings%GetTotalNumberOfDOF (this%GlobalNodesList, nDOF)
+
+            !Element matrices used to allocate memory (module Analysis)
+            Kte_Memory = 1.0d0
+            GM_Memory  = 1
+
+            !Initializing the sparse global stiffness matrix
+            call SparseMatrixInit( KgSparse , (nDOF+12) )
+
+            !Loop over elements to mapping the local-global positions in the sparse stiffness matrix
+            do e=1,size( this%ElementList )
+
+                call this%ElementList(e)% El%GetElementNumberDOF(this%AnalysisSettings , nDOFel)
+
+
+                ! Element tangent matrix (Ke and Ge and Ne)
+                !---------------------------------------------------------------------------------
+                Kte => Kte_Memory( 1:(nDOFel+12) , 1:(nDOFel+12) )
+
+
+                ! Global Mapping considering the matrices Ge and Ne - Shape Function and Gradients
+                !---------------------------------------------------------------------------------
+                GM => GM_Memory( 1:(nDOFel+12) )
+
+                call this%ElementList(e)%El%GetGlobalMapping( this%AnalysisSettings , GM )
+                
+                GM(nDOFel+1 : nDOFel+1+12) = nDOF + [1:12]
+
+
+                !---------------------------------------------------------------------------------
+
+                call SparseMatrixSetArray( GM, GM, Kte, KgSparse, OPT_SET )
+
+            enddo
+
+            !Converting the sparse matrix to coordinate format (used by Pardiso Sparse Solver)
+            call ConvertToCoordinateFormat( KgSparse , this%Kg%Row , this%Kg%Col , this%Kg%Val , this%Kg%RowMap)
+
+            !Releasing memory
+            call SparseMatrixKill(KgSparse)
+
+            !************************************************************************************
+
+        end subroutine
+        !##################################################################################################               
+        subroutine AllocateKgSparseMultiscaleMinimalUpperTriangular (this)
+
+            !************************************************************************************
+            ! DECLARATIONS OF VARIABLES
+            !************************************************************************************
+            ! Modules and implicit declarations
+            ! -----------------------------------------------------------------------------------
+            
+            !use ModSparseMatrixRoutines
+            !use ModAnalysis
+            !use ModElement
+            !use ModGlobalSparseMatrix
+
+            implicit none
+
+            ! Object
+            ! -----------------------------------------------------------------------------------
+            class(ClassMultiscaleFEMAnalysis) :: this
+
+            ! Internal variables
+            ! -----------------------------------------------------------------------------------
+            type(SparseMatrix) :: KgSparse
+            real(8) , pointer , dimension(:,:)  :: Kte
+            integer , pointer , dimension(:)    :: GM
+            integer ::  i, e, nDOFel, nDOF
+
+            !************************************************************************************
+
+
+            !************************************************************************************
+            ! PRE-ALLOCATING THE GLOBAL STIFFNESS MATRIX
+            !************************************************************************************
+
+            !Allocating memory for the sparse matrix (pre-assembling)
+            !************************************************************************************
+            call this%AnalysisSettings%GetTotalNumberOfDOF (this%GlobalNodesList, nDOF)
+
+            !Element matrices used to allocate memory (module Analysis)
+            Kte_Memory = 1.0d0
+            GM_Memory  = 1
+
+            !Initializing the sparse global stiffness matrix
+            call SparseMatrixInit( KgSparse , (nDOF+12) )
+
+            !Loop over elements to mapping the local-global positions in the sparse stiffness matrix
+            do e=1,size( this%ElementList )
+
+                call this%ElementList(e)% El%GetElementNumberDOF(this%AnalysisSettings , nDOFel)
+
+
+                ! Element tangent matrix (Ke and Ge and Ne)
+                !---------------------------------------------------------------------------------
+                Kte => Kte_Memory( 1:(nDOFel+12) , 1:(nDOFel+12) )
+
+
+                ! Global Mapping considering the matrices Ge and Ne - Shape Function and Gradients
+                !---------------------------------------------------------------------------------
+                GM => GM_Memory( 1:(nDOFel+12) )
+
+                call this%ElementList(e)%El%GetGlobalMapping( this%AnalysisSettings , GM )
+
+                GM(nDOFel+1 : nDOFel+1+12) = nDOF + [1:12]
+                !---------------------------------------------------------------------------------
+
+                call SparseMatrixSetArray( GM, GM, Kte, KgSparse, OPT_SET )
+
+            enddo
+
+            !Converting the sparse matrix to coordinate format (used by Pardiso Sparse Solver)
+            call ConvertToCoordinateFormatUpperTriangular( KgSparse , this%Kg%Row , this%Kg%Col , this%Kg%Val , this%Kg%RowMap)
+
+            !Releasing memory
+            call SparseMatrixKill(KgSparse)
+
+            !************************************************************************************
+
+        end subroutine
+        !##################################################################################################
+                  
+        
+        !##################################################################################################
+        subroutine AllocateKgSparseMultiscaleMinimalLinearD1 (this)
+
+            !************************************************************************************
+            ! DECLARATIONS OF VARIABLES
+            !************************************************************************************
+            ! Modules and implicit declarations
+            ! -----------------------------------------------------------------------------------
+            
+            !use ModSparseMatrixRoutines
+            !use ModAnalysis
+            !use ModElement
+            !use ModGlobalSparseMatrix
+
+            implicit none
+
+            ! Object
+            ! -----------------------------------------------------------------------------------
+            class(ClassMultiscaleFEMAnalysis) :: this
+
+            ! Internal variables
+            ! -----------------------------------------------------------------------------------
+            type(SparseMatrix) :: KgSparse
+            real(8) , pointer , dimension(:,:)  :: Kte
+            integer , pointer , dimension(:)    :: GM
+            integer ::  i, e, nDOFel, nDOF
+
+            !************************************************************************************
+
+
+            !************************************************************************************
+            ! PRE-ALLOCATING THE GLOBAL STIFFNESS MATRIX
+            !************************************************************************************
+
+            !Allocating memory for the sparse matrix (pre-assembling)
+            !************************************************************************************
+            call this%AnalysisSettings%GetTotalNumberOfDOF (this%GlobalNodesList, nDOF)
+
+            !Element matrices used to allocate memory (module Analysis)
+            Kte_Memory = 1.0d0
+            GM_Memory  = 1
+
+            !Initializing the sparse global stiffness matrix
+            call SparseMatrixInit( KgSparse , (nDOF+12) )
+
+            !Loop over elements to mapping the local-global positions in the sparse stiffness matrix
+            do e=1,size( this%ElementList )
+
+                call this%ElementList(e)% El%GetElementNumberDOF(this%AnalysisSettings , nDOFel)
+
+
+                ! Element tangent matrix (Ke and Ge and Ne)
+                !---------------------------------------------------------------------------------
+                Kte => Kte_Memory( 1:(nDOFel+12) , 1:(nDOFel+12) )
+
+
+                ! Global Mapping considering the matrices Ge and Ne - Shape Function and Gradients
+                !---------------------------------------------------------------------------------
+                GM => GM_Memory( 1:(nDOFel+12) )
+
+                call this%ElementList(e)%El%GetGlobalMapping( this%AnalysisSettings , GM )
+
+                GM(nDOFel+1 : nDOFel+1+12) = nDOF + [1:12]
+                !---------------------------------------------------------------------------------
+
+                call SparseMatrixSetArray( GM, GM, Kte, KgSparse, OPT_SET )
+
+            enddo
+
+            !Converting the sparse matrix to coordinate format (used by Pardiso Sparse Solver)
+            call ConvertToCoordinateFormat( KgSparse , this%Kg%Row , this%Kg%Col , this%Kg%Val , this%Kg%RowMap)
+
+            !Releasing memory
+            call SparseMatrixKill(KgSparse)
+
+            !************************************************************************************
+
+        end subroutine    
+        !##################################################################################################
+        subroutine AllocateKgSparseMultiscaleMinimalLinearD1UpperTriangular (this)
+
+            !************************************************************************************
+            ! DECLARATIONS OF VARIABLES
+            !************************************************************************************
+            ! Modules and implicit declarations
+            ! -----------------------------------------------------------------------------------
+
+            implicit none
+
+            ! Object
+            ! -----------------------------------------------------------------------------------
+            class(ClassMultiscaleFEMAnalysis) :: this
+
+            ! Internal variables
+            ! -----------------------------------------------------------------------------------
+            type(SparseMatrix) :: KgSparse
+            real(8) , pointer , dimension(:,:)  :: Kte
+            integer , pointer , dimension(:)    :: GM
+            integer ::  i, e, nDOFel, nDOF
+
+            !************************************************************************************
+
+
+            !************************************************************************************
+            ! PRE-ALLOCATING THE GLOBAL STIFFNESS MATRIX
+            !************************************************************************************
+
+            !Allocating memory for the sparse matrix (pre-assembling)
+            !************************************************************************************
+            call this%AnalysisSettings%GetTotalNumberOfDOF (this%GlobalNodesList, nDOF)
+
+            !Element matrices used to allocate memory (module Analysis)
+            Kte_Memory = 1.0d0
+            GM_Memory = 1.0d0
+
+            !Initializing the sparse global stiffness matrix
+            call SparseMatrixInit( KgSparse , (nDOF+12) )
+
+            !Loop over elements to mapping the local-global positions in the sparse stiffness matrix
+            do e=1,size( this%ElementList )
+
+                call this%ElementList(e)% El%GetElementNumberDOF(this%AnalysisSettings , nDOFel)
+
+                ! Element tangent matrix (Ke and Ge and Ne)
+                !---------------------------------------------------------------------------------
+                Kte => Kte_Memory( 1:(nDOFel+12) , 1:(nDOFel+12) )
+                
+
+                ! Global Mapping considering the matrices Ge and Ne - Shape Function and Gradients
+                !---------------------------------------------------------------------------------
+                GM => GM_Memory( 1:(nDOFel+12) )
+                
+                call this%ElementList(e)%El%GetGlobalMapping( this%AnalysisSettings , GM )              
+                
+                GM(nDOFel+1 : nDOFel+1+12) = nDOF + [1:12]
+          
+
+                call SparseMatrixSetArray( GM, GM, Kte, KgSparse, OPT_SET )
+
+            enddo
+
+            !Converting the sparse matrix to coordinate format (used by Pardiso Sparse Solver)
+            call ConvertToCoordinateFormatUpperTriangular( KgSparse , this%Kg%Row , this%Kg%Col , this%Kg%Val , this%Kg%RowMap)
+
+            !Releasing memory
+            call SparseMatrixKill(KgSparse)
+
+            !************************************************************************************
+
+        end subroutine
+        !##################################################################################################
+
+        
+        !##################################################################################################
+        subroutine AllocateKgSparseMultiscaleMinimalLinearD3 (this)
+
+            !************************************************************************************
+            ! DECLARATIONS OF VARIABLES
+            !************************************************************************************
+            ! Modules and implicit declarations
+            ! -----------------------------------------------------------------------------------
+
+
+            implicit none
+
+            ! Object
+            ! -----------------------------------------------------------------------------------
+            class(ClassMultiscaleFEMAnalysis) :: this
+
+            ! Internal variables
+            ! -----------------------------------------------------------------------------------
+            type(SparseMatrix) :: KgSparse
+            real(8) , pointer , dimension(:,:)  :: Kte
+            integer , pointer , dimension(:)    :: GM
+            integer ::  i, e, nDOFel, nDOF
+
+            !************************************************************************************
+
+
+            !************************************************************************************
+            ! PRE-ALLOCATING THE GLOBAL STIFFNESS MATRIX
+            !************************************************************************************
+
+            !Allocating memory for the sparse matrix (pre-assembling)
+            !************************************************************************************
+            call this%AnalysisSettings%GetTotalNumberOfDOF (this%GlobalNodesList, nDOF)
+
+            !Element matrices used to allocate memory (module Analysis)
+            Kte_Memory = 1.0d0
+            GM_Memory  = 1
+
+            !Initializing the sparse global stiffness matrix
+            call SparseMatrixInit( KgSparse , (nDOF+12) )
+
+            !Loop over elements to mapping the local-global positions in the sparse stiffness matrix
+            do e=1,size( this%ElementList )
+
+                call this%ElementList(e)% El%GetElementNumberDOF(this%AnalysisSettings , nDOFel)
+
+
+                ! Element tangent matrix (Ke and Ge and Ne)
+                !---------------------------------------------------------------------------------
+                Kte => Kte_Memory( 1:(nDOFel+12) , 1:(nDOFel+12) )
+
+
+                ! Global Mapping considering the matrices Ge and Ne - Shape Function and Gradients
+                !---------------------------------------------------------------------------------
+                GM => GM_Memory( 1:(nDOFel+12) )
+
+                call this%ElementList(e)%El%GetGlobalMapping( this%AnalysisSettings , GM )
+
+                GM(nDOFel+1 : nDOFel+1+12) = nDOF + [1:12]
+                !---------------------------------------------------------------------------------
+
+                call SparseMatrixSetArray( GM, GM, Kte, KgSparse, OPT_SET )
+
+            enddo
+
+            !Converting the sparse matrix to coordinate format (used by Pardiso Sparse Solver)
+            call ConvertToCoordinateFormat( KgSparse , this%Kg%Row , this%Kg%Col , this%Kg%Val , this%Kg%RowMap)
+
+            !Releasing memory
+            call SparseMatrixKill(KgSparse)
+
+            !************************************************************************************
+
+        end subroutine
+        !##################################################################################################
+        subroutine AllocateKgSparseMultiscaleMinimalLinearD3UpperTriangular (this)
+
+            !************************************************************************************
+            ! DECLARATIONS OF VARIABLES
+            !************************************************************************************
+            ! Modules and implicit declarations
+            ! -----------------------------------------------------------------------------------
+        
+
+            implicit none
+
+            ! Object
+            ! -----------------------------------------------------------------------------------
+            class(ClassMultiscaleFEMAnalysis) :: this
+
+            ! Internal variables
+            ! -----------------------------------------------------------------------------------
+            type(SparseMatrix) :: KgSparse
+            real(8) , pointer , dimension(:,:)  :: Kte
+            integer , pointer , dimension(:)    :: GM
+            integer ::  i, e, nDOFel, nDOF
+
+            !************************************************************************************
+
+
+            !************************************************************************************
+            ! PRE-ALLOCATING THE GLOBAL STIFFNESS MATRIX
+            !************************************************************************************
+
+            !Allocating memory for the sparse matrix (pre-assembling)
+            !************************************************************************************
+            call this%AnalysisSettings%GetTotalNumberOfDOF (this%GlobalNodesList, nDOF)
+
+            !Element matrices used to allocate memory (module Analysis)
+            Kte_Memory = 1.0d0
+            GM_Memory = 1
+
+            !Initializing the sparse global stiffness matrix
+            call SparseMatrixInit( KgSparse , (nDOF+12) )
+
+            !Loop over elements to mapping the local-global positions in the sparse stiffness matrix
+            do e=1,size( this%ElementList )
+
+                call this%ElementList(e)% El%GetElementNumberDOF(this%AnalysisSettings , nDOFel)
+
+
+                ! Element tangent matrix (Ke and Ge and Ne)
+                !---------------------------------------------------------------------------------
+                Kte => Kte_Memory( 1:(nDOFel+12) , 1:(nDOFel+12) )
+
+
+                ! Global Mapping considering the matrices Ge and Ne - Shape Function and Gradients
+                !---------------------------------------------------------------------------------
+                GM => GM_Memory( 1:(nDOFel+12) )
+
+                call this%ElementList(e)%El%GetGlobalMapping( this%AnalysisSettings , GM )
+
+                GM(nDOFel+1 : nDOFel+1+12) = nDOF + [1:12]
+                !---------------------------------------------------------------------------------
+
+                call SparseMatrixSetArray( GM, GM, Kte, KgSparse, OPT_SET )
+
+            enddo
+
+            !Converting the sparse matrix to coordinate format (used by Pardiso Sparse Solver)
+            call ConvertToCoordinateFormatUpperTriangular( KgSparse , this%Kg%Row , this%Kg%Col , this%Kg%Val , this%Kg%RowMap)
+
+            !Releasing memory
+            call SparseMatrixKill(KgSparse)
+
+            !************************************************************************************
+
+        end subroutine
 
 
 

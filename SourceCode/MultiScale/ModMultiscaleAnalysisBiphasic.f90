@@ -8,7 +8,7 @@
 ! Modifications:
 ! Date:         Author:
 !##################################################################################################
-module ModMultiscaleAnalysisBiphasic
+module ModMultiscaleFEMAnalysisBiphasic
 
     use ModFEMAnalysisBiphasic
     use ModContinuumMechanics
@@ -16,7 +16,7 @@ module ModMultiscaleAnalysisBiphasic
     use OMP_LIB
 
     !-----------------------------------------------------------------------------------
-    type, extends(ClassFEMAnalysisBiphasic) :: ClassMultiscaleAnalysisBiphasic
+    type, extends(ClassFEMAnalysisBiphasic) :: ClassMultiscaleFEMAnalysisBiphasic
 
         contains
 
@@ -28,13 +28,38 @@ module ModMultiscaleAnalysisBiphasic
             procedure :: HomogenizedRelativeVelocitywXBiphasic
             
             procedure :: Solve => SolveMultiscaleAnalysisBiphasic
+            
+            procedure :: AllocateKgSparse => AllocateKgSparseMultiscaleBiphasic
 
+            
     end type
     !-----------------------------------------------------------------------------------
 
-
     contains
+    
+    subroutine AllocateKgSparseMultiscaleBiphasic (this)
 
+            !************************************************************************************
+            ! DECLARATIONS OF VARIABLES
+            !************************************************************************************
+            
+            implicit none
+
+            ! Object
+            ! -----------------------------------------------------------------------------------
+            class(ClassMultiscaleFEMAnalysisBiphasic) :: this
+
+            !select case (this%AnalysisSettings%BiphasicSolver)
+            !    case(BiphasicSolver%Staggered)
+                    call AllocateKgSparseUpperTriangularBiphasicStaggered(this)
+            !    case(BiphasicSolver%Monolithic)
+            !        call AllocateKgSparseFullBiphasicMonolithic(this)
+            !    case default
+            !       stop 'Error: Biphasic solver not found - ModFEMAnalysisBiphasic.f90'
+            !end select
+    
+        end subroutine
+    
     !=================================================================================================
     subroutine TranslateCentroidToOriginBiphasic(this)
 
@@ -49,7 +74,7 @@ module ModMultiscaleAnalysisBiphasic
 
         ! Object
         ! -----------------------------------------------------------------------------------
-        class(ClassMultiscaleAnalysisBiphasic) :: this
+        class(ClassMultiscaleFEMAnalysisBiphasic) :: this
 
         ! Input variables
         ! -----------------------------------------------------------------------------------
@@ -146,7 +171,7 @@ module ModMultiscaleAnalysisBiphasic
 
         ! Object
         ! -----------------------------------------------------------------------------------
-        class(ClassMultiscaleAnalysisBiphasic) :: this
+        class(ClassMultiscaleFEMAnalysisBiphasic) :: this
 
         ! Input variables
         ! -----------------------------------------------------------------------------------
@@ -260,7 +285,7 @@ module ModMultiscaleAnalysisBiphasic
 
         ! Object
         ! -----------------------------------------------------------------------------------
-        class(ClassMultiscaleAnalysisBiphasic) :: this
+        class(ClassMultiscaleFEMAnalysisBiphasic) :: this
 
         ! Input variables
         ! -----------------------------------------------------------------------------------
@@ -398,7 +423,7 @@ module ModMultiscaleAnalysisBiphasic
 
         ! Object
         ! -----------------------------------------------------------------------------------
-        class(ClassMultiscaleAnalysisBiphasic) :: this
+        class(ClassMultiscaleFEMAnalysisBiphasic) :: this
 
         ! Input variables
         ! -----------------------------------------------------------------------------------
@@ -552,7 +577,7 @@ module ModMultiscaleAnalysisBiphasic
   
        ! Object
        ! -----------------------------------------------------------------------------------
-       class(ClassMultiscaleAnalysisBiphasic) :: this
+       class(ClassMultiscaleFEMAnalysisBiphasic) :: this
   
        ! Input variables
        ! -----------------------------------------------------------------------------------
@@ -715,7 +740,7 @@ module ModMultiscaleAnalysisBiphasic
 
         ! Object
         ! -----------------------------------------------------------------------------------
-        class(ClassMultiscaleAnalysisBiphasic) :: this
+        class(ClassMultiscaleFEMAnalysisBiphasic) :: this
 
         ! Input variables
         ! -----------------------------------------------------------------------------------
@@ -859,7 +884,7 @@ module ModMultiscaleAnalysisBiphasic
 
         ! Object
         ! -----------------------------------------------------------------------------------
-        class(ClassMultiscaleAnalysisBiphasic) :: this
+        class(ClassMultiscaleFEMAnalysisBiphasic) :: this
 
         ! Input variables
         ! -----------------------------------------------------------------------------------
