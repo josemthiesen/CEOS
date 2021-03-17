@@ -627,7 +627,7 @@ module ModElement
             ! Number of degrees of freedom of solid
             call this%GetElementNumberDOF(AnalysisSettings,NDOFel_solid)
             ! Number of degrees of freedom of fluid
-            call this%GetElementNumberDOF(AnalysisSettings,NDOFel_fluid)
+            call this%GetElementNumberDOF_fluid(AnalysisSettings,NDOFel_fluid)
 
             ! Allocating element stiffness matrix
             Ke=> Ke_Memory( 1:NDOFel_solid , 1:NDOFel_solid )
@@ -809,7 +809,7 @@ module ModElement
             ! Number of degrees of freedom of solid
             call this%GetElementNumberDOF(AnalysisSettings,NDOFel_solid)
             ! Number of degrees of freedom of fluid
-            call this%GetElementNumberDOF(AnalysisSettings,NDOFel_fluid)
+            call this%GetElementNumberDOF_fluid(AnalysisSettings,NDOFel_fluid)
             
             allocate(hs_transNf(nDOFel_solid,nDOFel_fluid))
             
@@ -917,7 +917,7 @@ module ModElement
             ! Number of degrees of freedom of solid
             call this%GetElementNumberDOF(AnalysisSettings,NDOFel_solid)
             ! Number of degrees of freedom of fluid
-            call this%GetElementNumberDOF(AnalysisSettings,NDOFel_fluid)
+            call this%GetElementNumberDOF_fluid(AnalysisSettings,NDOFel_fluid)
             
             ! Allocating intermediate matrices **********************
             
@@ -928,7 +928,7 @@ module ModElement
             Nfbs => Nfbs_Memory (1: NDOFel_fluid, 1:NDOFel_solid)
             
             ! H^(T)*T^(T)
-            transHtransT => transHtransT_Memory (1:NDOFel_fluid, 1: AnalysisSettings%AnalysisDimension )
+            transHtransT => transHtransT_Memory (1:NDOFel_fluid, 1: AnalysisSettings%BrowSize )
             
             ! Tangent Permeability Tensor
             Kftg => Kftg_Memory (1: AnalysisSettings%BrowSize, 1: AnalysisSettings%BrowSize)
@@ -1970,11 +1970,11 @@ module ModElement
             ! Input variables
             ! -----------------------------------------------------------------------------------
             real(8) , dimension(:) , intent(in) :: Pe
-            real(8) , pointer, dimension(:,:) , intent(in) :: H
+            real(8) , dimension(:,:) , intent(in) :: H
             
             ! Output variables
             ! -----------------------------------------------------------------------------------
-            real(8) , pointer, dimension(:,:), intent(out) :: T
+            real(8) , dimension(:,:), intent(inout) :: T
 
             ! Internal variables
             ! -----------------------------------------------------------------------------------

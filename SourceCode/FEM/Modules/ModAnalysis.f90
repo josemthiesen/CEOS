@@ -106,7 +106,7 @@ module ModAnalysis
     
     real(8) , target , dimension( MaxElementNumberDOF , 9)                      :: Nf_Q_vse_Memory
     real(8) , target , dimension( MaxElementNumberDOF , MaxElementNumberDOF)    :: Nfbs_Memory
-    real(8) , target , dimension( MaxElementNumberDOF , 3)                      :: transHtransT_Memory
+    real(8) , target , dimension( MaxElementNumberDOF , 6)                      :: transHtransT_Memory
     real(8) , target , dimension( 6 , 6)                                        :: Kftg_Memory
     real(8) , target , dimension( MaxElementNumberDOF , 6)                      :: transHtransTKftg_Memory
     
@@ -200,8 +200,9 @@ module ModAnalysis
         integer ::  BRowSize   , DSize
         integer ::  StressSize , StrainSize
         integer ::  GRowSize   , SSize 
+        integer ::  NDOFsolid  , NDOFfluid
         integer ::  MaxCutBack
-
+        
         integer ::  Pdof
 
         type(ClassStaggeredParameters) :: StaggeredParameters
@@ -342,6 +343,8 @@ module ModAnalysis
 		    !************************************************************************************
 
             TotalnDOF = size( GlobalNodesList ) * this%NDOFnode
+            
+            this%NDOFsolid = TotalnDOF 
 
 		    !************************************************************************************
 
@@ -385,6 +388,8 @@ module ModAnalysis
             enddo
             
             TotalnDOF_fluid = nNosFluid * this % Pdof 
+            
+            this%NDOFfluid = TotalnDOF_fluid
 
 		    !************************************************************************************
 

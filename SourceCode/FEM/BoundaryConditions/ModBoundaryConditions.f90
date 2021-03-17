@@ -177,8 +177,6 @@ module ModBoundaryConditions
         Udirichlet = 0.0d0
         Rmod = 0.0d0
 
-
-
         ! Applying prescribed boundary conditions
         if ( size(Presc_Disp_DOF) .ne. 0 ) then
 
@@ -189,7 +187,7 @@ module ModBoundaryConditions
                 Udirichlet(dof) = ( Ubar(dof) - U(dof) )
             enddo
 
-            ! Multiplicação esparça - Vetor Força para montagem da condição de contorno de rearranjo
+            ! Multiplicação esparsa - Vetor Força para montagem da condição de contorno de rearranjo
             call mkl_dcsrgemv('N', size(U), Kg%Val, Kg%RowMap, Kg%Col, Udirichlet, Rmod)
 
             !Resíduo Modificado

@@ -301,8 +301,8 @@ module ModFEMAnalysisBiphasic
                                     stop "Error in SplittingScheme - ModFEMAnalysisBiphasic"
                             end select
                         case (SolutionScheme%Monolithic)
-                            !call QuasiStaticAnalysisFEM_Biphasic_Monolithic( this%ElementList, this%AnalysisSettings, this%GlobalNodesList , &
-                            !                              this%BC, this%Kg, this%NLSolver )
+                            call QuasiStaticAnalysisFEM_biphasic_Monolithic( this%ElementList, this%AnalysisSettings, this%GlobalNodesList , &
+                                                                          this%BC, this%Kg, this%NLSolver )
                         case default
                             stop "Error in SolutionScheme - ModFEMAnalysisBiphasic"
                     end select
@@ -791,7 +791,304 @@ module ModFEMAnalysisBiphasic
             !************************************************************************************
 
             end subroutine
+                                            
+        ###############################################################################################
+        ! This routine contains the procedures to solve a quasi-static analysis based in a incremental-
+        ! iterative approach.
+        !##################################################################################################
+        subroutine QuasiStaticAnalysisFEM_biphasic_Monolithic( ElementList , AnalysisSettings , GlobalNodesList , BC  , &
+                                           Kg , NLSolver )
+
+            !************************************************************************************
+            ! DECLARATIONS OF VARIABLES
+            !************************************************************************************
+            ! Modules and implicit declarations
+            ! -----------------------------------------------------------------------------------
+                        
+            use ModFEMSystemOfEquationsMonolithicBiphasic
+            
+            implicit none
+
+            ! Input variables
+            ! -----------------------------------------------------------------------------------
+            type (ClassAnalysis)                                    :: AnalysisSettings
+            type (ClassElementsWrapper),     pointer, dimension(:)  :: ElementList
+            type (ClassNodes),               pointer, dimension(:)  :: GlobalNodesList
+            class (ClassBoundaryConditions),  pointer               :: BC
+            type (ClassGlobalSparseMatrix),  pointer                :: Kg
+            class(ClassNonLinearSolver),     pointer                :: NLSolver
+
+            ! Internal variables
+            ! -----------------------------------------------------------------------------------
+            real(8), allocatable, dimension(:) :: X , R, Xconverged
+            real(8), allocatable, dimension(:) :: DeltaFext_solid, DeltaFext_fluid
+            real(8), allocatable, dimension(:) :: DeltaUPresc, DeltaPPresc
+            real(8), allocatable, dimension(:) :: Fext_solid_alpha0, Fext_fluid_alpha0
+            real(8), allocatable, dimension(:) :: Ubar_alpha0, Pbar_alpha0
+
+            real(8) :: DeltaTime , Time_alpha0
+            real(8) :: alpha, alpha_max, alpha_min, alpha_aux
+            integer :: LC , ST , nSteps, nLoadCases ,  CutBack, SubStep, e,gp
+            integer :: FileID_FEMAnalysisResultsSolid, FileID_FEMAnalysisResultsFluid
+            integer :: Flag_EndStep
+            integer :: nDOFSolid, nDOFFluid, nDOF
+            real(8), parameter :: GR= (1.0d0 + dsqrt(5.0d0))/2.0d0
+
+            integer, allocatable, dimension(:) :: KgSolidValZERO, KgSolidValONE
+            integer :: contZEROSolid, contONESolid
+            integer, allocatable, dimension(:) :: KgFluidValZERO, KgFluidValONE
+            integer :: contZEROFluid, contONEFluid
+            integer :: Phase ! Indicates the material phase (1 = Solid; 2 = Fluid),
+            
+            type(ClassFEMSystemOfEquationsMonolithicBiphasic) :: FEMSoE
+
+            FileID_FEMAnalysisResultsSolid = 42
+            open (FileID_FEMAnalysisResultsSolid,file='FEMAnalysisSolid.result',status='unknown')
+            FileID_FEMAnalysisResultsFluid = 43
+            open (FileID_FEMAnalysisResultsFluid,file='FEMAnalysisFluid.result',status='unknown')
+
+            !************************************************************************************
+
+            !************************************************************************************
+            ! QUASI-STATIC ANALYSIS
+            !***********************************************************************************
+            nDOFSolid = AnalysisSettings%NDOFsolid
+            nDOFFluid = AnalysisSettings%NDOFfluid
+            
+            nDOF = nDOFSolid + nDOFFluid
+
+            write(FileID_FEMAnalysisResultsSolid,*) 'Total Number of Solid DOF  = ', nDOFSolid
+            write(FileID_FEMAnalysisResultsFluid,*) 'Total Number of Fluid DOF  = ', nDOFFluid
+
+            FEMSoE % ElementList => ElementList
+            FEMSoE % AnalysisSettings = AnalysisSettings
+            FEMSoE % GlobalNodesList => GlobalNodesList
+            FEMSoE % BC => BC
+            FEMSoE % Kg => Kg
+            
+            ! Allocate FEMSoE object atributes
+            allocate( FEMSoE%Xbar(nDOF))
+            allocate( FEMSoE%Fint_solid(nDOFSolid) , FEMSoE% Fext_solid(nDOFSolid))
+            allocate( FEMSoE%Fint_fluid(nDOFFluid) , FEMSoE% Fext_fluid(nDOFFluid), FEMSoE% VSolid(nDOFSolid) )
+
+            ! Allocating global arrays
+            allocate(R(nDOF) , X(nDOF), Xconverged(nDOF))
+            ! Allocating global arrays related to each phase (disp/solid -- press/fluid)   
+            allocate(DeltaFext_solid(nDOFSolid), Fext_solid_alpha0(nDOFSolid))
+            allocate(DeltaFext_fluid(nDOFFluid), Fext_fluid_alpha0(nDOFFluid))
+            allocate(DeltaUPresc(nDOFSolid), DeltaPPresc(nDOFFluid))
+            allocate(Ubar_alpha0(nDOFSolid), Pbar_alpha0(nDOFFluid))
+            
+            ! Initializing global X vector
+            X = 0.0d0
+            
+            ! Initializing displacement and pressure boundary condition variables
+            Ubar_alpha0 = 0.0d0
+            Pbar_alpha0 = 0.0d0
+
+            nLoadCases = BC%GetNumberOfLoadCases()
+
+            Flag_EndStep = 1
+            
+            !! *****************************************************************************************************************************
+            !! In the monolithic scheme, the global DISPLACEMENT (U) and PRESSURE (P) vectors are given by the split of the global vector X. 
+            !!
+            !   call WriteFEMResultsBiphasic( U, 0.0d0,  P, 0.0d0, 1, 1, 0, FileID_FEMAnalysisResultsSolid,FileID_FEMAnalysisResultsFluid, 0)
+            !!
+            !! where U = X(1:nDOFSolid)
+            !!       P = X((nDOFSolid+1):nDOF)
+            !! *****************************************************************************************************************************
+
+            call WriteFEMResultsBiphasic( X(1:nDOFSolid), 0.0d0,  X((nDOFSolid+1):nDOF), 0.0d0, 1, 1, 0, &
+                                            FileID_FEMAnalysisResultsSolid,FileID_FEMAnalysisResultsFluid, 0)
+
+            !LOOP - LOAD CASES
+            LOAD_CASE:  do LC = 1 , nLoadCases
+
+                write(*,'(a,i3)')'Load Case: ',LC
+                write(*,*)''
+
+                nSteps = BC%GetNumberOfSteps(LC)
+
+               !LOOP - STEPS
+                STEPS:  do ST = 1 , nSteps
+
+                    write(*,'(4x,a,i3,a,i3,a)')'Step: ',ST,' (LC: ',LC,')'
+                    write(*,*)''
+                    
+                    ! Get boundary conditions for both displacement and pressure fields
+                    call BC%GetBoundaryConditions(AnalysisSettings, GlobalNodesList,  LC, ST, Fext_solid_alpha0, DeltaFext_solid,FEMSoE%DispDOF, &
+                                                    X(1:nDOFSolid), DeltaUPresc)
+                    call BC%GetBoundaryConditionsFluid(AnalysisSettings, GlobalNodesList,  LC, ST, Fext_fluid_alpha0, DeltaFext_fluid,FEMSoE%PresDOF, &
+                                                    X((nDOFSolid+1):nDOF), DeltaPPresc)
+                    
+                    ! Shift on fluid prescribed degrees of freedom - PresDOF - (Monolithic)
+                    FEMSoE%PresDOF = FEMSoE%PresDOF + nDOFSolid
+                    
+                    !--------------------------------------------------------------------------------------
+                    ! Mapeando os graus de liberdade da matrix esparsa para a aplicação das CC de Dirichlet
+                    
+                    if ( (LC == 1) .and. (ST == 1) ) then
+                        
+                        !testar como ponteiro
+                        allocate( FEMSoE%DirichletDOF(size(FEMSoE%DispDOF)+ size(FEMSoE%PresDOF)))
+                    
+                        FEMSoE%DirichletDOF(1:size(FEMSoE%DispDOF)) =  FEMSoE%DispDOF
+                        FEMSoE%DirichletDOF(size(FEMSoE%DispDOF)+1 : size(FEMSoE%DispDOF)+ size(FEMSoE%PresDOF)) =  FEMSoE%PresDOF
+                        
+                        !-----------------------------------------------------------------------------------
+                        ! Allocate and apply Prescribed displacement AND pressure boundary conditions 
+                        ! KgSolidValZERO maps in which gdl's the Kg matrix has ZERO values.
+                        ! KgSolidValONE maps in which gdl's the Kg matrix has ONE values.
+                        ! ----------------------------------------------------------------------------------
+                        allocate( KgSolidValZERO(size(FEMSoE%Kg%Val)), KgSolidValONE(size(FEMSoE%Kg%Val)) )
+                        allocate( KgFluidValZERO(size(FEMSoE%Kg%Val)), KgFluidValONE(size(FEMSoE%Kg%Val)) )
+                        
+                        ! Gets  KgSolidValZERO and KgSolidValONE
+                        ! Maps the degrees of freedom from KgSolidValZERO and KgSolidValONE to FEMSoE objects
+                        call BC%AllocatePrescDispSparseMapping(FEMSoE%Kg, FEMSoE%DispDOF, KgSolidValZERO, KgSolidValONE, contZEROSolid, contONESolid)
+                        call BC%AllocatePrescPresSparseMapping(FEMSoE%Kg, FEMSoE%PresDOF, KgFluidValZERO, KgFluidValONE, contZEROFluid, contONEFluid)
+
+                        allocate( FEMSoE%PrescDirichletSparseMapZERO(contZEROSolid + contZEROFluid))
+                        allocate( FEMSoE%PrescDirichletSparseMapONE(contONESolid + contONEFluid))
+                        
+                        FEMSoE%PrescDirichletSparseMapZERO(1:contZEROSolid)                                 = KgSolidValZERO(1:contZEROSolid)
+                        FEMSoE%PrescDirichletSparseMapZERO(1+contZEROSolid: contZEROSolid + contZEROfluid)  = KgFluidValZERO(1:contZEROFluid)
+                        FEMSoE%PrescDirichletSparseMapONE(1:contONESolid)                                   = KgSolidValONE(1:contONESolid)
+                        FEMSoE%PrescDirichletSparseMapONE(1+contONESolid: contONESolid + contONEfluid)      = KgFluidValONE(1:contONEFluid)
+
+                        call BC%AllocateFixedSupportSparseMapping(FEMSoE%Kg, KgSolidValZERO, KgSolidValONE, contZEROSolid, contONESolid)
+
+                        allocate( FEMSoE%FixedSupportSparseMapZERO(contZEROSolid), FEMSoE%FixedSupportSparseMapONE(contONESolid) )
+
+                        FEMSoE%FixedSupportSparseMapZERO(:) = KgSolidValZERO(1:contZEROSolid)
+                        FEMSoE%FixedSupportSparseMapONE(:)  = KgSolidValONE(1:contONESolid)
+
+                        deallocate( KgSolidValZERO, KgSolidValONE )
+                        deallocate( KgFluidValZERO, KgFluidValONE )
+                        
+                    end if
+                    
+                    !-----------------------------------------------------------------------------------
+                    call BC%GetTimeInformation(LC,ST,Time_alpha0,DeltaTime)
+                    
+                    FEMSoE%DeltaT = DeltaTime
+
+                    ! Prescribed Incremental Displacement
+                    Ubar_alpha0 = X(1:nDOFSolid)
+                    Pbar_alpha0 = X(nDOFSolid+1 : nDOF)
+                    Xconverged = X
+                    
+                    FEMSoE%Xconverged = Xconverged
+
+                    alpha_max = 1.0d0 ; alpha_min = 0.0d0
+                    alpha = alpha_max
+
+                    CutBack = 0 ; SubStep = 0
+
+                    SUBSTEPS: do while(.true.)
+
+
+                        write(*,'(8x,a,i3)') 'Cut Back: ',CutBack
+                        write(*,'(12x,a,i3,a,f7.4,a)') 'SubStep: ',SubStep,' (Alpha: ',alpha,')'
+
+
+                        FEMSoE % Time = Time_alpha0 + alpha*DeltaTime
+                        FEMSoE % Fext_solid = Fext_solid_alpha0 + alpha*DeltaFext_solid
+                        FEMSoE % Fext_fluid = Fext_fluid_alpha0 + alpha*DeltaFext_fluid
+                        FEMSoE % Xbar(1:nDOFsolid) = Ubar_alpha0 + alpha*DeltaUPresc
+                        FEMSoE % Xbar(1+nDOFsolid:nDOF) = Pbar_alpha0 + alpha*DeltaPPresc
+
+                        call NLSolver%Solve( FEMSoE , XGuess = Xconverged , X = X, Phase = 1 )
+
+                        IF (NLSolver%Status%Error) then
+
+                            write(*,'(12x,a)') 'Not Converged - '//Trim(NLSolver%Status%ErrorDescription)
+                            write(*,'(12x,a)') Trim(FEMSoE%Status%ErrorDescription)
+                            write(*,*)''
+
+                            alpha = alpha_min + (1.0d0-1.0d0/GR)*( alpha - alpha_min )
+
+                            X = Xconverged
+
+                            ! Update Mesh Coordinates
+                            if (AnalysisSettings%NLAnalysis == .true.) then
+                                call UpdateMeshCoordinates(GlobalNodesList,AnalysisSettings,X)
+                            endif
+
+                            CutBack = CutBack + 1
+                            SubStep = 1
+                            if ( CutBack .gt. AnalysisSettings%MaxCutBack ) then
+                                write(*,'(a,i3,a,i3,a,i3,a)') 'Load Case: ',LC,' Step: ', ST , ' did not converge with ', AnalysisSettings%MaxCutBack, ' cut backs.'
+                                stop
+                            endif
+
+                            write(*,'(8x,a,i3)') 'Cut Back: ',CutBack
+                            write(*,'(12x,a,i3,a,f7.4,a)') 'SubStep: ',SubStep,' (Alpha: ',alpha,')'
+
+                            !---------------------------------------------------------------------------
+                        ELSEIF (alpha==1.0d0) then
+
+                            SubStep = SubStep + 1
+
+                            Flag_EndStep = 1
+                            call WriteFEMResultsBiphasic( X(1:nDOFSolid), 0.0d0,  X((nDOFSolid+1):nDOF), 0.0d0, 1, 1, 0, &
+                                                        FileID_FEMAnalysisResultsSolid,FileID_FEMAnalysisResultsFluid, 0)
+
+                            exit SUBSTEPS
+
+                            !---------------------------------------------------------------------------
+                        ELSE
+
+                            SubStep = SubStep + 1
+
+                            alpha_aux = alpha_min
+
+                            alpha_min = alpha
+
+                            alpha = min(alpha + GR*(alpha - alpha_aux),1.0d0)
+
+                            Xconverged = X
+
+                            write(*,'(12x,a,i3,a,f7.4,a)') 'SubStep: ',SubStep,' (Alpha: ',alpha,')'
+
+                            Flag_EndStep = 0
+                            
+                            !call WriteFEMResultsBiphasic( X(1:nDOFSolid), 0.0d0,  X((nDOFSolid+1):nDOF), 0.0d0, 1, 1, 0, &
+                            !                                FileID_FEMAnalysisResultsSolid,FileID_FEMAnalysisResultsFluid, 0)
+
+                        ENDIF
+                    
+                    enddo SUBSTEPS
+
+                    ! -----------------------------------------------------------------------------------
+                    ! SWITCH THE CONVERGED STATE: StateVariable_n := StateVariable_n+1
+                    ! -----------------------------------------------------------------------------------
+                    do e=1,size(elementlist)
+                        do gp=1,size(elementlist(e)%el%GaussPoints)
+                            call ElementList(e)%el%GaussPoints(gp)%SwitchConvergedState()
+                        enddo
+                    enddo
+                    ! -----------------------------------------------------------------------------------
+
+                    write(*,'(4x,a,i3)')'End Step: ',ST
+                    write(*,*)''
+
+                enddo STEPS
+
+                write(*,'(a,i3)')'End Load Case: ',LC
+                write(*,*)''
+                write(*,*)''
+
+            enddo LOAD_CASE
+
+            close (FileID_FEMAnalysisResultsSolid)
+            close (FileID_FEMAnalysisResultsFluid)
+            !************************************************************************************
+        end subroutine
+        !##################################################################################################     
         
+
             subroutine QuasiStaticAnalysisFEM_biphasic_FluidSolid( ElementList , AnalysisSettings , GlobalNodesList , BC  , &
                                                                     KgSolid , KgFluid, NLSolver )
 
@@ -983,10 +1280,6 @@ module ModFEMAnalysisBiphasic
                         FEMSoEFluid%PrescPresSparseMapONE(:)  = KgFluidValONE(1:contONEFluid)
                         
                         deallocate( KgFluidValZERO, KgFluidValONE )
-                        
-                        
-                        !-----------------------------------------------------------------------------------
-                        ! Calculando Velocidade inicial para os GDL de deslocamento prescrito
                         
                     end if
                     !-----------------------------------------------------------------------------------

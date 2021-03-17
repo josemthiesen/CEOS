@@ -61,20 +61,27 @@ module ModAnalysisManager
         if (AnalysisSettings%ProblemType .eq. ProblemTypes%Mechanical) then
             if (AnalysisSettings%MultiscaleAnalysis) then
                 allocate( ClassMultiscaleFEMAnalysis :: Analysis)
-                allocate(Analysis%Kg)
+                allocate( Analysis%Kg)
             else
                 allocate( ClassFEMAnalysis :: Analysis)
-                allocate(Analysis%Kg)
+                allocate( Analysis%Kg)
             endif 
         elseif (AnalysisSettings%ProblemType .eq. ProblemTypes%Biphasic) then
             if (AnalysisSettings%MultiscaleAnalysis) then
                 allocate( ClassMultiscaleFEMAnalysisBiphasic :: Analysis)
-                allocate(Analysis%Kg)
-                allocate(Analysis%KgFluid)
+                allocate( Analysis%Kg)
+                allocate( Analysis%KgFluid)
             else
-                allocate( ClassFEMAnalysisBiphasic :: Analysis)
-                allocate(Analysis%Kg)
-                allocate(Analysis%KgFluid)
+                if (AnalysisSettings%SolutionScheme .eq. SolutionScheme%Sequential) then
+                    allocate( ClassFEMAnalysisBiphasic :: Analysis)
+                    allocate( Analysis%Kg)
+                    allocate( Analysis%KgFluid)
+                elseif (AnalysisSettings%SolutionScheme .eq. SolutionScheme%Monolithic) then
+                    allocate( ClassFEMAnalysisBiphasic :: Analysis)
+                    allocate( Analysis%Kg)
+                else
+                     stop 'Error: Solution Scheme not identified in ReadAndCreateAnalysis'
+                endif
             endif
         else
             stop 'Error: Problem Type not identified in ReadAndCreateAnalysis'

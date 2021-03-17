@@ -105,7 +105,8 @@ contains
 
     !---------------------------------------------------------------------------------------------------------------------------------------------------------
                 case (iLinearSolver)
-                    call ReadLinearSolver(DataFile,LinearSolver)
+                    if (.not.BlockFound(iAnalysisSettings)) call DataFile%RaiseError("Analysis Settings must be specified before the Linear solver")
+                    call ReadLinearSolver(DataFile,AnalysisSettings, LinearSolver)
 
     !---------------------------------------------------------------------------------------------------------------------------------------------------------
                 case (iNonLinearSolver)
@@ -1270,7 +1271,7 @@ contains
     !=======================================================================================================================
 
     !=======================================================================================================================
-    subroutine ReadLinearSolver(DataFile,LinearSolver)
+    subroutine ReadLinearSolver(DataFile,AnalysisSettings, LinearSolver)
     
         implicit none
         

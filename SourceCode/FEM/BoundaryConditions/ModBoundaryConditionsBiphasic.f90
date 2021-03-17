@@ -59,7 +59,6 @@ module ModBoundaryConditionsBiphasic
         integer, dimension(size(Kg%Val))        :: KgValZERO, KgValONE
         integer :: contZERO, contONE
 
-
         ! Internal variables
         ! -----------------------------------------------------------------------------------
         integer :: i, n, dof, NumberOfThreads, nCC_Presc, RowSize

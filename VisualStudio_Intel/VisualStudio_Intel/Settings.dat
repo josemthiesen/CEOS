@@ -17,7 +17,7 @@ ANALYSIS SETTINGS
 	Multiscale Analysis =  False
 	Multiscale Model = Linear !MinimalLinearD1 !Linear !Taylor !Minimal  
 	Problem Type = Biphasic !Biphasic!Mechanical !
-	Solution Scheme = Monolithic ! Monolithic
+	Solution Scheme = Monolithic ! Monolithic !Sequential
 	Multiscale Model Fluid = Linear !Linear !Taylor
 	Fiber Reinforced Analysis = False !True!False
 	Fiber Data File = Fiber_Data.dat
@@ -43,7 +43,7 @@ NONLINEAR SOLVER
 
 	Newton_Raphson_Full
 	
-	Tol = 1.0e-6
+	Tol = 1.0e-8
 	MaxIter = 50
 
 	
@@ -174,7 +174,7 @@ END MATERIAL
 
 MESH AND BOUNDARY CONDITIONS
 
-	Mesh File =  quarto_cilindro_cartilagem_u20p8_grosseiro.cdb!quarto_cilindro_cartilagem_u20p8_grosseiro.cdb!terzaghi_u20p8_refinoemcima.cdb!quarto_cilindro_cartilagem_u20p8_refinoemcima.cdb!quarto_cilindro_cartilagem_u20p8_grosseiro.cdb!quarto_cilindro_cartilagem_u20p8_refino1.cdb!teste_u20p8_1elem.cdb!quarto_cilindro_cartilagem_u20p8_refino1.cdb!Quarto_Cilindro_Cartilagem_Trial.cdb!quarto_cilindro_cartilagem_u20p8_refino1.cdb!Quarto_Cilindro_Cartilagem_Trial.cdb!quarto_cilindro_cartilagem_u20p8_refino1.cdb!Quarto_Cilindro_Cartilagem_Trial.cdb!quarto_cilindro_cartilagem_u20p8_refino1.cdb!Quarto_Cilindro_Cartilagem_Trial.cdb!quarto_cilindro_cartilagem_u20p8_refino1.cdb!Quarto_Cilindro_Cartilagem_Trial.cdb!teste_hexa20_4.cdb 
+	Mesh File =  teste_u20p8_1elem.cdb!quarto_cilindro_cartilagem_u20p8_grosseiro.cdb!terzaghi_u20p8_refinoemcima.cdb!quarto_cilindro_cartilagem_u20p8_refinoemcima.cdb!quarto_cilindro_cartilagem_u20p8_grosseiro.cdb!quarto_cilindro_cartilagem_u20p8_refino1.cdb!teste_u20p8_1elem.cdb!quarto_cilindro_cartilagem_u20p8_refino1.cdb!Quarto_Cilindro_Cartilagem_Trial.cdb!quarto_cilindro_cartilagem_u20p8_refino1.cdb!Quarto_Cilindro_Cartilagem_Trial.cdb!quarto_cilindro_cartilagem_u20p8_refino1.cdb!Quarto_Cilindro_Cartilagem_Trial.cdb!quarto_cilindro_cartilagem_u20p8_refino1.cdb!Quarto_Cilindro_Cartilagem_Trial.cdb!quarto_cilindro_cartilagem_u20p8_refino1.cdb!Quarto_Cilindro_Cartilagem_Trial.cdb!teste_hexa20_4.cdb 
 	Preprocessor = HyperMesh 
 	Time Discretization File = Time_Discretization.dat
 		
