@@ -87,8 +87,8 @@ subroutine TangentStiffnessMatrixMonolithic( AnalysisSettings , ElementList , De
         !!$OMP CRITICAL
         call AssembleGlobalMatrixMonolithicBiphasic( GM_solid , GM_solid,  Kuu, Kg ) 
         call AssembleGlobalMatrixMonolithicBiphasic( GM_solid , GM_fluid,  Kup, Kg )
-        call AssembleGlobalMatrixMonolithicBiphasic( GM_fluid , GM_solid,  Kpu*1.0d6, Kg ) !CHUNCHO
-        call AssembleGlobalMatrixMonolithicBiphasic( GM_fluid , GM_fluid,  Kpp*1.0d6, Kg )
+        call AssembleGlobalMatrixMonolithicBiphasic( GM_fluid , GM_solid,  Kpu, Kg ) !CHUNCHO
+        call AssembleGlobalMatrixMonolithicBiphasic( GM_fluid , GM_fluid,  Kpp, Kg )
         !!$OMP END CRITICAL
     enddo
     !!$OMP END DO

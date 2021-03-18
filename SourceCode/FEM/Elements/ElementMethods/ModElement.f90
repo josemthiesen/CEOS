@@ -47,7 +47,7 @@ module ModElement
             procedure :: ElementInternalForce
             !procedure :: ExternalForce
             procedure :: Matrix_B_and_G
-            procedure :: MatrixQLA_ThreeDimensional
+            procedure :: MatrixQ_ThreeDimensional
             procedure :: GetGlobalMapping
             procedure :: GetElementNumberDOF
             procedure :: DeformationGradient
@@ -630,7 +630,7 @@ module ModElement
             call this%GetElementNumberDOF_fluid(AnalysisSettings,NDOFel_fluid)
 
             ! Allocating element stiffness matrix
-            Ke=> Ke_Memory( 1:NDOFel_solid , 1:NDOFel_solid )
+            Ke=> Kuu_Memory( 1:NDOFel_solid , 1:NDOFel_solid )
             Ke=0.0d0
 
             ! Allocating matrix B
@@ -661,7 +661,7 @@ module ModElement
             ! Allocating matrix bs
             bs => bs_Memory(1:NDOFel_solid, 1:1)
 
-            ! Allocating matrix N
+            ! Allocating matrix Nf
             Nf => Nf_Memory( 1:NDOFel_fluid)
             
             ! Retrieving gauss points parameters for numerical integration
@@ -821,7 +821,7 @@ module ModElement
             
             
             ! Allocating element stiffness matrix
-            Ke=> Ke_Memory( 1:NDOFel_solid , 1:NDOFel_fluid )
+            Ke=> Kup_Memory( 1:NDOFel_solid , 1:NDOFel_fluid )
             Ke=0.0d0
 
             ! Allocating matrix hs
@@ -861,7 +861,7 @@ module ModElement
                                             
                 call VectorMultiplyTransposeVector(hs, Nf, hs_transNf)
                 
-                Ke = Ke + hs_transNf*Weight(gp)*detJ*FactorAxi
+                Ke = Ke - hs_transNf*Weight(gp)*detJ*FactorAxi
                 
             enddo                    
 
@@ -939,7 +939,7 @@ module ModElement
             ! ******************************************************* 
             
             ! Allocating element stiffness matrix
-            Ke=> Ke_Memory( 1:NDOFel_fluid , 1:NDOFel_solid )
+            Ke=> Kpu_Memory( 1:NDOFel_fluid , 1:NDOFel_solid )
             Ke=0.0d0
 
             ! Allocating matrix B
@@ -964,6 +964,8 @@ module ModElement
             H => H_Memory(  1:AnalysisSettings%AnalysisDimension , 1:NDOFel_fluid )
             
             
+            
+            
             ! Retrieving gauss points parameters for numerical integration
             call this%GetGaussPoints(NaturalCoord,Weight)
 
@@ -974,10 +976,27 @@ module ModElement
                 !Get matrix H
                 call this%MatrixH_ThreeDimensional(AnalysisSettings, NaturalCoord(gp,:), H, detJ , FactorAxi)
                 
+                !Get matrix T
                 call MatrixT_ThreeDimensional(H, Pe, T)
+                
+                !Get matrix Q
+                call this%MatrixQ_ThreeDimensional(AnalysisSettings, NaturalCoord(gp,:), Q, detJ , FactorAxi )
             
                 !Get matrix B, G and the Jacobian determinant
                 call this%Matrix_B_and_G(AnalysisSettings, NaturalCoord(gp,:) , B, G , detJ , FactorAxi )
+                
+                ! ***********************************************************************************************
+                !Get the matrix bs
+                bs=0.0d0
+                !do i=1,nDOFel_solid
+                !    bs(i,1) = G(1,i)+G(5,i)+G(9,i)  ! d_Displacement1/d_x1+d_Displacement2/d_x2+d_Displacement3/d_x3
+                !enddo
+                !bs([(i,i=1,nDOFel_solid,1)],1) = G(1,i)!+G(5,i)+G(9,i)
+                bs(:,1) = G(1,:) + G(5,:) + G(9,:)
+                
+                !Get the matrix Nf
+                Nf=0.0d0
+                call this%GetShapeFunctions_fluid(NaturalCoord(gp,:) , Nf )
                 
                 ! declarar: Q_Vse (9), Nf_Q_vse (ndof_fluid, 9), Nfbs (ndof_fluid, ndof_solid), HKf (ndof_fluid, 3), HkfH (ndof_fluid, ndof_fluid)
                 ! HKfH_Pe(ndof_fluid,1) HKfH_Pe_bt(ndof_fluid, ndof_solid),  HKfL(ndof_fluid,9), HA(ndof_fluid,9)
@@ -1134,7 +1153,7 @@ module ModElement
                 !Get matrix H
                 call this%MatrixH_ThreeDimensional(AnalysisSettings, NaturalCoord(gp,:), H, detJ , FactorAxi)
                 
-                call this%MatrixQLA_ThreeDimensional(AnalysisSettings, NaturalCoord(gp,:), H, Pe, Kf, Q, L, A, detJ , FactorAxi )
+                !call this%MatrixQLA_ThreeDimensional(AnalysisSettings, NaturalCoord(gp,:), H, Pe, Kf, Q, L, A, detJ , FactorAxi )
             
                 !Get matrix B, G and the Jacobian determinant
                 call this%Matrix_B_and_G(AnalysisSettings, NaturalCoord(gp,:) , B, G , detJ , FactorAxi )
@@ -1256,7 +1275,7 @@ module ModElement
 
 
             ! Allocating element stiffness matrix
-            Ke=> Ke_Memory( 1:NDOFel_fluid , 1:NDOFel_fluid )
+            Ke=> Kpp_Memory( 1:NDOFel_fluid , 1:NDOFel_fluid )
             Ke=0.0d0
 
             ! Allocating matrix H
@@ -1613,7 +1632,7 @@ module ModElement
 
             ! Retrieving gauss points parameters for numerical integration
             !call this%GetGaussPoints(NaturalCoord,Weight)
-            call this%GetGaussPoints_fluid(NaturalCoord,Weight)
+            call this%GetGaussPoints(NaturalCoord,Weight)
 
             !Loop over gauss points
             do gp = 1, size(NaturalCoord,dim=1)
@@ -1666,12 +1685,12 @@ module ModElement
                 ! **********************************************************
                 
                 FixedStressActivator   = AnalysisSettings%StaggeredParameters%FixedStressActivator
-                DeltaTime = this%GaussPoints_fluid(gp)%StaggeredVariables%DeltaTime
+                DeltaTime = this%GaussPoints(gp)%StaggeredVariables%DeltaTime
                 alpha = AnalysisSettings%StaggeredParameters%StabilityConst/DeltaTime
-                P_PreviousStaggered = this%GaussPoints_fluid(gp)%StaggeredVariables%Press_PreviousStaggered
-                P_PreviousStep = this%GaussPoints_fluid(gp)%StaggeredVariables%Press_PreviousStep
-                Kd_PreviousStaggered = this%GaussPoints_fluid(gp)%StaggeredVariables%Kd_PreviousStaggered
-                Kd_PreviousStep = this%GaussPoints_fluid(gp)%StaggeredVariables%Kd_PreviousStep
+                P_PreviousStaggered = this%GaussPoints(gp)%StaggeredVariables%Press_PreviousStaggered
+                P_PreviousStep = this%GaussPoints(gp)%StaggeredVariables%Press_PreviousStep
+                Kd_PreviousStaggered = this%GaussPoints(gp)%StaggeredVariables%Kd_PreviousStaggered
+                Kd_PreviousStep = this%GaussPoints(gp)%StaggeredVariables%Kd_PreviousStep
                 
                 P_CurrentStaggered = dot_product(Nf,Pe)
                 
@@ -2004,7 +2023,7 @@ module ModElement
         end subroutine
         
         
-        subroutine MatrixQLA_ThreeDimensional(this, AnalysisSettings, NaturalCoord, H, Pe, Kf, Q, L, A, detJ , FactorAxi )
+        subroutine MatrixQ_ThreeDimensional(this, AnalysisSettings, NaturalCoord, Q, detJ , FactorAxi )
 
  		    !************************************************************************************
             ! DECLARATIONS OF VARIABLES
@@ -2019,20 +2038,18 @@ module ModElement
 
             ! Input variables
             ! -----------------------------------------------------------------------------------
-            real(8) , dimension(:) , intent(in) :: NaturalCoord, Pe
-            real(8) , pointer, dimension(:,:) , intent(in) :: Kf, H
+            real(8) , dimension(:) , intent(in) :: NaturalCoord
             
             ! Output variables
             ! -----------------------------------------------------------------------------------
             type(ClassAnalysis) , intent(inout) :: AnalysisSettings
             real(8) , intent(out) :: detJ , FactorAxi
-            real(8) , pointer, dimension(:,:), intent(out) :: Q, L, A
+            real(8) , dimension(:,:), intent(inout) :: Q
 
             ! Internal variables
             ! -----------------------------------------------------------------------------------
             integer                             :: i , j , n , nNodes , DimProb , nDOFel
             real(8) , dimension(:,:) , pointer  :: DifSF
-            real(8) , dimension(3)              :: Ahat, Lhat
             real(8) , dimension(AnalysisSettings%AnalysisDimension,AnalysisSettings%AnalysisDimension) :: Jacob
             
 		    !************************************************************************************
@@ -2074,34 +2091,18 @@ module ModElement
             enddo
 
             Q = 0.0d0
-            Q(1,[(i,i=1,nDOFel,3)])=DifSF(:,1) !d_Displacement1/d_x1
-            Q(2,[(i,i=2,nDOFel,3)])=DifSF(:,1) !d_Displacement2/d_x1
-            Q(3,[(i,i=3,nDOFel,3)])=DifSF(:,1) !d_Displacement3/d_x1
+            Q(1,[(i,i=1,3,3)])=DifSF(:,1) !d_Displacement1/d_x1
+            Q(2,[(i,i=2,3,3)])=DifSF(:,1) !d_Displacement2/d_x1
+            Q(3,[(i,i=3,3,3)])=DifSF(:,1) !d_Displacement3/d_x1
 
-            Q(4,[(i,i=1,nDOFel,3)])=DifSF(:,2) !d_Displacement1/d_x2
-            Q(5,[(i,i=2,nDOFel,3)])=DifSF(:,2) !d_Displacement2/d_x2
-            Q(6,[(i,i=3,nDOFel,3)])=DifSF(:,2) !d_Displacement3/d_x2
+            Q(4,[(i,i=1,3,3)])=DifSF(:,2) !d_Displacement1/d_x2
+            Q(5,[(i,i=2,3,3)])=DifSF(:,2) !d_Displacement2/d_x2
+            Q(6,[(i,i=3,3,3)])=DifSF(:,2) !d_Displacement3/d_x2
 
-            Q(7,[(i,i=1,nDOFel,3)])=DifSF(:,3) !d_Displacement1/d_x3
-            Q(8,[(i,i=2,nDOFel,3)])=DifSF(:,3) !d_Displacement2/d_x3
-            Q(9,[(i,i=3,nDOFel,3)])=DifSF(:,3) !d_Displacement3/d_x3
-            
-            Lhat = 0.0d0
-            call MatrixVectorMultiply ( "N", H, Pe, Lhat, 1.0d0, 0.0d0 )
-            
-            L= 0.0d0
-            L(1,[(i,i=1,3)]) = Lhat(:)
-            L(2,[(i,i=4,6)]) = Lhat(:)
-            L(3,[(i,i=7,9)]) = Lhat(:)
-            
-            Ahat = 0.0d0
-            call MatrixVectorMultiply ( "N", Kf, Lhat, Ahat, 1.0d0, 0.0d0 )
-            
-            A= 0.0d0
-            A(1,[(i,i=1,3)]) = Ahat(:)
-            A(2,[(i,i=4,6)]) = Ahat(:)
-            A(3,[(i,i=7,9)]) = Ahat(:)
-
+            Q(7,[(i,i=1,3,3)])=DifSF(:,3) !d_Displacement1/d_x3
+            Q(8,[(i,i=2,3,3)])=DifSF(:,3) !d_Displacement2/d_x3
+            Q(9,[(i,i=3,3,3)])=DifSF(:,3) !d_Displacement3/d_x3
+        
 		    !************************************************************************************
 
         end subroutine

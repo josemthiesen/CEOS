@@ -85,8 +85,11 @@ module ModAnalysis
 
     ! Arrays used to allocate memory
     !----------------------------------------------------------------------------------------------
-    real(8) , target , dimension( MaxElementNumberDOF , MaxElementNumberDOF)    :: Ke_Memory, Kuu_Memory, Kup_Memory, &
-                                                                                   Kpu_Memory, Kpp_Memory
+    real(8) , target , dimension( MaxElementNumberDOF , MaxElementNumberDOF)    :: Ke_Memory
+    real(8) , target , dimension( MaxElementNumberDOF , MaxElementNumberDOF)    :: Kuu_Memory
+    real(8) , target , dimension( MaxElementNumberDOF , MaxElementNumberDOF)    :: Kup_Memory
+    real(8) , target , dimension( MaxElementNumberDOF , MaxElementNumberDOF)    :: Kpu_Memory
+    real(8) , target , dimension( MaxElementNumberDOF , MaxElementNumberDOF)    :: Kpp_Memory
     real(8) , target , dimension( MaxTensorComponents , MaxElementNumberDOF)    :: B_Memory
     real(8) , target , dimension( 9 , MaxElementNumberDOF)                      :: G_Memory
     real(8) , target , dimension( 9 , 9)                                        :: S_Memory
@@ -140,6 +143,10 @@ module ModAnalysis
 	!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     ! Marking global variables as THREADPRIVATE so that they won't be shared between OMP regions
     !$OMP THREADPRIVATE(Ke_Memory)
+    !$OMP THREADPRIVATE(Kuu_Memory)
+    !$OMP THREADPRIVATE(Kup_Memory)
+    !$OMP THREADPRIVATE(Kpu_Memory)
+    !$OMP THREADPRIVATE(Kpp_Memory)
     !$OMP THREADPRIVATE(B_Memory)
     !$OMP THREADPRIVATE(G_Memory)
     !$OMP THREADPRIVATE(S_Memory)

@@ -84,7 +84,7 @@ module ModFEMSystemOfEquationsMonolithicBiphasic
             endif
             
             ! Internal Force solid
-            call InternalForceSolid(this%ElementList , this%AnalysisSettings , X(NDOFsolid:(NDOFsolid+NDOFfluid)), &
+            call InternalForceSolid(this%ElementList , this%AnalysisSettings , X((NDOFsolid+1):(NDOFsolid+NDOFfluid)), &
                                     this%Fint_solid, this%Status)
             
             call GetSolidVelocity (this%XConverged(1:NDOFsolid), X(1:NDOFsolid), this%DeltaT, this%VSolid)
@@ -100,7 +100,7 @@ module ModFEMSystemOfEquationsMonolithicBiphasic
 
             ! Residual
             R(1:NDOFsolid) = this%Fint_solid - this%Fext_solid
-            R(NDOFsolid+1:(NDOFsolid + NDOFfluid)) = (this%Fint_fluid - this%Fext_fluid) *1.0d6 ! CHUNCHO
+            R((NDOFsolid+1):(NDOFsolid + NDOFfluid)) = (this%Fint_fluid - this%Fext_fluid) !*1.0d6 ! CHUNCHO
 
     end subroutine
 
@@ -110,6 +110,8 @@ module ModFEMSystemOfEquationsMonolithicBiphasic
 
         use ModInterfaces
         use ModMathRoutines
+        use ModSparseMatrixRoutines !chuncho
+
         class(ClassFEMSystemOfEquationsMonolithicBiphasic)        :: this
         class (ClassGlobalSparseMatrix), pointer :: G
         real(8),dimension(:) :: X , R
@@ -119,17 +121,32 @@ module ModFEMSystemOfEquationsMonolithicBiphasic
         
         ! DFC Variables
         real(8), dimension(68,68) :: KgDFCFull 
-        
+        real(8), dimension(4624) :: normDFC
+        type (ClassGlobalSparseMatrix), pointer :: KgSparseDFC
+        type (ClassGlobalSparseMatrix), pointer :: KgSparseAnalytic
+        type(SparseMatrix) :: KgSparseDFC_Raw
+        integer :: i ,j, k
         ! X -> Global Incognite of the biphasic analysis (U / P)
+        
+        allocate(KgSparseDFC)
         
         NDOFsolid = this%AnalysisSettings%NDOFsolid
         NDOFfluid = this%AnalysisSettings%NDOFfluid
 
         call TangentStiffnessMatrixMonolithic( this%AnalysisSettings , this%ElementList , this%DeltaT, this%VSolid, &
                                                 X((NDOFsolid+1):(NDOFsolid + NDOFfluid)), this%Kg)
-        
-        call TangentStiffnessDFC(this, X, R, KgDFCFull)
-
+        !! Rodar com apenas 1 elemento
+        !KgSparseAnalytic => this%Kg
+        !
+        !call TangentStiffnessDFC(this, X, R, KgDFCFull)
+        !
+        !k=0
+        !do i= 1, 68
+        !    do j = 1, 68
+        !        k=k+1
+        !        write(*,*) i, "," , j, ",", KgDFCFull(i,j), ",", KgSparseAnalytic%Val(k)
+        !    end do
+        !end do
         
         ! The dirichelet BC (Fluid -> pressure) are being applied in the system Kx=R and not in Kx = -R
         R = -R
@@ -169,12 +186,13 @@ module ModFEMSystemOfEquationsMonolithicBiphasic
         class(ClassFEMSystemOfEquationsMonolithicBiphasic) :: this
 
         ! Output variables
-        real(8), dimension(:,:), intent(inout) :: KgDFCFull 
+        real(8), dimension(:,:), intent(inout) :: KgDFCFull
         
         ! Internal variables
         real(8),allocatable, dimension(:) :: Xpert , Rpert_frente,Rpert_tras
         integer :: i, j, k, FileID_CompareKgDFC
         real(8) :: h
+        real(8), dimension(68,68) :: KgDFCFull2
         
         allocate(Rpert_frente(size(R,1)))
         allocate(Rpert_tras(size(R,1)))
@@ -182,35 +200,41 @@ module ModFEMSystemOfEquationsMonolithicBiphasic
         
         FileID_CompareKgDFC = 13
         open (FileID_CompareKgDFC,file='CompareKgDFC.result',status='unknown')
-        
-        h = 5.0e-9
-        
+                
         Xpert = X
         
         do i = 1, size(X,1)
+            h = 1.0e-8
             do j = 1, size(X,1)
+                if (j.eq.61) then
+                    h = h*1.0d0
+                endif
+                
                 Xpert(j) = X(j) + h
                 
                 call FEMUpdateMesh(this,Xpert)
                 
                 call EvaluateR(this,Xpert,Rpert_frente)
                 
-                Xpert(j) = X(j) - 2*h
+                Xpert(j) = X(j) - h
 
                 call FEMUpdateMesh(this,Xpert)
                 
                 call EvaluateR(this,Xpert,Rpert_tras)
                 
                 KgDFCFull(i,j) = (Rpert_frente(i) - Rpert_tras(i))/(2*h)
-                
-                Xpert(j) = X(j) + h
-                
-                call FEMUpdateMesh(this,Xpert)
-                
-                !write(FileID_CompareKgDFC,*) 'K', i, j, '=', KgDFCFull(i,j)
+                                
+                call FEMUpdateMesh(this,X)
                 
             end do
         end do
+        
+        !do i = 1, size(X,1)
+        !    do j = 1, size(X,1)
+        !        write(FileID_CompareKgDFC,*) 'K', j,i, '=', KgDFCFull(j,i)        
+        !    end do
+        !end do
+        
         
     end subroutine
     

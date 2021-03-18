@@ -283,6 +283,7 @@ module ModElementHexaU20P8
 
             xi = NaturalCoord(1) ; eta = NaturalCoord(2) ; zeta = NaturalCoord(3)
 
+            ! Mapeado segundo ansys
             id(1,:)= [ -R1 , -R1 , -R1 ]
             id(2,:)= [  R1 , -R1 , -R1 ]
             id(3,:)= [  R1 ,  R1 , -R1 ]
