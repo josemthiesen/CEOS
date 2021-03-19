@@ -43,7 +43,7 @@ NONLINEAR SOLVER
 
 	Newton_Raphson_Full
 	
-	Tol = 1.0e-8
+	Tol = 1.0e-7
 	MaxIter = 50
 
 	
@@ -70,9 +70,9 @@ MATERIAL
 	
 	Material ID = 1
 	neo_hookean_isochoric_biphasic
-	G = 0.343
-	BulkModulus = 0.243
-	k0 = 0.76e-4 ! 0.5e-2 ! 0.76e-2
+	G = 0.000000343!0.343
+	BulkModulus = 0.000000243!0.243
+	k0 = 0.9e+2 ! 0.5e-2 ! 0.76e-2
 	
 	!Material ID = 1
 	!neo_hookean_isochoric_biphasic

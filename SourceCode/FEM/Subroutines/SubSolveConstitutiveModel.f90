@@ -48,8 +48,8 @@ subroutine SolveConstitutiveModel( ElementList , AnalysisSettings, Time, U, Stat
     ! SOLVING THE GLOBAL CONSTITUTIVE MODEL
     !************************************************************************************
 
-    !$OMP PARALLEL DEFAULT(PRIVATE) FIRSTPRIVATE(Status) SHARED(ElementList, AnalysisSettings, U, Time)
-    !$OMP DO
+    !!$OMP PARALLEL DEFAULT(PRIVATE) FIRSTPRIVATE(Status) SHARED(ElementList, AnalysisSettings, U, Time)
+    !!$OMP DO
     do e = 1 , size(ElementList)
         call ElementList(e)%El%GetElementNumberDOF(AnalysisSettings , nDOFel)
         GM => GM_Memory( 1:nDOFel )
@@ -79,8 +79,8 @@ subroutine SolveConstitutiveModel( ElementList , AnalysisSettings, Time, U, Stat
             call ElementList(e)%El%GaussPoints(gp)%UpdateStressAndStateVariables(Status)
         enddo
     enddo
-    !$OMP END DO
-    !$OMP END PARALLEL
+    !!$OMP END DO
+    !!$OMP END PARALLEL
 
 end subroutine
 

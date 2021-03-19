@@ -963,9 +963,6 @@ module ModElement
             ! Allocating matrix H
             H => H_Memory(  1:AnalysisSettings%AnalysisDimension , 1:NDOFel_fluid )
             
-            
-            
-            
             ! Retrieving gauss points parameters for numerical integration
             call this%GetGaussPoints(NaturalCoord,Weight)
 
@@ -1632,14 +1629,14 @@ module ModElement
 
             ! Retrieving gauss points parameters for numerical integration
             !call this%GetGaussPoints(NaturalCoord,Weight)
-            call this%GetGaussPoints(NaturalCoord,Weight)
+            call this%GetGaussPoints_fluid(NaturalCoord,Weight)
 
             !Loop over gauss points
             do gp = 1, size(NaturalCoord,dim=1)
 
                 !Get the permeability k of the Gauss Point
                 Kf = 0.0d0
-                call this%GaussPoints(gp)%GetPermeabilityTensor(Kf)
+                call this%GaussPoints_fluid(gp)%GetPermeabilityTensor(Kf)
                 
                 !Get matrix H
                 call this%MatrixH_ThreeDimensional(AnalysisSettings, NaturalCoord(gp,:), H, detJ , FactorAxi)
@@ -1687,10 +1684,10 @@ module ModElement
                 FixedStressActivator   = AnalysisSettings%StaggeredParameters%FixedStressActivator
                 DeltaTime = this%GaussPoints(gp)%StaggeredVariables%DeltaTime
                 alpha = AnalysisSettings%StaggeredParameters%StabilityConst/DeltaTime
-                P_PreviousStaggered = this%GaussPoints(gp)%StaggeredVariables%Press_PreviousStaggered
-                P_PreviousStep = this%GaussPoints(gp)%StaggeredVariables%Press_PreviousStep
-                Kd_PreviousStaggered = this%GaussPoints(gp)%StaggeredVariables%Kd_PreviousStaggered
-                Kd_PreviousStep = this%GaussPoints(gp)%StaggeredVariables%Kd_PreviousStep
+                P_PreviousStaggered = this%GaussPoints_fluid(gp)%StaggeredVariables%Press_PreviousStaggered
+                P_PreviousStep = this%GaussPoints_fluid(gp)%StaggeredVariables%Press_PreviousStep
+                Kd_PreviousStaggered = this%GaussPoints_fluid(gp)%StaggeredVariables%Kd_PreviousStaggered
+                Kd_PreviousStep = this%GaussPoints_fluid(gp)%StaggeredVariables%Kd_PreviousStep
                 
                 P_CurrentStaggered = dot_product(Nf,Pe)
                 

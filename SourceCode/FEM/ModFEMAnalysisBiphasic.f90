@@ -1032,8 +1032,9 @@ module ModFEMAnalysisBiphasic
                             SubStep = SubStep + 1
 
                             Flag_EndStep = 1
-                            call WriteFEMResultsBiphasic( X(1:nDOFSolid),  FEMSoE % Time,  X((nDOFSolid+1):nDOF), 0.0d0, 1, 1, 0, &
-                                                        FileID_FEMAnalysisResultsSolid,FileID_FEMAnalysisResultsFluid, 0)
+                            
+                            call WriteFEMResultsBiphasic( X(1:nDOFSolid),  FEMSoE % Time,  X((nDOFSolid+1):nDOF), FEMSoE % Time, LC, ST, Substep, &
+                                                        FileID_FEMAnalysisResultsSolid,FileID_FEMAnalysisResultsFluid, NLSolver%NumberOfIterations)
 
                             exit SUBSTEPS
 
@@ -1054,8 +1055,8 @@ module ModFEMAnalysisBiphasic
 
                             Flag_EndStep = 0
                             
-                            !call WriteFEMResultsBiphasic( X(1:nDOFSolid), 0.0d0,  X((nDOFSolid+1):nDOF), 0.0d0, 1, 1, 0, &
-                            !                                FileID_FEMAnalysisResultsSolid,FileID_FEMAnalysisResultsFluid, 0)
+                            call WriteFEMResultsBiphasic( X(1:nDOFSolid),  FEMSoE % Time,  X((nDOFSolid+1):nDOF), FEMSoE % Time, LC, ST, Substep, &
+                                                        FileID_FEMAnalysisResultsSolid,FileID_FEMAnalysisResultsFluid, NLSolver%NumberOfIterations)
 
                         ENDIF
                     
