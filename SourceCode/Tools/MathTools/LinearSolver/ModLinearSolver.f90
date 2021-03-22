@@ -20,6 +20,7 @@ module ModLinearSolver
 
         type(ClassStatus) :: Status
         integer           :: MatrixTypePARDISO_parameter
+        integer, dimension(64) :: iparm_to_mtype = 0
 
         contains
             ! Class Methods

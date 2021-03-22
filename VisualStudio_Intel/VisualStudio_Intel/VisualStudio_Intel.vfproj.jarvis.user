@@ -4,4 +4,4 @@
 		<Configuration Name="Debug|Win32"/>
 		<Configuration Name="Release|Win32"/>
 		<Configuration Name="Debug|x64" CommandArguments="/settings Settings.dat /solve /postprocess post_processing.post"/>
-		<Configuration Name="Release|x64" CommandArguments="/settings Settings.dat /solve /postprocess post_processing.post"/></Configurations></VisualStudioUserFile>
+		<Configuration Name="Release|x64" CommandArguments="/settings Settings.dat /postprocess post_processing.post"/></Configurations></VisualStudioUserFile>

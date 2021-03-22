@@ -16,10 +16,11 @@ module ModNewtonRaphsonFull
     implicit none
 
     type, extends(ClassNonlinearSolver) :: ClassNewtonRaphsonFull
-        real(8) :: tol
-        real(8) :: SolidScaleTol = 1.0d0
-        real(8) :: FluidScaleTol = 1.0d0
+        real(8) :: Tol_Force_Mechanical = 1.0d0
+        real(8) :: Tol_Flux_Biphasic = 1.0d0
         integer :: itmax
+        integer :: sizeR_solid = 0.0d0
+        integer :: sizeR_fluid = 0.0d0
         integer :: NormType = 2 , MatrixType = 2
         logical :: ShowInfo = .true.
 
@@ -59,18 +60,17 @@ contains
 
         use ModGlobalSparseMatrix
         use ModMathRoutines
+        
         class(ClassNewtonRaphsonFull) :: this
-        class(ClassNonLinearSystemOfEquations)      :: SOE
-        real(8),dimension(:)          :: Xguess , X
+        class(ClassNonLinearSystemOfEquations)     :: SOE
+        real(8),dimension(:)                        :: Xguess , X
 
         integer :: it, i
-        real(8) :: normR , R(size(X)) , DX(size(X)), norma, tol
+        real(8) :: normR , normR_solid, normR_fluid, R(size(X)) , DX(size(X)), norma, tol, tol_fluid
         integer :: Phase ! Indicates the material phase (1 = Solid; 2 = Fluid)
 
         real(8),dimension(:,:),pointer :: GFull
         class(ClassGlobalSparseMatrix),pointer :: GSparse
-        
-
 
         call SOE%Status%SetSuccess
         call this%Status%SetSuccess
@@ -78,14 +78,6 @@ contains
         it = 0
         X=Xguess
         
-        ! tolerance adjustment 
-        if (Phase .eq. 1) then
-            tol = this%tol*this%SolidScaleTol
-        elseif (Phase .eq. 2) then
-            tol = this%tol*this%FluidScaleTol
-        endif
-
-
         LOOP: do while (.true.)
 
             !---------------------------------------------------------------------------------------------------------------
@@ -125,21 +117,50 @@ contains
                 case (NewtonRaphsonFull_NormTypes%L2Norm)
                     normR = norm(R)
                 case (NewtonRaphsonFull_NormTypes%MaximumAbsoluteValue)
-                    normR = maxval( dabs(R))
+                    if (Phase.eq.1) then
+                        tol = this%tol_force_mechanical
+                        if (size(R,1).eq.this%sizeR_solid) then ! If it is not biphasic monolithic, then..
+                            normR = maxval( dabs(R))
+                            if (this%ShowInfo) write(*,'(12x,a,i3,a,e16.9)') 'IT: ',IT ,'  NORM: ',normR
+                            if (normR<tol) then ! Converged by solid residual norm (normal or solid biphasic analysis)
+                                call this%Status%SetSuccess()
+                            if (this%ShowInfo) write(*,'(12x,a,i3,a)')'Converged in ',IT,' iterations'
+                                return
+                            elseif (it>= this%itmax) then
+                                call this%Status%SetError(NewtonRaphsonFull_Errors%MaxNumberOfIteration,'Maximum Number of Iterations reached!')
+                                return
+                            endif
+                        elseif (size(R,1).gt.this%sizeR_solid) then ! IF it is biphasic monolithic, then..
+                            tol_fluid = this%tol_flux_biphasic
+                            normR_solid = maxval( dabs(R(1:this%sizeR_solid)))
+                            normR_fluid = maxval( dabs(R((this%sizeR_solid+1):size(R,1))))
+                            if (this%ShowInfo) write(*,'(12x,a,i3,a,e16.9, 5x, a, e16.9)') 'IT: ',IT ,'  NORM_Solid: ',normR_solid,'  NORM_Fluid: ',normR_fluid
+                            if (normR_solid<tol.AND.normR_fluid<tol_fluid) then ! Converged by both residual norms
+                                call this%Status%SetSuccess()
+                            if (this%ShowInfo) write(*,'(12x,a,i3,a)')'Converged in ',IT,' iterations'
+                                return
+                            elseif (it>= this%itmax) then
+                                call this%Status%SetError(NewtonRaphsonFull_Errors%MaxNumberOfIteration,'Maximum Number of Iterations reached!')
+                                return
+                            endif
+                        endif 
+                    elseif (Phase.eq.2) then
+                        tol_fluid = this%tol_flux_biphasic
+                        normR = maxval( dabs(R))
+                        if (this%ShowInfo) write(*,'(12x,a,i3, a,e16.9)') 'IT: ',IT ,'  NORM: ',normR
+                        if (normR<tol_fluid) then ! Converged by fluid residual norm (biphasic staggered procedure, fluid phase)
+                            call this%Status%SetSuccess()
+                        if (this%ShowInfo) write(*,'(12x,a,i3,a)')'Converged in ',IT,' iterations'
+                            return
+                        elseif (it>= this%itmax) then
+                            call this%Status%SetError(NewtonRaphsonFull_Errors%MaxNumberOfIteration,'Maximum Number of Iterations reached!')
+                            return
+                        endif
+                    endif
                 case default
                     stop "NewtonRaphsonFull_Solve :: NormType not set"
-            end select
-
-            if (this%ShowInfo) write(*,'(12x,a,i3,a,e16.9)') 'IT: ',IT ,'  NORM: ',normR
-
-            if (normR<tol) then
-                call this%Status%SetSuccess()
-                if (this%ShowInfo) write(*,'(12x,a,i3,a)')'Converged in ',IT,' iterations'
-                return
-            elseif (it>= this%itmax) then
-                call this%Status%SetError(NewtonRaphsonFull_Errors%MaxNumberOfIteration,'Maximum Number of Iterations reached!')
-                return
-            endif
+                end select
+                        
             !---------------------------------------------------------------------------------------------------------------
 
             !---------------------------------------------------------------------------------------------------------------
@@ -199,18 +220,19 @@ contains
 
 		    !************************************************************************************
 
-		    character(len=100),dimension(2)::ListOfOptions,ListOfValues
+		    character(len=100),dimension(3)::ListOfOptions,ListOfValues
 
             !************************************************************************************
             ! READ THE MATERIAL PARAMETERS
 		    !************************************************************************************
-		    ListOfOptions=["tol","maxiter"]
+		    ListOfOptions=["tol_force_mechanical","tol_flux_biphasic","maxiter"]
 
 		    call DataFile%FillListOfOptions(ListOfOptions,ListOfValues)
 
 
-            this%tol = ListOfValues(1)
-            this%itmax = ListOfValues(2)
+            this%tol_force_mechanical = ListOfValues(1)
+            this%tol_flux_biphasic = ListOfValues(2)
+            this%itmax = ListOfValues(3)
 
         end subroutine
         !==========================================================================================

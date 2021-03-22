@@ -19,6 +19,7 @@ module ModFEMAnalysisBiphasic
     use ModBoundaryConditions
     use ModGlobalSparseMatrix
     use ModNonlinearSolver
+    use ModNonlinearSolverLibrary
     use ModFEMAnalysis
     use ModInterfaces
     use ModMathRoutines
@@ -452,6 +453,14 @@ module ModFEMAnalysisBiphasic
             call AnalysisSettings%GetTotalNumberOfDOF (GlobalNodesList, nDOFSolid)
             call AnalysisSettings%GetTotalNumberOfDOF_fluid (GlobalNodesList, nDOFFluid)
 
+            select type (NLSolver)
+                class is (ClassNewtonRaphsonFull)
+                        NLSolver%SizeR_solid = nDOFSolid
+                        NLSolver%SizeR_fluid = nDOFFluid
+                class default
+                    stop 'Error: Non linear solver is not defined'
+            end select
+            
             write(FileID_FEMAnalysisResultsSolid,*) 'Total Number of Solid DOF  = ', nDOFSolid
             write(FileID_FEMAnalysisResultsFluid,*) 'Total Number of Fluid DOF  = ', nDOFFluid
 
@@ -637,7 +646,7 @@ module ModFEMAnalysisBiphasic
                         FEMSoESolid % Fext = Fext_alpha0 + alpha*DeltaFext
                         FEMSoESolid % Ubar = Ubar_alpha0 + alpha*DeltaUPresc
                         FEMSoESolid % Pfluid = Pstaggered    !Pconverged
-
+                        
                         write(*,'(12x,a)') 'Solve the Solid system of equations '
                         call NLSolver%Solve( FEMSoESolid , XGuess = Ustaggered , X = U, Phase = 1 )
 
@@ -854,6 +863,14 @@ module ModFEMAnalysisBiphasic
             !***********************************************************************************
             nDOFSolid = AnalysisSettings%NDOFsolid
             nDOFFluid = AnalysisSettings%NDOFfluid
+            
+            select type (NLSolver)
+                class is (ClassNewtonRaphsonFull)
+                        NLSolver%SizeR_solid = nDOFSolid
+                        NLSolver%SizeR_fluid = nDOFFluid
+                class default
+                    stop 'Error: Non linear solver is not defined'
+            end select
             
             nDOF = nDOFSolid + nDOFFluid
 
@@ -1159,6 +1176,14 @@ module ModFEMAnalysisBiphasic
             !***********************************************************************************
             call AnalysisSettings%GetTotalNumberOfDOF (GlobalNodesList, nDOFSolid)
             call AnalysisSettings%GetTotalNumberOfDOF_fluid (GlobalNodesList, nDOFFluid)
+            
+            select type (NLSolver)
+                class is (ClassNewtonRaphsonFull)
+                        NLSolver%SizeR_solid = nDOFSolid
+                        NLSolver%SizeR_fluid = nDOFFluid
+                class default
+                    stop 'Error: Non linear solver is not defined'
+            end select
 
             write(FileID_FEMAnalysisResultsSolid,*) 'Total Number of Solid DOF  = ', nDOFSolid
             write(FileID_FEMAnalysisResultsFluid,*) 'Total Number of Fluid DOF  = ', nDOFFluid
@@ -1346,6 +1371,7 @@ module ModFEMAnalysisBiphasic
                         FEMSoEFluid % Pbar = Pbar_alpha0 + alpha*DeltaPPresc
                         FEMSoEFluid % VSolid = VSolid
                         
+                        
                         write(*,'(12x,a)') 'Solve the Fluid system of equations '
                         call NLSolver%Solve( FEMSoEFluid , XGuess = Pstaggered , X = P, Phase = 2 )
 
@@ -1362,7 +1388,7 @@ module ModFEMAnalysisBiphasic
                         FEMSoESolid % Fext = Fext_alpha0 + alpha*DeltaFext
                         FEMSoESolid % Ubar = Ubar_alpha0 + alpha*DeltaUPresc
                         FEMSoESolid % Pfluid = P           !FEMSoESolid % Pfluid = Pstaggered
-
+                        
                         write(*,'(12x,a)') 'Solve the Solid system of equations '
                         call NLSolver%Solve( FEMSoESolid , XGuess = Ustaggered , X = U, Phase = 1 )
 

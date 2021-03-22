@@ -20,6 +20,7 @@ module ModFEMAnalysis
     use ModBoundaryConditions
     use ModGlobalSparseMatrix
     use ModNonlinearSolver
+    use ModNonlinearSolverLibrary
     use ModInterfaces
     use ModMathRoutines
     use ModLoadHistoryData
@@ -472,7 +473,14 @@ module ModFEMAnalysis
             ! QUASI-STATIC ANALYSIS
             !***********************************************************************************
             call AnalysisSettings%GetTotalNumberOfDOF (GlobalNodesList, nDOF)
-
+            
+            select type (NLSolver)
+                class is (ClassNewtonRaphsonFull)
+                        NLSolver%sizeR_solid = nDOF
+                class default
+                    stop 'Error: Non linear solver is not defined'
+            end select
+            
             write(FileID_FEMAnalysisResults,*) 'Total Number of DOF = ', nDOF
 
             FEMSoE % ElementList => ElementList
@@ -486,7 +494,6 @@ module ModFEMAnalysis
             ! Allocating arrays
             allocate(R(nDOF) , DeltaFext(nDOF), Fext_alpha0(nDOF))
             allocate( U(nDOF)  , DeltaUPresc(nDOF), Ubar_alpha0(nDOF), Uconverged(nDOF)  )
-
 
             U = 0.0d0
             Ubar_alpha0 = 0.0d0
@@ -699,6 +706,13 @@ module ModFEMAnalysis
             ! QUASI-STATIC ANALYSIS
             !***********************************************************************************
             call AnalysisSettings%GetTotalNumberOfDOF (GlobalNodesList, nDOF)
+            
+            select type (NLSolver)
+                class is (ClassNewtonRaphsonFull)
+                        NLSolver%sizeR_solid = nDOF + 12
+                class default
+                    stop 'Error: Non linear solver is not defined'
+            end select
 
             write(FileID_FEMAnalysisResults,*) 'Total Number of DOF = ', nDOF
 
@@ -936,7 +950,14 @@ module ModFEMAnalysis
             ! QUASI-STATIC ANALYSIS
             !***********************************************************************************
             call AnalysisSettings%GetTotalNumberOfDOF (GlobalNodesList, nDOF)
-
+            
+            select type (NLSolver)
+                class is (ClassNewtonRaphsonFull)
+                        NLSolver%sizeR_solid = nDOF + 12
+                class default
+                    stop 'Error: Non linear solver is not defined'
+            end select
+            
             write(FileID_FEMAnalysisResults,*) 'Total Number of DOF = ', nDOF
 
             FEMSoE % ElementList => ElementList
@@ -1168,6 +1189,13 @@ module ModFEMAnalysis
             ! QUASI-STATIC ANALYSIS
             !***********************************************************************************
             call AnalysisSettings%GetTotalNumberOfDOF (GlobalNodesList, nDOF)
+            
+            select type (NLSolver)
+                class is (ClassNewtonRaphsonFull)
+                        NLSolver%sizeR_solid = nDOF + 12
+                class default
+                    stop 'Error: Non linear solver is not defined'
+            end select
 
             write(FileID_FEMAnalysisResults,*) 'Total Number of DOF = ', nDOF
 

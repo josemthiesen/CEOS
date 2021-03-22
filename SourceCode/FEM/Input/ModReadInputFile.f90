@@ -369,13 +369,12 @@ contains
         class (ClassNonlinearSolver), pointer :: NLSolver
         character(len=255)::string
 
-        character(len=100),dimension(6)::ListOfOptions,ListOfValues
-        logical,dimension(6)::FoundOption
+        character(len=100),dimension(4)::ListOfOptions,ListOfValues
+        logical,dimension(4)::FoundOption
         integer :: i
 
 
-        ListOfOptions=["Splitting Scheme", "Stability Constant", "Mechanical Newton Scale Tolerance", "Flux Newton Scale Tolerance", &
-	                    "Mechanical Staggered Tolerance", "Flux Staggered Tolerance"]
+        ListOfOptions=["Splitting Scheme", "Stability Constant", "Mechanical Staggered Tolerance", "Flux Staggered Tolerance"]
 
         call DataFile%FillListOfOptions(ListOfOptions,ListOfValues,FoundOption)
 
@@ -428,24 +427,9 @@ contains
                 call Error( "Solution Scheme not identified - ModReadInputFile.f90" )
             end select
             
-                
-        
         AnalysisSettings%StaggeredParameters%StabilityConst = ListOfValues(2)
-        AnalysisSettings%StaggeredParameters%SolidStaggTol = ListOfValues(5)
-        AnalysisSettings%StaggeredParameters%FluidStaggTol = ListOfValues(6)
-        
-        select type (NLSolver)
-            class is (ClassNewtonRaphsonFull)
-                if (AnalysisSettings%ProblemType == ProblemTypes%Biphasic) then
-                    NLSolver%SolidScaleTol = ListOfValues(3)
-                    NLSolver%FluidScaleTol = ListOfValues(4)
-                else
-                    NLSolver%SolidScaleTol = 1.0d0
-                    NLSolver%FluidScaleTol = 1.0d0
-                end if
-            class default
-                stop 'Error: Non linear solver is not defined'
-        end select
+        AnalysisSettings%StaggeredParameters%SolidStaggTol = ListOfValues(3)
+        AnalysisSettings%StaggeredParameters%FluidStaggTol = ListOfValues(4)
             
         BlockFound(iStaggeredSplittingScheme)=.true.
         call DataFile%GetNextString(string)
@@ -1304,8 +1288,16 @@ contains
         
         if (AnalysisSettings%SolutionScheme == SolutionScheme%Monolithic.AND.AnalysisSettings%ProblemType == ProblemTypes%Biphasic) then
             LinearSolver%MatrixTypePARDISO_parameter = 11
+            LinearSolver%iparm_to_mtype(10) = 13
+            LinearSolver%iparm_to_mtype(11) = 1
+            LinearSolver%iparm_to_mtype(13) = 1
+            LinearSolver%iparm_to_mtype(24) = 10
         else
             LinearSolver%MatrixTypePARDISO_parameter = -2
+            LinearSolver%iparm_to_mtype(10) = 0
+            LinearSolver%iparm_to_mtype(11) = 0
+            LinearSolver%iparm_to_mtype(13) = 0
+            LinearSolver%iparm_to_mtype(24) = 1
         end if
         
 

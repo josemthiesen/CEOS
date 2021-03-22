@@ -1682,7 +1682,7 @@ module ModElement
                 ! **********************************************************
                 
                 FixedStressActivator   = AnalysisSettings%StaggeredParameters%FixedStressActivator
-                DeltaTime = this%GaussPoints(gp)%StaggeredVariables%DeltaTime
+                DeltaTime = this%GaussPoints_fluid(gp)%StaggeredVariables%DeltaTime
                 alpha = AnalysisSettings%StaggeredParameters%StabilityConst/DeltaTime
                 P_PreviousStaggered = this%GaussPoints_fluid(gp)%StaggeredVariables%Press_PreviousStaggered
                 P_PreviousStep = this%GaussPoints_fluid(gp)%StaggeredVariables%Press_PreviousStep
