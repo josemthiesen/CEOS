@@ -57,6 +57,15 @@ END POST PROCESSOR
 NUMBER OF PROBES = 0
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+PROBE
+	Location = Nodal Force
+	File Name = Reaction_Force.probe
+	Load Collector = Reaction Force
+	Components = Total
+	HyperMesh File = Malha_Fibra_Helicoidal_3_Passos.cdb
+END PROBE 
+
 PROBE
 	Location = Micro Structure Biphasic
 	File Name = Homogenized_Relative_Velocity.probe

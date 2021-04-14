@@ -18,6 +18,7 @@ module ModTimer
         procedure :: Start => StartTime
         procedure :: Stop => StopTime
         procedure :: GetElapsedTime => GetTime
+        procedure :: WriteElapsedTime
 
     end type
 
@@ -38,8 +39,22 @@ module ModTimer
         !this%time =  dsecnd() - this%time
         this%time = rtc() - this%time
     end subroutine
-
-
+    
+    subroutine WriteElapsedTime(this)
+    
+        class(ClassTimer) :: this
+        integer           :: FileID_FEMAnalysisResultsSolid
+        
+        FileID_FEMAnalysisResultsSolid = 747
+        open (FileID_FEMAnalysisResultsSolid,file='ElapsedTime.result',status='unknown')
+        
+        write (FileID_FEMAnalysisResultsSolid,*) 'FEA Processing Time:'
+        write (FileID_FEMAnalysisResultsSolid,*) this%Time
+        
+        close (FileID_FEMAnalysisResultsSolid)
+    
+    end subroutine 
+    
     function GetTime(this) result(dt)
         class(ClassTimer)::this
         real(8)::Dt

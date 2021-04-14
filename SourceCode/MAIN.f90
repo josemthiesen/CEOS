@@ -133,11 +133,15 @@ program MAIN
         call Analysis%Solve
 
         call AnalysisTime%Stop
+        
         write(*,*) ''
         write(*,*) ''
         write(*,*) 'Finite Element Analysis: CPU Time =', AnalysisTime%GetElapsedTime() , '[s]'
         write(*,*) ''
         write(*,*) ''
+        
+        call AnalysisTime%WriteElapsedTime
+        
         !**********************************************************************************************
     endif
 

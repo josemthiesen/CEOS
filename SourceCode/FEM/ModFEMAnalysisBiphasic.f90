@@ -436,7 +436,11 @@ module ModFEMAnalysisBiphasic
             integer :: contZEROFluid, contONEFluid
             integer :: SubstepsMAX, nDOFel
             integer :: Phase ! Indicates the material phase (1 = Solid; 2 = Fluid)  
-
+            
+            integer :: NumberOfSolidNewtonIterations = 0
+            integer :: NumberOfFluidNewtonIterations = 0
+            integer :: FileID_NumberOfIterations
+            
             type(ClassFEMSystemOfEquationsSolid) :: FEMSoESolid
             type(ClassFEMSystemOfEquationsFluid) :: FEMSoEFluid
 
@@ -444,6 +448,8 @@ module ModFEMAnalysisBiphasic
             open (FileID_FEMAnalysisResultsSolid,file='FEMAnalysisSolid.result',status='unknown')
             FileID_FEMAnalysisResultsFluid = 43
             open (FileID_FEMAnalysisResultsFluid,file='FEMAnalysisFluid.result',status='unknown')
+            FileID_NumberOfIterations = 467
+            open (FileID_NumberOfIterations,file='NumberOfStaggeredIterations.dat',status='unknown')
 
             !************************************************************************************
 
@@ -629,6 +635,9 @@ module ModFEMAnalysisBiphasic
                         stop 'Error: Staggered procedure not identified.'
                     end select
                     
+                    NumberOfSolidNewtonIterations = 0
+                    NumberOfFluidNewtonIterations = 0
+                    
                     SUBSTEPS: do while(.true.)   !Staggered procedure
                         
                        
@@ -649,6 +658,8 @@ module ModFEMAnalysisBiphasic
                         
                         write(*,'(12x,a)') 'Solve the Solid system of equations '
                         call NLSolver%Solve( FEMSoESolid , XGuess = Ustaggered , X = U, Phase = 1 )
+                        
+                        NumberOfSolidNewtonIterations = NumberOfSolidNewtonIterations + NLSolver%NumberOfIterations
 
                         IF (NLSolver%Status%Error) then
                             write(*,'(12x,a)') 'Solid Not Converged - '//Trim(NLSolver%Status%ErrorDescription)
@@ -677,6 +688,8 @@ module ModFEMAnalysisBiphasic
                         
                         write(*,'(12x,a)') 'Solve the Fluid system of equations '
                         call NLSolver%Solve( FEMSoEFluid , XGuess = Pstaggered , X = P, Phase = 2 )
+                        
+                        NumberOfFluidNewtonIterations = NumberOfFluidNewtonIterations + NLSolver%NumberOfIterations
 
                         IF (NLSolver%Status%Error) then
                             write(*,'(12x,a)') 'Fluid Not Converged - '//Trim(NLSolver%Status%ErrorDescription)
@@ -762,10 +775,6 @@ module ModFEMAnalysisBiphasic
                             SubStep = SubStep + 1
                             
                         endif     
-                        
-                        
-                        
-                    
                          
                     enddo SUBSTEPS
 
@@ -773,7 +782,13 @@ module ModFEMAnalysisBiphasic
                     ! Write the results
                     call WriteFEMResultsBiphasic( U, FEMSoESolid%Time,  P, FEMSoEFluid%Time, LC, ST, SubStep,FileID_FEMAnalysisResultsSolid, &
                                                   FileID_FEMAnalysisResultsFluid, Substep)
-
+                    
+                    write(FileID_NumberOfIterations,*) 'Time step :', FEMSoEFluid%Time
+                    write(FileID_NumberOfIterations,*) 'Number of Staggered Iterations :', Substep
+                    write(FileID_NumberOfIterations,*) 'Number of Solid Newton Iterations :', NumberOfSolidNewtonIterations
+                    write(FileID_NumberOfIterations,*) 'Number of Fluid Newton Iterations :', NumberOfFluidNewtonIterations
+                    write(FileID_NumberOfIterations,*) ''
+                    
                     ! -----------------------------------------------------------------------------------
                     ! SWITCH THE CONVERGED STATE: StateVariable_n := StateVariable_n+1
                     ! -----------------------------------------------------------------------------------
@@ -797,6 +812,7 @@ module ModFEMAnalysisBiphasic
 
             close (FileID_FEMAnalysisResultsSolid)
             close (FileID_FEMAnalysisResultsFluid)
+            close (FileID_NumberOfIterations)
             !************************************************************************************
 
             end subroutine
@@ -1160,14 +1176,21 @@ module ModFEMAnalysisBiphasic
             integer :: contZEROFluid, contONEFluid
             integer :: SubstepsMAX
             integer :: Phase ! Indicates the material phase (1 = Solid; 2 = Fluid)
+            
+            integer :: NumberOfSolidNewtonIterations = 0
+            integer :: NumberOfFluidNewtonIterations = 0
+            integer :: FileID_NumberOfIterations
 
-            type(ClassFEMSystemOfEquationsSolid) :: FEMSoESolid
+            type(ClassFEMSystemOfEquationsSolid) :: FEMSoESolid 
             type(ClassFEMSystemOfEquationsFluid) :: FEMSoEFluid
 
             FileID_FEMAnalysisResultsSolid = 42
             open (FileID_FEMAnalysisResultsSolid,file='FEMAnalysisSolid.result',status='unknown')
             FileID_FEMAnalysisResultsFluid = 43
             open (FileID_FEMAnalysisResultsFluid,file='FEMAnalysisFluid.result',status='unknown')
+            FileID_NumberOfIterations = 467
+            open (FileID_NumberOfIterations,file='NumberOfStaggeredIterations.dat',status='unknown')
+            
 
             !************************************************************************************
 
@@ -1244,6 +1267,8 @@ module ModFEMAnalysisBiphasic
             call WriteFEMResultsBiphasic( U, 0.0d0,  P, 0.0d0, 1, 1, 0,FileID_FEMAnalysisResultsSolid,FileID_FEMAnalysisResultsFluid, 0)
 
             ! Set Kd using the initial linearlized elasticity matrix (F = Id(3,3))
+            
+            call BC%GetTimeInformation(1,1,Time_alpha0,DeltaTime) !Verificar
             
             do e=1,size(elementlist)
                 do gp=1,size(elementlist(e)%el%GaussPoints)
@@ -1345,7 +1370,10 @@ module ModFEMAnalysisBiphasic
                         stop 'Error: Staggered procedure not identified.'
                     end select
                     
-                    call ComputeInitialKd( ElementList, AnalysisSettings)
+                    call ComputeInitialKd( ElementList, AnalysisSettings, Time_alpha0, DeltaTime)
+                    
+                    NumberOfSolidNewtonIterations = 0
+                    NumberOfFluidNewtonIterations = 0
                     
                     SUBSTEPS: do while(.true.)   !Staggered procedure
 
@@ -1374,6 +1402,8 @@ module ModFEMAnalysisBiphasic
                         
                         write(*,'(12x,a)') 'Solve the Fluid system of equations '
                         call NLSolver%Solve( FEMSoEFluid , XGuess = Pstaggered , X = P, Phase = 2 )
+                        
+                        NumberOfFluidNewtonIterations = NumberOfFluidNewtonIterations + NLSolver%NumberOfIterations
 
                         IF (NLSolver%Status%Error) then
                             write(*,'(12x,a)') 'Fluid Not Converged - '//Trim(NLSolver%Status%ErrorDescription)
@@ -1391,6 +1421,8 @@ module ModFEMAnalysisBiphasic
                         
                         write(*,'(12x,a)') 'Solve the Solid system of equations '
                         call NLSolver%Solve( FEMSoESolid , XGuess = Ustaggered , X = U, Phase = 1 )
+                        
+                        NumberOfSolidNewtonIterations = NumberOfSolidNewtonIterations + NLSolver%NumberOfIterations
 
                         IF (NLSolver%Status%Error) then
                             write(*,'(12x,a)') 'Solid Not Converged - '//Trim(NLSolver%Status%ErrorDescription)
@@ -1426,19 +1458,6 @@ module ModFEMAnalysisBiphasic
                                 InitialNormStagFluid = AuxInitialNormStagFluid
                             endif
                         endif
-                        
-                        ! Update fixed stress staggered variables
-                        
-                        !stagg = 0 !trial
-                        !do e=1,size(elementlist)
-                         !   do gp=1,size(elementlist(e)%el%GaussPoints)
-                          !      stagg = stagg + 1 ! trial
-                          !      DivV_Staggered(stagg) = ElementList(e)%el%GaussPoints(gp)%StaggeredVariables%Div_Velocity_PreviousStaggered ! trial
-                          !      DivV(stagg) =  ElementList(e)%el%GaussPoints(gp)%StaggeredVariables%Div_Velocity_CurrentStaggered! trial
-                          !  enddo
-                        !enddo
-                        
-                        !NormStagFixedStress = maxval(dabs(DivV_Staggered-DivV)) !trial
                         
                         InitialTolFixedStress = 1.0e-14
                         
@@ -1491,6 +1510,13 @@ module ModFEMAnalysisBiphasic
                     call WriteFEMResultsBiphasic( U, FEMSoESolid%Time,  P, FEMSoEFluid%Time, LC, ST, SubStep,FileID_FEMAnalysisResultsSolid, &
                                                   FileID_FEMAnalysisResultsFluid, Substep)
 
+                    write(FileID_NumberOfIterations,*) 'Time step :', FEMSoEFluid%Time
+                    write(FileID_NumberOfIterations,*) 'Number of Staggered Iterations :', Substep
+                    write(FileID_NumberOfIterations,*) 'Number of Solid Newton Iterations :', NumberOfSolidNewtonIterations
+                    write(FileID_NumberOfIterations,*) 'Number of Fluid Newton Iterations :', NumberOfFluidNewtonIterations
+                    write(FileID_NumberOfIterations,*) ''
+                    
+
                     ! -----------------------------------------------------------------------------------
                     ! SWITCH THE CONVERGED STATE: StateVariable_n := StateVariable_n+1
                     ! -----------------------------------------------------------------------------------
@@ -1505,7 +1531,7 @@ module ModFEMAnalysisBiphasic
                     write(*,*)''
 
                 enddo STEPS
-
+            
                 write(*,'(a,i3)')'End Load Case: ',LC
                 write(*,*)''
                 write(*,*)''
@@ -1514,6 +1540,7 @@ module ModFEMAnalysisBiphasic
 
             close (FileID_FEMAnalysisResultsSolid)
             close (FileID_FEMAnalysisResultsFluid)
+            close (FileID_NumberOfIterations)
             !************************************************************************************
 
         end subroutine
@@ -1623,7 +1650,7 @@ module ModFEMAnalysisBiphasic
 
         end subroutine
         
-        subroutine ComputeInitialKd( ElementList, AnalysisSettings)
+        subroutine ComputeInitialKd( ElementList, AnalysisSettings, Time_alpha0, DeltaTime)
 
             !************************************************************************************
             ! DECLARATIONS OF VARIABLES
@@ -1640,6 +1667,7 @@ module ModFEMAnalysisBiphasic
             ! -----------------------------------------------------------------------------------
             type(ClassElementsWrapper) , dimension(:)  :: ElementList
             type(ClassAnalysis)                        :: AnalysisSettings
+            real(8)                                    :: Time_alpha0, DeltaTime
             
             ! Internal variables
             ! -----------------------------------------------------------------------------------
@@ -1648,7 +1676,7 @@ module ModFEMAnalysisBiphasic
             real(8) , pointer , dimension(:,:)  :: NaturalCoord_fluid, NaturalCoord_solid, D
             real(8) , pointer , dimension(:)    :: Nf, Weight_fluid, Weight_solid
             real(8), dimension(6)               :: Id_voigt, DdotI
-            real(8)                             :: Kd, DeltaTime
+            real(8)                             :: Kd
 
 
             class(ClassElementBiphasic), pointer :: ElBiphasic
@@ -1661,7 +1689,7 @@ module ModFEMAnalysisBiphasic
             Id_voigt(2) = 1.0d0
             Id_voigt(3) = 1.0d0
             
-            !$OMP PARALLEL DEFAULT(PRIVATE) SHARED(AnalysisSettings, ElementList, Id_voigt)
+            !$OMP PARALLEL DEFAULT(PRIVATE) SHARED(AnalysisSettings, ElementList, Id_voigt, Time_alpha0, DeltaTime)
             !$OMP DO
             
             do e = 1, size(ElementList)
@@ -1688,6 +1716,7 @@ module ModFEMAnalysisBiphasic
                 
                 do gp = 1, size(NaturalCoord_solid,dim=1)
                     DdotI = 0.0d0
+                    ElBiphasic%GaussPoints(gp)%Time = Time_alpha0 + DeltaTime
                     !Get tangent modulus
                     call ElBiphasic%GaussPoints(gp)%GetTangentModulus(D)
                     call MatrixVectorMultiply( 'N', D, Id_voigt, DdotI, 1.0d0, 0.0d0 )
@@ -1737,24 +1766,24 @@ module ModFEMAnalysisBiphasic
             real(8) :: Gamma, Beta  ! Parâmetros do procedimento de Newmark ******
             real(8) :: omega        ! Parâmetro da regra do trapézio ******
             
-            Gamma = 0.5d0   ! Implícito e incondicionalmente estável
-            Beta  = 0.25d0
-            omega = 0.5d0   ! Implícito e incondicionalmente estável
+            !Gamma = 0.5d0   ! Implícito e incondicionalmente estável
+            !Beta  = 0.25d0
+            !omega = 0.5d0   ! Implícito e incondicionalmente estável
             
             
             ! Update the solid aceleration
-            aux1 = (1/(Beta*(DeltaTime**2)))*(U(1)-Uconverged(1))
-            aux2 = (1/(Beta*DeltaTime))*VSolidconverged(1) 
-            aux3 = ((0.5 - Beta)/Beta)*ASolidconverged(1)
+            !aux1 = (1/(Beta*(DeltaTime**2)))*(U(1)-Uconverged(1))
+            !aux2 = (1/(Beta*DeltaTime))*VSolidconverged(1) 
+            !aux3 = ((0.5 - Beta)/Beta)*ASolidconverged(1)
            
-            ASolid = (1/(Beta*(DeltaTime**2)))*(U-Uconverged) -  (1/(Beta*DeltaTime))*VSolidconverged - ((0.5 - Beta)/Beta)*ASolidconverged  !*******
+            !ASolid = (1/(Beta*(DeltaTime**2)))*(U-Uconverged) -  (1/(Beta*DeltaTime))*VSolidconverged - ((0.5 - Beta)/Beta)*ASolidconverged  !*******
             
             ! Update the solid velocity         
-            VSolid  = VSolidconverged + DeltaTime*(1-Gamma)*ASolidconverged + Gamma*DeltaTime*ASolid
+            !VSolid  = VSolidconverged + DeltaTime*(1-Gamma)*ASolidconverged + Gamma*DeltaTime*ASolid
             
             !****************************************************************************
             ! Diferenças Finitas
-            !VSolid = (U-Uconverged)/DeltaTime
+            VSolid = (U-Uconverged)/DeltaTime
             
             !****************************************************************************
             ! Regra do Trapézio

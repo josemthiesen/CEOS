@@ -101,7 +101,7 @@ module ModFEMSystemOfEquationsMonolithicBiphasic
 
             ! Residual
             R(1:NDOFsolid) = this%Fint_solid - this%Fext_solid
-            R((NDOFsolid+1):(NDOFsolid + NDOFfluid)) = (this%Fint_fluid - this%Fext_fluid) !*1.0d6 ! CHUNCHO
+            R((NDOFsolid+1):(NDOFsolid + NDOFfluid)) = (this%Fint_fluid - this%Fext_fluid) ! CHUNCHO
 
     end subroutine
 

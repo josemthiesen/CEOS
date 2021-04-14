@@ -64,6 +64,7 @@ module ModViscoelasticMatrixBiphasic
              
              ! Fluid
             procedure :: GetPermeabilityTensor         => GetPermeabilityTensorViscoelasticMatrixBiphasic
+            procedure :: GetTangentPermeabilityTensor  => GetTangentPermeabilityTensorExponentialIso
 
     end type
 	!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -1146,8 +1147,10 @@ module ModViscoelasticMatrixBiphasic
             ! Atualização permeabilidade
             Js = det(this%F)
             !k = k0*((Js-1)/PhiF + 1)**2
-            k = k0*(((Js - PhiS)/(1-PhiS))**L)*exp(M*(Js**2 - 1)/2)
-                        
+            !k = k0*(((Js - PhiS)/(1-PhiS))**L)*exp(M*(Js**2 - 1)/2)
+            
+            k = k0
+            
             Kf = 0.0d0
             Kf(1,1) = k
             Kf(2,2) = k
@@ -1155,7 +1158,40 @@ module ModViscoelasticMatrixBiphasic
             
             
         end subroutine
+        
         !==========================================================================================
+        
+        subroutine GetTangentPermeabilityTensorExponentialIso(this,Kftg)
+            use ModMathRoutines
+        
+            class(ClassViscoelasticMatrixBiphasic)::this
+            real(8),dimension(:,:),intent(inout)    :: Kftg
+            real(8)                                 :: k0, dk_dJ
+            real(8), dimension(6)                   :: Ivoigt
+            
+            Ivoigt = 0.0d0
+            Ivoigt(1:3) = 1.0d0
+            
+            k0 = this%Properties%k0
+            
+            call Get_dk_dJ(this, dk_dJ)
+            
+            ! Modified Projection Operator
+            Kftg = (k0 + det(this%F) *dk_dJ)*Ball_Voigt(Ivoigt, Ivoigt) - 2.0d0*k0 *Square_Voigt(Ivoigt,Ivoigt)
+            
+        end subroutine
+        !==========================================================================================
+        
+        subroutine Get_dk_dJ(this, dk_dJ)
+            use ModMathRoutines
+    
+            class(ClassViscoelasticMatrixBiphasic)::this
+            real(8), intent(inout)  :: dk_dJ
+            
+            ! Considering k(J) = constant, its derivative in relation to J is zero;          
+            dk_dJ = 0.0d0
+            
+        end subroutine
 
 
 
