@@ -1,11 +1,23 @@
+!################################ SCRIPT DE EXEMPLO PARA O CODIGO #########################
+! DATA DE CRIAÇÃO  7/1/2015
+! o caractere para comentários é !
+! Este script é "case insensitive" , e ignora espaços (verticais e horizontais)
+! o caractere para determinar atribuições é o =
+!aceita o comando pause e disp para poder debugar
+!exemplo: 
+!disp=mostrar este texto
+!pause 
+! ########################################################################################
+
+			
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 ANALYSIS SETTINGS
 
 	Multiscale Analysis =  False
 	Multiscale Model = Linear !MinimalLinearD1 !Linear !Taylor !Minimal  
-	Problem Type = Biphasic !Biphasic!Mechanical !
-	Solution Scheme = Sequential ! Monolithic !Sequential
+	Problem Type = Biphasic!Mechanical !
+	Solution Scheme = Monolithic !Sequential
 	Multiscale Model Fluid = Linear !Linear !Taylor
 	Fiber Reinforced Analysis = False !True!False
 	Fiber Data File = Fiber_Data.dat
@@ -13,7 +25,7 @@ ANALYSIS SETTINGS
 	Nonlinear Analysis = True !False !
 	Hypothesis of Analysis = 3D ! Axisymmetric ! Plane Strain !  
 	Element Technology = Full Integration !Mean Dilatation ! Reduced Integration
-	Maximum Cut Backs = 15
+	Maximum Cut Backs = 100
 	
 END ANALYSIS SETTINGS
 
@@ -32,48 +44,23 @@ NONLINEAR SOLVER
 	Newton_Raphson_Full
 	
 	Tol_Force_Mechanical = 1e-6
-	Tol_Flux_Biphasic =  1e-6
-	MaxIter = 100
+	Tol_Flux_Biphasic = 1e-6
+	MaxIter = 500
 
-	
 END NONLINEAR SOLVER
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 STAGGERED SPLITTING SCHEME
 
-	Splitting Scheme 	 = Fixed Stress!Fixed Stress !Fixed Stress!Undrained!Drained ! Fixed Strain! Undrained! Fixed Stress
-	Stability Constant 	 =  0.5! Depende do modelo ! 1.0d4 rodou o k = 0.76e-3
+	Splitting Scheme 	 = Undrained! Fixed Stress !Fixed Strain! Undrained! Fixed Stress
+	Stability Constant 	 = 100.0 ! Depende do modelo ! 1.0d4 rodou o k = 0.76e-3
 	Mechanical Staggered Tolerance    = 1.0d-3
 	Flux Staggered Tolerance 		  = 1.0d-3 ! com 1.0d-1 rodou, mas o resultado nao deu boa
 	
 END STAGGERED SPLITTING SCHEME
 
-!OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
-! Melhora no condicionamento da matriz tangente acoplada (Newton Raphson) para o caso:
-!
-! 	Problem Type = Biphasic 
-!   Solution Scheme = Monolithic 
-!
-! Para melhorar o condicionamento e facilitar a solução do sistema linear de equações em cada 
-! incremento, recomenda-se efetuar a seguinte mudança nas unidades de força do problema (o que 
-! acaba, consequentemente, mudando as unidades de entrada dos materiais e de resposta de pressão):
-! 
-! 								1 (N) = 1*10^p (Nbar)
-! 				onde p é uma constante de "escalonamento" das unidades
-! 
-! Ex: BulkModulus = 1 Pa (N/m^2) ==> 1*10^-p Pa_bar (Nbar/m^2) 
-!     k0          = 1 m^4/(N*s)    ==> 1*10^+p m^4/(Nbar*s)
-!     etc..
-! 
-! Obs 1 : O valor da constante "p" deve ser escolhido de modo a manter "ordens de grandeza" similares nos  
-! termos da matriz referente ao problema de balanço mecânico e de conservação da massa (Ex: p= 2, 3, 4...)
-! Obs 2 : Observar a consistencia das unidades das propriedades de material e das condições de contorno
-! do problema (para o caso de pressão/força prescrita)
-! Obs 3 : Como um dos critérios de convergência do método de Newton-Raphson está na norma_inf da parcela
-! de força do resíduo (resíduo do sólido), para valores de p > 0 deve-se diminuir o valor estipulado para
-! Tol_Force_Mechanical. Assim, Tol_Force_Mechanical => Tol_Force_Mechanical*1*10^-p. 
-!OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 MATERIAL
 
@@ -81,22 +68,46 @@ MATERIAL
 	
 	!Material ID = 1
 	!neo_hookean_isochoric_biphasic
-	!G = 0.343
-	!BulkModulus = 0.243
-	!k0 = 7.6e-2
-		
-     Material ID = 1
+	!G = 0.343e0  !0.343
+	!BulkModulus = 0.243e0 !0.243
+	!k0 = 0.76e-0 !  0.2e-3  0.4e-4        0.5e-2 ! 0.76e-2
+	
+	 Material ID = 1
 	 Matrix_Viscoelastic_Biphasic
 	 K_inf = 1.0e0
-	 Mu_inf = 10.0e-2        !14e0  E = 35MPa e v = 0,25
-	 Lambda_inf = 15.0e-2    !14e0
+	 Mu_inf = 10.0e-2    !14e0  E = 35MPa e v = 0,25
+	 Lambda_inf = 15.0e-2  !14e0
 	 K_e = 1.0e0
-	 Mu_e = 50.0e-2 
-	 Ni_v = 1500.0e-2 
-	 k0          = 1.0e-1
+	 Mu_e = 50.0e-2
+	 Ni_v = 1500.0e-2
+	 k0          = 1e-1
 	 PhiF		  = 0.7
 	 M 			  = 2
 	 L 			  = 0.1
+	
+	!Material ID = 1
+	!compressible_neo_hookean_Biphasic
+	!Mu =  10.0e-2  !1.10e-3
+	!Lambda = 15.0e-2  !110.0e-3
+	!k0 = 1.00e-2
+	!PhiF = 0.7
+	!M    = 0 !2
+	!L    = 0 !0.1
+
+	!Material ID = 1
+	!Matrix_Viscoelastic
+	!K_inf = 1.0e0
+	!Mu_inf = 10.0e0        !14e0  E = 35MPa e v = 0,25
+	!Lambda_inf = 15.0e0    !14e0
+	!K_e = 1.0e0
+	!Mu_e = 50.0e0
+	!Ni_v = 1500e0
+
+	
+	!Material ID = 1
+	!compressible_neo_hookean
+	!Mu =  60.0e0  !1.10e-3
+	!Lambda = 15.0e0  !110.0e-3
 
 	
 END MATERIAL 
@@ -105,7 +116,7 @@ END MATERIAL
 
 MESH AND BOUNDARY CONDITIONS
 
-	Mesh File =  quarto_cilindro_cartilagem_u20p8_grosseiro.cdb!confined_3d_mesh_quarter_d2xh2_ref2_7000_z15.cdb!confined_3d_mesh_quarter_d2xh2_ref2_10000.cdb!unconfined_3d_quarter_d2xh2_ref1.cdb!confined_3d_mesh_quarter_d2xh2_ref1.cdb!Quarto_cilindro_Hexa_SemiConfi_grosseiro.cdb!quarto_cilindro_cartilagem_u20p8_refinoemcima.cdb
+	Mesh File = confined_3d_mesh_quarter_d2xh2_ref2_11000.cdb!unconfined_3d_quarter_d2xh2_5000.cdb !unconfined_3d_quarter_d2xh2_ref2_10000.cdb !confined_3d_mesh_quarter_d2xh2_ref1.cdb !Quarto_cilindro_Hexa_Confi_refino.cdb ! Quarto_cilindro_Hexa_menor_d_confi.cdb !quarto_cilindro_cartilagem_u20p8_grosseiro.cdb ! Quarto_cilindro_Hexa_SemiConfi_grosseiro.cdb !Quarto_cilindro_Hexa_SemiConfi.cdb !Quarto_cilindro_Hexa_Confi.cdb   !quarto_cilindro_cartilagem_u20p8_grosseiro.cdb !!Quarto_Cilindro_Cartilagem_tetra.cdb!
 	Preprocessor = HyperMesh 
 	Time Discretization File = Time_Discretization.dat
 		
@@ -126,6 +137,8 @@ MACROSCOPIC DEFORMATION GRADIENT
 	F33 = F33.dat !One !One	
 		
 END MACROSCOPIC DEFORMATION GRADIENT
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 

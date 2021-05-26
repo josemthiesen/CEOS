@@ -1,0 +1,408 @@
+*********************************************************************
+Abaqus/fromAnsys 6.14-1
+
+reading Ansys data from: C:\Users\jarvis\OneDrive - posgrad.ufsc.br\Universidade\UFSC\Dissertacao\CEOS\VisualStudio_Intel\VisualStudio_Intel\confined_3d_mesh_quarter_d2xh2_ref2_11000.cdb
+  creating Abaqus input: C:\Users\jarvis\OneDrive - posgrad.ufsc.br\Universidade\UFSC\Dissertacao\CEOS\VisualStudio_Intel\VisualStudio_Intel\confined_3d_mesh_quarter_d2xh2_ref2_11000.inp
+ writing diagnostics to: C:\Users\jarvis\OneDrive - posgrad.ufsc.br\Universidade\UFSC\Dissertacao\CEOS\VisualStudio_Intel\VisualStudio_Intel\confined_3d_mesh_quarter_d2xh2_ref2_11000.log
+
+unrecognized keyWord = "CM"
+unrecognized keyWord = "ESEL"
+unrecognized keyWord = "ESEL"
+unrecognized keyWord = "LSCLEAR"
+unrecognized keyWord = "LSWRITE"
+------------------------------------------------
+completed first pass through Ansys .cdb file
+                      number of lines = 21270
+ number of characters in longest line = 153
+                number of blank lines = 0
+         number of /COM comment lines = 0
+            number of ! comment lines = 40
+    number of partial ! comment lines = 3
+               number of "*" commands = 3
+               number of "/" commands = 1
+       number of leading int data lines = 4801
+     number of leading float data lines = 11325
+ number of presumed macro logic lines = 1
+       number of "(" formatting lines = 2
+        number of recognized keywords = 5096
+      number of unrecognized keywords = 5
+Ansys Commands processed:
+     command   number
+------------   ------
+            D     5081
+       EBLOCK        1
+           ET        1
+       MPTEMP        1
+       NBLOCK        1
+Ansys Commands NOT processed:
+     command   number
+------------   ------
+        *ELSE        1
+       *ENDIF        1
+       FINISH        1
+          *IF        1
+            N        1
+       NUMOFF        4
+       /PREP7        1
+         TYPE        1
+...allocated memory for 1 ET_KEYOPT_struct's
+NOTE: found NBLOCK format string (3I8,6E16.0)
+NOTE: minimum node number = 1
+      maximum node number = 11325
+          number of nodes = 11325
+NOTE: allocated m_pPNodeBlock with size = 996600
+NOTE: found disciplineType = 1 (STRUCTURAL)
+NOTE: found EBLOCK: "EBLOCK, 19, SOLID,         "
+NOTE: found EBLOCK format string (19i8)
+NOTE: minimum element number = 1
+      maximum element number = 2400
+          number of elements = 2400
+NOTE: allocated m_pPEelmBlock with size = 307200
+element inventory:
+     2400 : SOLID186 (20 Node Structural Solid)
+     2400 : total translated elements
+Warning: cannot translate :D,11325,PRES,             0.0
+Warning: cannot translate :D,11324,PRES,             0.0
+Warning: cannot translate :D,11323,PRES,             0.0
+Warning: cannot translate :D,11322,PRES,             0.0
+Warning: cannot translate :D,11321,PRES,             0.0
+Warning: cannot translate :D,11320,PRES,             0.0
+Warning: cannot translate :D,11319,PRES,             0.0
+Warning: cannot translate :D,11318,PRES,             0.0
+Warning: cannot translate :D,11317,PRES,             0.0
+Warning: cannot translate :D,11316,PRES,             0.0
+Warning: cannot translate :D,11315,PRES,             0.0
+Warning: cannot translate :D,11314,PRES,             0.0
+Warning: cannot translate :D,11313,PRES,             0.0
+Warning: cannot translate :D,11312,PRES,             0.0
+Warning: cannot translate :D,11311,PRES,             0.0
+Warning: cannot translate :D,11310,PRES,             0.0
+Warning: cannot translate :D,11309,PRES,             0.0
+Warning: cannot translate :D,11308,PRES,             0.0
+Warning: cannot translate :D,11307,PRES,             0.0
+Warning: cannot translate :D,11306,PRES,             0.0
+Warning: cannot translate :D,11305,PRES,             0.0
+Warning: cannot translate :D,11304,PRES,             0.0
+Warning: cannot translate :D,11303,PRES,             0.0
+Warning: cannot translate :D,11302,PRES,             0.0
+Warning: cannot translate :D,11301,PRES,             0.0
+Warning: cannot translate :D,11300,PRES,             0.0
+Warning: cannot translate :D,11299,PRES,             0.0
+Warning: cannot translate :D,11298,PRES,             0.0
+Warning: cannot translate :D,11297,PRES,             0.0
+Warning: cannot translate :D,11296,PRES,             0.0
+Warning: cannot translate :D,11295,PRES,             0.0
+Warning: cannot translate :D,11294,PRES,             0.0
+Warning: cannot translate :D,11293,PRES,             0.0
+Warning: cannot translate :D,11292,PRES,             0.0
+Warning: cannot translate :D,11291,PRES,             0.0
+Warning: cannot translate :D,11290,PRES,             0.0
+Warning: cannot translate :D,11289,PRES,             0.0
+Warning: cannot translate :D,11288,PRES,             0.0
+Warning: cannot translate :D,11287,PRES,             0.0
+Warning: cannot translate :D,11286,PRES,             0.0
+Warning: cannot translate :D,11285,PRES,             0.0
+Warning: cannot translate :D,11284,PRES,             0.0
+Warning: cannot translate :D,11283,PRES,             0.0
+Warning: cannot translate :D,11282,PRES,             0.0
+Warning: cannot translate :D,11281,PRES,             0.0
+Warning: cannot translate :D,11280,PRES,             0.0
+Warning: cannot translate :D,11279,PRES,             0.0
+Warning: cannot translate :D,11278,PRES,             0.0
+Warning: cannot translate :D,11277,PRES,             0.0
+Warning: cannot translate :D,11276,PRES,             0.0
+Warning: cannot translate :D,11275,PRES,             0.0
+Warning: cannot translate :D,11274,PRES,             0.0
+Warning: cannot translate :D,11273,PRES,             0.0
+Warning: cannot translate :D,11272,PRES,             0.0
+Warning: cannot translate :D,11271,PRES,             0.0
+Warning: cannot translate :D,11270,PRES,             0.0
+Warning: cannot translate :D,11269,PRES,             0.0
+Warning: cannot translate :D,11268,PRES,             0.0
+Warning: cannot translate :D,11267,PRES,             0.0
+Warning: cannot translate :D,11266,PRES,             0.0
+Warning: cannot translate :D,11265,PRES,             0.0
+Warning: cannot translate :D,11264,PRES,             0.0
+Warning: cannot translate :D,11263,PRES,             0.0
+Warning: cannot translate :D,11262,PRES,             0.0
+Warning: cannot translate :D,11261,PRES,             0.0
+Warning: cannot translate :D,11260,PRES,             0.0
+Warning: cannot translate :D,11259,PRES,             0.0
+Warning: cannot translate :D,11258,PRES,             0.0
+Warning: cannot translate :D,11257,PRES,             0.0
+Warning: cannot translate :D,11256,PRES,             0.0
+Warning: cannot translate :D,11255,PRES,             0.0
+Warning: cannot translate :D,11254,PRES,             0.0
+Warning: cannot translate :D,11253,PRES,             0.0
+Warning: cannot translate :D,11252,PRES,             0.0
+Warning: cannot translate :D,11251,PRES,             0.0
+Warning: cannot translate :D,11250,PRES,             0.0
+Warning: cannot translate :D,11249,PRES,             0.0
+Warning: cannot translate :D,11248,PRES,             0.0
+Warning: cannot translate :D,11247,PRES,             0.0
+Warning: cannot translate :D,11246,PRES,             0.0
+Warning: cannot translate :D,11245,PRES,             0.0
+Warning: cannot translate :D,11244,PRES,             0.0
+Warning: cannot translate :D,11243,PRES,             0.0
+Warning: cannot translate :D,11242,PRES,             0.0
+Warning: cannot translate :D,11241,PRES,             0.0
+Warning: cannot translate :D,11240,PRES,             0.0
+Warning: cannot translate :D,11239,PRES,             0.0
+Warning: cannot translate :D,11238,PRES,             0.0
+Warning: cannot translate :D,11237,PRES,             0.0
+Warning: cannot translate :D,11236,PRES,             0.0
+Warning: cannot translate :D,11235,PRES,             0.0
+Warning: cannot translate :D,11234,PRES,             0.0
+Warning: cannot translate :D,11233,PRES,             0.0
+Warning: cannot translate :D,11232,PRES,             0.0
+Warning: cannot translate :D,11231,PRES,             0.0
+Warning: cannot translate :D,11230,PRES,             0.0
+Warning: cannot translate :D,11229,PRES,             0.0
+Warning: cannot translate :D,11228,PRES,             0.0
+Warning: cannot translate :D,11227,PRES,             0.0
+Warning: cannot translate :D,11226,PRES,             0.0
+Warning: cannot translate :D,11225,PRES,             0.0
+Warning: cannot translate :D,11224,PRES,             0.0
+Warning: cannot translate :D,11223,PRES,             0.0
+Warning: cannot translate :D,11222,PRES,             0.0
+Warning: cannot translate :D,11221,PRES,             0.0
+Warning: cannot translate :D,11220,PRES,             0.0
+Warning: cannot translate :D,11219,PRES,             0.0
+Warning: cannot translate :D,11218,PRES,             0.0
+Warning: cannot translate :D,11217,PRES,             0.0
+Warning: cannot translate :D,11216,PRES,             0.0
+Warning: cannot translate :D,11215,PRES,             0.0
+Warning: cannot translate :D,11214,PRES,             0.0
+Warning: cannot translate :D,11213,PRES,             0.0
+Warning: cannot translate :D,11212,PRES,             0.0
+Warning: cannot translate :D,11211,PRES,             0.0
+Warning: cannot translate :D,8335,PRES,             0.0
+Warning: cannot translate :D,8334,PRES,             0.0
+Warning: cannot translate :D,8332,PRES,             0.0
+Warning: cannot translate :D,8331,PRES,             0.0
+Warning: cannot translate :D,8329,PRES,             0.0
+Warning: cannot translate :D,8328,PRES,             0.0
+Warning: cannot translate :D,8326,PRES,             0.0
+Warning: cannot translate :D,8325,PRES,             0.0
+Warning: cannot translate :D,8323,PRES,             0.0
+Warning: cannot translate :D,8322,PRES,             0.0
+Warning: cannot translate :D,8320,PRES,             0.0
+Warning: cannot translate :D,8319,PRES,             0.0
+Warning: cannot translate :D,8317,PRES,             0.0
+Warning: cannot translate :D,8316,PRES,             0.0
+Warning: cannot translate :D,8314,PRES,             0.0
+Warning: cannot translate :D,8313,PRES,             0.0
+Warning: cannot translate :D,8311,PRES,             0.0
+Warning: cannot translate :D,8310,PRES,             0.0
+Warning: cannot translate :D,8308,PRES,             0.0
+Warning: cannot translate :D,8307,PRES,             0.0
+Warning: cannot translate :D,8305,PRES,             0.0
+Warning: cannot translate :D,8303,PRES,             0.0
+Warning: cannot translate :D,8302,PRES,             0.0
+Warning: cannot translate :D,8300,PRES,             0.0
+Warning: cannot translate :D,8299,PRES,             0.0
+Warning: cannot translate :D,8297,PRES,             0.0
+Warning: cannot translate :D,8296,PRES,             0.0
+Warning: cannot translate :D,8294,PRES,             0.0
+Warning: cannot translate :D,8293,PRES,             0.0
+Warning: cannot translate :D,8291,PRES,             0.0
+Warning: cannot translate :D,8290,PRES,             0.0
+Warning: cannot translate :D,8288,PRES,             0.0
+Warning: cannot translate :D,8287,PRES,             0.0
+Warning: cannot translate :D,8285,PRES,             0.0
+Warning: cannot translate :D,8284,PRES,             0.0
+Warning: cannot translate :D,8282,PRES,             0.0
+Warning: cannot translate :D,8281,PRES,             0.0
+Warning: cannot translate :D,8279,PRES,             0.0
+Warning: cannot translate :D,8278,PRES,             0.0
+Warning: cannot translate :D,8276,PRES,             0.0
+Warning: cannot translate :D,8275,PRES,             0.0
+Warning: cannot translate :D,8273,PRES,             0.0
+Warning: cannot translate :D,8272,PRES,             0.0
+Warning: cannot translate :D,8270,PRES,             0.0
+Warning: cannot translate :D,8269,PRES,             0.0
+Warning: cannot translate :D,8267,PRES,             0.0
+Warning: cannot translate :D,8266,PRES,             0.0
+Warning: cannot translate :D,8264,PRES,             0.0
+Warning: cannot translate :D,8263,PRES,             0.0
+Warning: cannot translate :D,8261,PRES,             0.0
+Warning: cannot translate :D,8260,PRES,             0.0
+Warning: cannot translate :D,8258,PRES,             0.0
+Warning: cannot translate :D,8256,PRES,             0.0
+Warning: cannot translate :D,8255,PRES,             0.0
+Warning: cannot translate :D,8253,PRES,             0.0
+Warning: cannot translate :D,8252,PRES,             0.0
+Warning: cannot translate :D,8250,PRES,             0.0
+Warning: cannot translate :D,8249,PRES,             0.0
+Warning: cannot translate :D,8247,PRES,             0.0
+Warning: cannot translate :D,8246,PRES,             0.0
+Warning: cannot translate :D,8244,PRES,             0.0
+Warning: cannot translate :D,8243,PRES,             0.0
+Warning: cannot translate :D,8241,PRES,             0.0
+Warning: cannot translate :D,8240,PRES,             0.0
+Warning: cannot translate :D,8238,PRES,             0.0
+Warning: cannot translate :D,8237,PRES,             0.0
+Warning: cannot translate :D,8235,PRES,             0.0
+Warning: cannot translate :D,8234,PRES,             0.0
+Warning: cannot translate :D,8232,PRES,             0.0
+Warning: cannot translate :D,8230,PRES,             0.0
+Warning: cannot translate :D,8229,PRES,             0.0
+Warning: cannot translate :D,8228,PRES,             0.0
+Warning: cannot translate :D,8226,PRES,             0.0
+Warning: cannot translate :D,8225,PRES,             0.0
+Warning: cannot translate :D,8224,PRES,             0.0
+Warning: cannot translate :D,8222,PRES,             0.0
+Warning: cannot translate :D,8221,PRES,             0.0
+Warning: cannot translate :D,8220,PRES,             0.0
+Warning: cannot translate :D,8218,PRES,             0.0
+Warning: cannot translate :D,8217,PRES,             0.0
+Warning: cannot translate :D,8216,PRES,             0.0
+Warning: cannot translate :D,8214,PRES,             0.0
+Warning: cannot translate :D,8213,PRES,             0.0
+Warning: cannot translate :D,8212,PRES,             0.0
+Warning: cannot translate :D,8210,PRES,             0.0
+Warning: cannot translate :D,8209,PRES,             0.0
+Warning: cannot translate :D,8208,PRES,             0.0
+Warning: cannot translate :D,8206,PRES,             0.0
+Warning: cannot translate :D,8205,PRES,             0.0
+Warning: cannot translate :D,8204,PRES,             0.0
+Warning: cannot translate :D,8202,PRES,             0.0
+Warning: cannot translate :D,8201,PRES,             0.0
+Warning: cannot translate :D,8199,PRES,             0.0
+Warning: cannot translate :D,8198,PRES,             0.0
+Warning: cannot translate :D,8196,PRES,             0.0
+Warning: cannot translate :D,8194,PRES,             0.0
+Warning: cannot translate :D,8192,PRES,             0.0
+Warning: cannot translate :D,8190,PRES,             0.0
+Warning: cannot translate :D,8188,PRES,             0.0
+Warning: cannot translate :D,8186,PRES,             0.0
+Warning: cannot translate :D,8183,PRES,             0.0
+Warning: cannot translate :D,8182,PRES,             0.0
+Warning: cannot translate :D,8181,PRES,             0.0
+Warning: cannot translate :D,8179,PRES,             0.0
+Warning: cannot translate :D,8178,PRES,             0.0
+Warning: cannot translate :D,8177,PRES,             0.0
+Warning: cannot translate :D,8175,PRES,             0.0
+Warning: cannot translate :D,8174,PRES,             0.0
+Warning: cannot translate :D,8173,PRES,             0.0
+Warning: cannot translate :D,8171,PRES,             0.0
+Warning: cannot translate :D,8170,PRES,             0.0
+Warning: cannot translate :D,8169,PRES,             0.0
+Warning: cannot translate :D,8167,PRES,             0.0
+Warning: cannot translate :D,8166,PRES,             0.0
+Warning: cannot translate :D,8165,PRES,             0.0
+Warning: cannot translate :D,8163,PRES,             0.0
+Warning: cannot translate :D,8162,PRES,             0.0
+Warning: cannot translate :D,8161,PRES,             0.0
+Warning: cannot translate :D,8159,PRES,             0.0
+Warning: cannot translate :D,8158,PRES,             0.0
+Warning: cannot translate :D,8156,PRES,             0.0
+Warning: cannot translate :D,8154,PRES,             0.0
+Warning: cannot translate :D,8152,PRES,             0.0
+Warning: cannot translate :D,8150,PRES,             0.0
+Warning: cannot translate :D,8148,PRES,             0.0
+Warning: cannot translate :D,8146,PRES,             0.0
+Warning: cannot translate :D,8143,PRES,             0.0
+Warning: cannot translate :D,8142,PRES,             0.0
+Warning: cannot translate :D,8140,PRES,             0.0
+Warning: cannot translate :D,8139,PRES,             0.0
+Warning: cannot translate :D,8137,PRES,             0.0
+Warning: cannot translate :D,8136,PRES,             0.0
+Warning: cannot translate :D,8134,PRES,             0.0
+Warning: cannot translate :D,8133,PRES,             0.0
+Warning: cannot translate :D,8131,PRES,             0.0
+Warning: cannot translate :D,8130,PRES,             0.0
+Warning: cannot translate :D,8128,PRES,             0.0
+Warning: cannot translate :D,8127,PRES,             0.0
+Warning: cannot translate :D,8125,PRES,             0.0
+Warning: cannot translate :D,8123,PRES,             0.0
+Warning: cannot translate :D,8122,PRES,             0.0
+Warning: cannot translate :D,8120,PRES,             0.0
+Warning: cannot translate :D,8119,PRES,             0.0
+Warning: cannot translate :D,8117,PRES,             0.0
+Warning: cannot translate :D,8116,PRES,             0.0
+Warning: cannot translate :D,8114,PRES,             0.0
+Warning: cannot translate :D,8113,PRES,             0.0
+Warning: cannot translate :D,8111,PRES,             0.0
+Warning: cannot translate :D,8110,PRES,             0.0
+Warning: cannot translate :D,8108,PRES,             0.0
+Warning: cannot translate :D,8107,PRES,             0.0
+Warning: cannot translate :D,8105,PRES,             0.0
+Warning: cannot translate :D,8103,PRES,             0.0
+Warning: cannot translate :D,8102,PRES,             0.0
+Warning: cannot translate :D,8100,PRES,             0.0
+Warning: cannot translate :D,8099,PRES,             0.0
+Warning: cannot translate :D,8097,PRES,             0.0
+Warning: cannot translate :D,8096,PRES,             0.0
+Warning: cannot translate :D,8094,PRES,             0.0
+Warning: cannot translate :D,8093,PRES,             0.0
+Warning: cannot translate :D,8091,PRES,             0.0
+Warning: cannot translate :D,8090,PRES,             0.0
+Warning: cannot translate :D,8088,PRES,             0.0
+Warning: cannot translate :D,8087,PRES,             0.0
+Warning: cannot translate :D,8085,PRES,             0.0
+Warning: cannot translate :D,8083,PRES,             0.0
+Warning: cannot translate :D,8082,PRES,             0.0
+Warning: cannot translate :D,8080,PRES,             0.0
+Warning: cannot translate :D,8079,PRES,             0.0
+Warning: cannot translate :D,8077,PRES,             0.0
+Warning: cannot translate :D,8076,PRES,             0.0
+Warning: cannot translate :D,8074,PRES,             0.0
+Warning: cannot translate :D,8073,PRES,             0.0
+Warning: cannot translate :D,8071,PRES,             0.0
+Warning: cannot translate :D,8070,PRES,             0.0
+Warning: cannot translate :D,8068,PRES,             0.0
+Warning: cannot translate :D,8067,PRES,             0.0
+Warning: cannot translate :D,8065,PRES,             0.0
+Warning: cannot translate :D,8063,PRES,             0.0
+Warning: cannot translate :D,8062,PRES,             0.0
+Warning: cannot translate :D,8060,PRES,             0.0
+Warning: cannot translate :D,8059,PRES,             0.0
+Warning: cannot translate :D,8057,PRES,             0.0
+Warning: cannot translate :D,8056,PRES,             0.0
+Warning: cannot translate :D,8054,PRES,             0.0
+Warning: cannot translate :D,8053,PRES,             0.0
+Warning: cannot translate :D,8051,PRES,             0.0
+Warning: cannot translate :D,8050,PRES,             0.0
+Warning: cannot translate :D,8048,PRES,             0.0
+Warning: cannot translate :D,8047,PRES,             0.0
+Warning: cannot translate :D,8045,PRES,             0.0
+Warning: cannot translate :D,8043,PRES,             0.0
+Warning: cannot translate :D,8042,PRES,             0.0
+Warning: cannot translate :D,8040,PRES,             0.0
+Warning: cannot translate :D,8039,PRES,             0.0
+Warning: cannot translate :D,8037,PRES,             0.0
+Warning: cannot translate :D,8036,PRES,             0.0
+Warning: cannot translate :D,8034,PRES,             0.0
+Warning: cannot translate :D,8033,PRES,             0.0
+Warning: cannot translate :D,8031,PRES,             0.0
+Warning: cannot translate :D,8030,PRES,             0.0
+Warning: cannot translate :D,8028,PRES,             0.0
+Warning: cannot translate :D,8027,PRES,             0.0
+Warning: cannot translate :D,8025,PRES,             0.0
+Warning: cannot translate :D,8023,PRES,             0.0
+Warning: cannot translate :D,8021,PRES,             0.0
+Warning: cannot translate :D,8019,PRES,             0.0
+Warning: cannot translate :D,8017,PRES,             0.0
+Warning: cannot translate :D,8015,PRES,             0.0
+Warning: cannot translate :D,8013,PRES,             0.0
+NOTE: did not find ANTYPE.  Assume ANTYPE = 0 (STATIC)
+NOTE: found 1 entries in ET (Element Table) data
+calling writePartsMeshInformationToAbaFile() ...
+calling writeNodeInformationOfPart() ...
+calling writeElementInformationForFlatInpFile() ...
+NOTE: [writeElementInformationForFlatInpFile()] need to create 1 sections
+      section_0  elemType=186  MAT_1  ET_1  REAL_0
+NOTE: elemtype=186  matId=1  et=1  rlBlkId=0  secId=0  no.elements = 2400
+WARNING: For section id 0 material id  1 not found
+calling writeAssemblyInformation() ...
+calling writeNsetAndElsetforContact() ...
+calling writeContact() ...
+calling writeMaterialData() ...
+*** wrote 0 *MATERIALS
+writing NSETs && ELSETs ...
+calling writeBCInfo() ...
+calling writeLoadInformation ...
+
+end fromAnsys file translation
+Abaqus job C:/Users/jarvis/OneDrive - posgrad.ufsc.br/Universidade/UFSC/Dissertacao/CEOS/VisualStudio_Intel/VisualStudio_Intel/confined_3d_mesh_quarter_d2xh2_ref2_11000 completed

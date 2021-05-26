@@ -239,6 +239,11 @@ module ModExportResultFile
         elseif (  File%CompareStrings(ProbeLocation, 'Nodal Force' ) ) then
 
             call NodalForceProbeConstructor(ProbeList(i)%Pr, ProbeHyperMeshFile, ProbeFileName, ProbeLoadCollector, ProbeComponentsString)
+            
+        ! Nodal flux probes
+        elseif (  File%CompareStrings(ProbeLocation, 'Nodal Flux' ) ) then
+
+            call NodalFluxProbeConstructor(ProbeList(i)%Pr, ProbeHyperMeshFile, ProbeFileName, ProbeLoadCollector, ProbeComponentsString)
 
         ! Microstructure probes
         elseif (  File%CompareStrings(ProbeLocation, 'Micro Structure' ) ) then
@@ -452,18 +457,20 @@ module ModExportResultFile
 
         ! Internal variables
         ! -----------------------------------------------------------------------------------
+        class (ClassProbe), pointer                :: Probe
         type(ClassParser)                         :: ResultFileSolid
         type(ClassParser)                         :: ResultFileFluid
         type(ClassStatus)                         :: Status
-        integer :: TotalNDOF_Solid, LoadCase, Step, CutBack, SubStep, el, gp, i, cont
+        integer :: TotalNDOF_Solid, LoadCase, Step, CutBack, SubStep, el, gp, i, j, k, cont, conta_flux
         integer :: TotalNDOF_Fluid, FileNumberFluid, FileNumberSolid
+        integer , allocatable , dimension(:)      :: Nodesflux
         real(8) :: Time, OldTime, DeltaTime
         real(8) , allocatable, target, dimension(:) :: U , P, Psolid
         real(8) , allocatable, target, dimension(:) :: OldU , OldVSolid, VSolid, OldASolid, ASolid
         character(len=255) :: OptionName, OptionValue, String
         character(len=255) :: FileNameSolid, FileNameFluid
         integer :: Flag_EndStep, NumberOfIterations,IterationFile
-        logical :: CalulaRelativeVelocity, InterpolatePressure
+        logical :: CalculateRelativeVelocity, InterpolatePressure
 
 
         !************************************************************************************
@@ -480,12 +487,12 @@ module ModExportResultFile
         endif
         
         
-        CalulaRelativeVelocity = .false.
+        CalculateRelativeVelocity = .false.
         InterpolatePressure    = .false.
         DO cont=1,size(PostProcessor%VARIABLENAMES)
             ! Check if it is necessary to compute the relative velocity
             IF (PostProcessor%VARIABLENAMES(cont) == 'relativevelocity') THEN
-                CalulaRelativeVelocity = .true.
+                CalculateRelativeVelocity = .true.
             ENDIF
             ! Check if it is necessary to interpolate the pressure on the solid nodes
             IF (PostProcessor%VARIABLENAMES(cont) == 'pressure') THEN
@@ -532,7 +539,9 @@ module ModExportResultFile
         if(FEA%AnalysisSettings%FiberReinforcedAnalysis) then
             call FEA%AdditionalMaterialModelRoutine()
         endif
-
+        
+        FEA%AnalysisSettings%StaggeredParameters%StabilityConst = 0.0
+        
         ! Restart Constitutive Model
         ! -----------------------------------------------------------------------------------
         do el = 1,size(FEA%ElementList)
@@ -547,6 +556,34 @@ module ModExportResultFile
         do i = 1,size(FEA%GlobalNodesList)
             FEA%GlobalNodesList(i)%Coord = FEA%GlobalNodesList(i)%CoordX
         enddo
+        
+        conta_flux = 0
+        do i = 1, size(ProbeList)
+            Probe => ProbeList(i)%Pr
+            select type (Probe)
+                class is (ClassNodalFluxProbe)
+                
+                        allocate(Nodesflux, source=Probe%Nodes)
+                        
+                        do j = 1, size(Probe%Nodes)
+                            Nodesflux(j) = FEA%GlobalNodesList(Probe%Nodes(j))%IDFluid
+                            if (FEA%GlobalNodesList(Probe%Nodes(j))%IDFluid.ne.0) then
+                                conta_flux = conta_flux + 1
+                            end if
+                        end do
+                    
+                        allocate(Probe%NodesFlux(conta_flux))
+                    
+                        do k = 1, conta_flux
+                            if (Nodesflux(k).ne.0) then
+                                Probe%NodesFlux(k) = Nodesflux(k)
+                            end if
+                        end do       
+                class default
+
+            end select
+        end do
+        
         
         Time = 0.0d0
         OldTime = 0.0d0
@@ -638,7 +675,7 @@ module ModExportResultFile
             call SolveFluidCauchyStress( FEA%ElementList , FEA%AnalysisSettings, Time, P, Status)
             
             ! Update the relative velocity w
-            IF (CalulaRelativeVelocity) THEN
+            IF (CalculateRelativeVelocity) THEN
                 call SolveVelocidadeRelativaW( FEA%ElementList , FEA%AnalysisSettings, Time, P, Status)
             ENDIF
             

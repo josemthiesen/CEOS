@@ -13,6 +13,7 @@
 module ModProbe
 
     use ModTools
+    use ModNodes
     
     implicit none
 
@@ -99,7 +100,15 @@ module ModProbe
     contains
         procedure :: WriteProbeResult => WriteProbeResult_NodalForce
     end type
-
+    
+    ! Nodal Flux
+    type, extends(ClassProbe) :: ClassNodalFluxProbe
+        integer , allocatable , dimension (:) :: Nodes
+        integer , allocatable , dimension (:) :: NodesFlux
+        logical :: FluidComponents = .false.
+    contains
+        procedure :: WriteProbeResult => WriteProbeResult_NodalFlux
+    end type
 
     !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     !Wrapper in order to use different types of probes
@@ -852,6 +861,113 @@ module ModProbe
 
     end subroutine
     !==========================================================================================
+    
+    subroutine NodalFluxProbeConstructor(Probe, ProbeHyperMeshFile, FileName, ProbeLoadCollector, ComponentsString)
+
+
+            !************************************************************************************
+            ! DECLARATIONS OF VARIABLES
+            !************************************************************************************
+            ! Modules and implicit declarations
+            ! -----------------------------------------------------------------------------------
+            use ModParser
+            implicit none
+
+            ! Object
+            ! -----------------------------------------------------------------------------------
+            class(ClassProbe), pointer :: Probe
+
+            ! Input variables
+            ! -----------------------------------------------------------------------------------
+            character(*)     :: ProbeHyperMeshFile, FileName, ProbeLoadCollector
+            character(len=*) :: ComponentsString
+            type  (ClassNodes)              , pointer     , dimension(:) :: GlobalNodesList
+
+            ! Internal variables
+            ! -----------------------------------------------------------------------------------
+            type(ClassNodalFluxProbe), pointer :: NodalFluxProbe
+
+            character(len=255), allocatable , dimension(:) :: AuxString
+            integer, allocatable , dimension(:) :: NodalFluxList
+            integer ::  FileNumber, Node
+            character(len=255) :: Line
+            logical :: found
+            type(ClassParser) :: Comp
+
+            !************************************************************************************
+
+            allocate(NodalFluxProbe)
+
+            NodalFluxProbe%FileName = FileName
+
+            FileNumber = FreeFile()
+            open (FileNumber,File=ProbeHyperMeshFile,status="old")
+
+            found = .false.
+            LOOP_LOAD_COLLECTORS: do while (.not. EOF(FileNumber))
+
+                read(FileNumber,'(a255)') Line
+
+                if ( Compare(RemoveSpaces(Line),'!!hmnameloadcol') ) then
+
+                    read(FileNumber,'(a255)') Line
+
+                    call Split(Line,AuxString,'"')
+
+                    if ( Compare(RemoveSpaces(AuxString(2)),ProbeLoadCollector) ) then
+                        found = .true.
+                        exit lOOP_LOAD_COLLECTORS
+                    end if
+
+                endif
+
+            enddo LOOP_LOAD_COLLECTORS
+
+            if (.not. found) then
+                write(*,*)'Load Collector (Nodal Flux) could not be found in HyperMesh .cdb File'
+                stop
+            end if
+
+            ! Ler duas linhas dummy
+            read(FileNumber,'(a255)') Line
+            read(FileNumber,'(a255)') Line
+
+            LOOP_NODES: do while (.not. EOF(FileNumber))
+
+                read(FileNumber,'(a255)') Line
+
+                call Split(Line,AuxString,',')
+
+                if ( size(AuxString) == 4 ) then
+
+                    Node = AuxString(2)
+                    call AppendInteger( NodalFluxList, Node )
+
+                else
+                    exit LOOP_NODES
+                endif
+
+            enddo LOOP_NODES
+
+            if (size(NodalFluxList) == 0) then
+                write(*,*) 'Vector NodalFluxList is empty'
+                stop
+            end if
+            allocate ( NodalFluxProbe%Nodes,source=NodalFluxList)
+
+            
+            if ( Comp%CompareStrings(ComponentsString, 'Fluid') ) then
+                NodalFluxProbe%FluidComponents = .true.
+            else
+                write(*,*) 'Only Fluid Component is accepted to calculate Flux - subroutine NodalFluxProbeConstructor File'
+                stop
+            endif
+
+            Probe => NodalFluxProbe
+
+            close(FileNumber)
+
+    end subroutine
 
     !==========================================================================================
     subroutine WriteProbeResult_NodalForce(this,FEA)
@@ -938,6 +1054,81 @@ module ModProbe
     end subroutine
     !==========================================================================================
 
+     !==========================================================================================
+    subroutine WriteProbeResult_NodalFlux(this,FEA)
+
+            !************************************************************************************
+            ! DECLARATIONS OF VARIABLES
+            !************************************************************************************
+            ! Modules and implicit declarations
+            ! -----------------------------------------------------------------------------------
+            use ModFEMAnalysis
+            use ModInterfaces
+            use ModAnalysis
+            implicit none
+
+            ! Object
+            ! -----------------------------------------------------------------------------------
+            class(ClassNodalFluxProbe) :: this
+
+            ! Input variables
+            ! -----------------------------------------------------------------------------------
+            class(ClassFEMAnalysis) :: FEA
+
+            ! Internal variables
+            ! -----------------------------------------------------------------------------------
+            real(8) , allocatable , dimension(:) :: Fint, TotalFlux
+            integer :: DOF
+            type(ClassStatus) :: Status
+            integer :: Component, NDOFnode_fluid
+            !************************************************************************************
+
+            ! teste se probe esta ativo
+            if (.not. this%Active) then
+                return
+            endif
+
+            if ( any( this%Nodes >  size(FEA%GlobalNodesList)) ) then
+                call this%WriteOnFile('ERROR - Node Number is greater than the Max Number of Nodes in the Mesh')
+                this%Active = .false.
+                return
+            endif
+
+            allocate( Fint , mold = FEA%P )
+            Fint = 0.0d0
+            
+            ! Option Problem Type 
+             select case ( FEA%AnalysisSettings%ProblemType )
+
+                case ( ProblemTypes%Mechanical )
+                               
+                    call Error( "Problem Type Mechanical not defined in WriteProbeResult_NodalFlux" )
+                    
+                case ( ProblemTypes%Thermal )
+                               
+                    call Error( "Problem Type Thermal not defined in WriteProbeResult_NodalFlux" )
+                    
+                case ( ProblemTypes%Biphasic )
+                               
+                    if (this%FluidComponents) then
+                        ! Using the total internal force (Solid + Fluid contributions)
+                        call InternalForceFluid( FEA%ElementList, FEA%AnalysisSettings, FEA%P, FEA%Vsolid, Fint, Status )
+                    else 
+                        call Error( "In a Biphasic analysis, you need to define FLUID component" )
+                    endif
+                             
+                case default
+                    stop "Problem Type not identified in WriteProbeResult_NodalForce"
+                end select          
+            
+            allocate(TotalFlux(FEA%AnalysisSettings%PDOF))
+            
+            TotalFlux(1) = sum(Fint(this%NodesFlux)) 
+                        
+            call this%WriteOnFile( FEA%Time , TotalFlux )
+
+    end subroutine
+    
     !==========================================================================================
     subroutine WriteProbeResult_MicroStructure(this,FEA)
 
