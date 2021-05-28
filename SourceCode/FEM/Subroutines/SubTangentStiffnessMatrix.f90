@@ -198,7 +198,7 @@ subroutine TangentStiffnessMatrix( AnalysisSettings , ElementList , nDOF, Kg )
 
                 call ElementList(e)%El%Matrix_Ne_and_Ge(AnalysisSettings, Ne, Ge)
 
-                Kte = 1.0d-14  ! Definir um valor muito pequeno invés de Zero
+                Kte = 1.0d-15 ! Definir um valor muito pequeno invés de Zero
                 Kte( 1:nDOFel , 1:nDOFel ) = Ke
                 Kte( (nDOFel+1):(nDOFel+9),1:nDOFel) = -Ge
                 Kte( (nDOFel+10):(nDOFel+12),1:nDOFel) = -Ne

@@ -130,20 +130,14 @@ contains
     !---------------------------------------------------------------------------------------------------------------------------------------------------------
                case (iMacroscopicDeformationGradient)
                     if (.not.all(BlockFound([iMeshAndBC]))) call DataFile%RaiseError("Mesh must be specified before Multiscale Settings.")
-                    if(AnalysisSettings%ProblemType == ProblemTypes%Mechanical) then
-                        call ReadMacroscopicDeformationGradientMechanical(AnalysisSettings,DataFile,TimeFileName,BC,GlobalNodesList,AnalysisSettings%MultiscaleAnalysis)
-                    elseif(AnalysisSettings%ProblemType == ProblemTypes%Biphasic) then
-                        call ReadMacroscopicDeformationGradientBiphasic(AnalysisSettings,DataFile,TimeFileName,BC,GlobalNodesList,AnalysisSettings%MultiscaleAnalysis)
-                    endif
+                    call ReadMacroscopicDeformationGradient(AnalysisSettings,DataFile,TimeFileName,BC,GlobalNodesList)
+                   
                     
     !---------------------------------------------------------------------------------------------------------------------------------------------------------
                 case (iMacroscopicPressureAndGradient)
                     if (.not.all(BlockFound([iMeshAndBC]))) call DataFile%RaiseError("Mesh must be specified before Multiscale Settings.")
-                    if(AnalysisSettings%ProblemType == ProblemTypes%Mechanical) then
-                        call ReadMacroscopicPressureAndGradientPressureMechanical(AnalysisSettings,DataFile,TimeFileName,BC,GlobalNodesList,AnalysisSettings%MultiscaleAnalysis)
-                    elseif(AnalysisSettings%ProblemType == ProblemTypes%Biphasic) then
-                        call ReadMacroscopicPressureAndGradientPressureBiphasic(AnalysisSettings,DataFile,TimeFileName,BC,GlobalNodesList,AnalysisSettings%MultiscaleAnalysis)
-                    endif
+                    call ReadMacroscopicPressureAndGradientPressureBiphasic(AnalysisSettings,DataFile,TimeFileName,BC,GlobalNodesList)
+                   
                    
     !---------------------------------------------------------------------------------------------------------------------------------------------------------   
                     
@@ -360,6 +354,7 @@ contains
     end subroutine
     !=======================================================================================================================
     
+    !=======================================================================================================================
     subroutine ReadStaggeredSplittingScheme(DataFile,AnalysisSettings, NLSolver)
 
         implicit none
@@ -438,7 +433,7 @@ contains
         endif
 
     end subroutine
-    
+    !=======================================================================================================================
 
     !=======================================================================================================================
     subroutine ReadMeshAndBC(DataFile,GlobalNodesList,ElementList,AnalysisSettings,MaterialList,BC,TimeFileName)
@@ -578,268 +573,22 @@ contains
 
     end subroutine
     !=======================================================================================================================
-    !=======================================================================================================================
- 
-    !=======================================================================================================================
-    subroutine ReadMacroscopicDeformationGradientMechanical(AnalysisSettings,DataFile,TimeFileName,BC,GlobalNodesList,isMultiscale)
- 
-        implicit none
-
-        type(ClassParser)                               :: DataFile
-        type (ClassAnalysis)                            :: AnalysisSettings
-        type (ClassNodes) , pointer , dimension(:)      :: GlobalNodesList
-        class (ClassBoundaryConditions), pointer        :: BC
-        character(len=100)                              :: TimeFileName
-        logical                                         :: isMultiscale
-        character(len=255)::string
-
-        character(len=100),dimension(9)::ListOfOptions,ListOfValues
-        logical,dimension(9)::FoundOption
-        integer :: i, j, k, cont
-
-
-        ListOfOptions=["F11","F12","F13","F21","F22","F23","F31","F32","F33"]
-
-        call DataFile%FillListOfOptions(ListOfOptions,ListOfValues,FoundOption)
-
-        call DataFile%CheckError
-
-        do i=1,size(FoundOption)
-            if (.not.FoundOption(i)) then
-                write(*,*) "Macroscopic Deformation Gradient :: Option not found ["//trim(ListOfOptions(i))//"]"
-                stop
-            endif
-        enddo
-
-
-        if (isMultiscale) then
-
-            select type ( BC )
-
-                type is ( ClassMultiscaleBoundaryConditionsTaylorAndLinear )
-
-                    ! Option: Kinematical Constraints
-                    if (AnalysisSettings%MultiscaleModel == MultiscaleModels%Taylor) then
-                         BC%TypeOfBC = MultiscaleBCType%Taylor
-                    elseif (AnalysisSettings%MultiscaleModel == MultiscaleModels%Linear) then
-                        BC%TypeOfBC = MultiscaleBCType%Linear
-                    endif
-
-                    allocate(BC%MacroscopicDefGrad(3,3))
-
-                    k=0
-                    do i=1,3
-                        do j=1,3
-
-                            k = k + 1
-
-                            call BC%MacroscopicDefGrad(i,j)%ReadTimeDiscretization(TimeFileName)
-
-                            if (DataFile%CompareStrings(ListOfValues(k),"Zero")) then
-                                call BC%MacroscopicDefGrad(i,j)%CreateConstantLoadHistory(0.0d0)
-                            elseif (DataFile%CompareStrings(ListOfValues(k),"One")) then
-                                call BC%MacroscopicDefGrad(i,j)%CreateConstantLoadHistory(1.0d0)
-                            else
-                                call BC%MacroscopicDefGrad(i,j)%ReadValueDiscretization(ListOfValues(k))
-                            endif
-
-                        enddo
-                    enddo
-
-
-                    ! Creating the class of the kinematic constraints
-                    if (BC%TypeOfBC == MultiscaleBCType%Taylor) then
-
-                        allocate(BC%NodalMultiscaleDispBC(size(GlobalNodesList)))
-
-                        do i=1,size(GlobalNodesList)
-                            BC%NodalMultiscaleDispBC(i)%Fmacro => BC%MacroscopicDefGrad
-                            BC%NodalMultiscaleDispBC(i)%Node => GlobalNodesList(i)
-                        enddo
-
-                    elseif (BC%TypeOfBC == MultiscaleBCType%Linear) then
-
-                        ! Adding all the nodes of the boundary
-                        cont = 0
-                        do i=1,size(BC%BoundaryNodes)
-                            cont = cont + size(BC%BoundaryNodes(i)%Nodes)
-                        enddo
-
-                        allocate(BC%NodalMultiscaleDispBC(cont))
-
-                        cont = 0
-                        do i=1,size(BC%BoundaryNodes)
-                            do j=1,size(BC%BoundaryNodes(i)%Nodes)
-                                cont = cont + 1
-                                BC%NodalMultiscaleDispBC(cont)%Fmacro => BC%MacroscopicDefGrad
-                                BC%NodalMultiscaleDispBC(cont)%Node => GlobalNodesList(BC%BoundaryNodes(i)%Nodes(j))
-                            enddo
-                        enddo
-
-
-                    else
-
-                        stop "Error: Kinematical Constraints not identified"
-                    endif
-
-                type is ( ClassMultiscaleBoundaryConditionsMinimal )
-
-                    BC%TypeOfBC = MultiscaleBCType%Minimal
-
-                     allocate(BC%MacroscopicDefGrad(3,3))
-
-                        k=0
-                        do i=1,3
-                            do j=1,3
-
-                                k = k + 1
-
-                                call BC%MacroscopicDefGrad(i,j)%ReadTimeDiscretization(TimeFileName)
-
-                                if (DataFile%CompareStrings(ListOfValues(k),"Zero")) then
-                                    call BC%MacroscopicDefGrad(i,j)%CreateConstantLoadHistory(0.0d0)
-                                elseif (DataFile%CompareStrings(ListOfValues(k),"One")) then
-                                    call BC%MacroscopicDefGrad(i,j)%CreateConstantLoadHistory(1.0d0)
-                                else
-                                    call BC%MacroscopicDefGrad(i,j)%ReadValueDiscretization(ListOfValues(k))
-                                endif
-
-                            enddo
-                        enddo
-
-                        
-                        allocate(BC%NodalMultiscaleDispBC(size(GlobalNodesList)))
-
-                        do i=1,size(GlobalNodesList)
-                            BC%NodalMultiscaleDispBC(i)%Fmacro => BC%MacroscopicDefGrad
-                            BC%NodalMultiscaleDispBC(i)%Node => GlobalNodesList(i)
-                        enddo
-                        
-                
-                type is ( ClassMultiscaleBoundaryConditionsMinimalLinearD1 )
-
-                    BC%TypeOfBC = MultiscaleBCType%MinimalLinearD1
-
-                    allocate(BC%MacroscopicDefGrad(3,3))
-
-                        k=0
-                        do i=1,3
-                            do j=1,3
-
-                                k = k + 1
-
-                                call BC%MacroscopicDefGrad(i,j)%ReadTimeDiscretization(TimeFileName)
-
-                                if (DataFile%CompareStrings(ListOfValues(k),"Zero")) then
-                                    call BC%MacroscopicDefGrad(i,j)%CreateConstantLoadHistory(0.0d0)
-                                elseif (DataFile%CompareStrings(ListOfValues(k),"One")) then
-                                    call BC%MacroscopicDefGrad(i,j)%CreateConstantLoadHistory(1.0d0)
-                                else
-                                    call BC%MacroscopicDefGrad(i,j)%ReadValueDiscretization(ListOfValues(k))
-                                endif
-
-                            enddo
-                        enddo
-
-                        
-                        ! Adding all the nodes of the boundary
-                        cont = 0
-                        do i=1,size(BC%BoundaryNodes)
-                            cont = cont + size(BC%BoundaryNodes(i)%Nodes)
-                        enddo
-
-                        allocate(BC%NodalMultiscaleDispBC(cont))
-
-                        cont = 0
-                        do i=1,size(BC%BoundaryNodes)
-                            do j=1,size(BC%BoundaryNodes(i)%Nodes)
-                                cont = cont + 1
-                                BC%NodalMultiscaleDispBC(cont)%Fmacro => BC%MacroscopicDefGrad
-                                BC%NodalMultiscaleDispBC(cont)%Node => GlobalNodesList(BC%BoundaryNodes(i)%Nodes(j))
-                            enddo
-                        enddo                        
-                        
-                        
-                        
-                        
-                type is ( ClassMultiscaleBoundaryConditionsMinimalLinearD3 )
-
-                    BC%TypeOfBC = MultiscaleBCType%MinimalLinearD3
-
-                    allocate(BC%MacroscopicDefGrad(3,3))
-
-                        k=0
-                        do i=1,3
-                            do j=1,3
-
-                                k = k + 1
-
-                                call BC%MacroscopicDefGrad(i,j)%ReadTimeDiscretization(TimeFileName)
-
-                                if (DataFile%CompareStrings(ListOfValues(k),"Zero")) then
-                                    call BC%MacroscopicDefGrad(i,j)%CreateConstantLoadHistory(0.0d0)
-                                elseif (DataFile%CompareStrings(ListOfValues(k),"One")) then
-                                    call BC%MacroscopicDefGrad(i,j)%CreateConstantLoadHistory(1.0d0)
-                                else
-                                    call BC%MacroscopicDefGrad(i,j)%ReadValueDiscretization(ListOfValues(k))
-                                endif
-
-                            enddo
-                        enddo                        
-                        
-
-                        ! Adding all the nodes of the boundary
-                        cont = 0
-                        do i=1,size(BC%BoundaryNodes)
-                            cont = cont + size(BC%BoundaryNodes(i)%Nodes)
-                        enddo
-
-                        allocate(BC%NodalMultiscaleDispBC(cont))
-
-                        cont = 0
-                        do i=1,size(BC%BoundaryNodes)
-                            do j=1,size(BC%BoundaryNodes(i)%Nodes)
-                                cont = cont + 1
-                                BC%NodalMultiscaleDispBC(cont)%Fmacro => BC%MacroscopicDefGrad
-                                BC%NodalMultiscaleDispBC(cont)%Node => GlobalNodesList(BC%BoundaryNodes(i)%Nodes(j))
-                            enddo
-                        enddo
-
-
-                class default
-                     stop "Error: Multiscale Settings - Select Type (BC)"
-            end select
-
-        endif
-
-        BlockFound(iMacroscopicDeformationGradient)=.true.
-        call DataFile%GetNextString(string)
-        if (.not.DataFile%CompareStrings(string,'end'//trim(BlockName(iMacroscopicDeformationGradient)))) then
-            call DataFile%RaiseError("End of block was expected. BlockName="//trim(BlockName(iMacroscopicDeformationGradient)))
-        endif
-
-
-    end subroutine
-    !=======================================================================================================================
     
     !=======================================================================================================================
-    subroutine ReadMacroscopicDeformationGradientBiphasic(AnalysisSettings,DataFile,TimeFileName,BC,GlobalNodesList,isMultiscale)
-
+    subroutine ReadMacroscopicDeformationGradient(AnalysisSettings,DataFile,TimeFileName,BC,GlobalNodesList)
+ 
         implicit none
 
-        type(ClassParser)                               :: DataFile
-        type (ClassAnalysis)                            :: AnalysisSettings
-        type (ClassNodes) , pointer , dimension(:)      :: GlobalNodesList
-        class (ClassBoundaryConditions), pointer        :: BC
-        character(len=100)                              :: TimeFileName
-        logical                                         :: isMultiscale
-
+        type(ClassParser)                                  :: DataFile
+        type (ClassAnalysis)                               :: AnalysisSettings
+        type (ClassNodes) , pointer , dimension(:)         :: GlobalNodesList
+        class (ClassBoundaryConditions), pointer           :: BC
+        character(len=100)                                 :: TimeFileName
         character(len=255)::string
 
         character(len=100),dimension(9)::ListOfOptions,ListOfValues
         logical,dimension(9)::FoundOption
         integer :: i, j, k, cont
-
 
 
         ListOfOptions=["F11","F12","F13","F21","F22","F23","F31","F32","F33"]
@@ -856,207 +605,63 @@ contains
         enddo
 
 
-        if (isMultiscale) then
+        if (AnalysisSettings%MultiscaleAnalysis) then
 
             select type ( BC )
-                          
-                type is ( ClassMultiBCBiphFluidTaylorAndLinearSolidTaylorAndLinear )
-
+                
+                ! Mechanical Analysis
+                class is ( ClassMultiscaleBoundaryConditions )
+                    ! Option: Kinematical Constraints
+                    if (AnalysisSettings%MultiscaleModel == MultiscaleModels%Taylor) then
+                        BC%TypeOfBC = MultiscaleBCType%Taylor
+                    elseif (AnalysisSettings%MultiscaleModel == MultiscaleModels%Linear) then
+                        BC%TypeOfBC = MultiscaleBCType%Linear
+                    elseif (AnalysisSettings%MultiscaleModel == MultiscaleBCType%Minimal) then
+                        BC%TypeOfBC = MultiscaleBCType%Minimal
+                    elseif (AnalysisSettings%MultiscaleModel == MultiscaleBCType%MinimalLinearD1) then
+                        BC%TypeOfBC = MultiscaleBCType%MinimalLinearD1
+                    elseif (AnalysisSettings%MultiscaleModel == MultiscaleBCType%MinimalLinearD3) then
+                        BC%TypeOfBC = MultiscaleBCType%MinimalLinearD3
+                    else 
+                        stop "Error: Multiscale Type of BC not defined - Select Type (BC)"
+                    endif
+            
+                    ! Reading the values of deformation gradient
+                    call ReadMacroscopicDeformationGradientComponents(BC%MacroscopicDefGrad, DataFile, TimeFileName, ListofValues)
+                    ! Defining the nodal displacement constraint for each multiscale BC model.
+                    ! Global nodes or only Boundary nodes
+                    call DefineNodalMultiscaleDispBC(BC%TypeOfBC, BC%BoundaryNodes, BC%NodalMultiscaleDispBC , BC%MacroscopicDefGrad , GlobalNodesList)
+              
+                ! Biphasic Analysis    
+                class is ( ClassMultiscaleBoundaryConditionsBiphasic )
+                
                     ! Option: Kinematical Constraints
                     if (AnalysisSettings%MultiscaleModelSolid == MultiscaleModels%Taylor) then
                          BC%TypeOfBCSolid = MultiscaleBCType%Taylor
                     elseif (AnalysisSettings%MultiscaleModelSolid == MultiscaleModels%Linear) then
                         BC%TypeOfBCSolid = MultiscaleBCType%Linear
+                    elseif (AnalysisSettings%MultiscaleModelSolid == MultiscaleBCType%Minimal) then
+                        BC%TypeOfBCSolid = MultiscaleBCType%Minimal
+                    elseif (AnalysisSettings%MultiscaleModelSolid == MultiscaleBCType%MinimalLinearD1) then
+                        BC%TypeOfBCSolid = MultiscaleBCType%MinimalLinearD1
+                    elseif (AnalysisSettings%MultiscaleModelSolid == MultiscaleBCType%MinimalLinearD3) then
+                        BC%TypeOfBCSolid = MultiscaleBCType%MinimalLinearD3
+                    else 
+                        stop "Error: Multiscale Type of BC not defined - Select Type (BC)"
                     endif
-
-                    allocate(BC%MacroscopicDefGrad(3,3))
-
-                    k=0
-                    do i=1,3
-                        do j=1,3
-
-                            k = k + 1
-
-                            call BC%MacroscopicDefGrad(i,j)%ReadTimeDiscretization(TimeFileName)
-
-                            if (DataFile%CompareStrings(ListOfValues(k),"Zero")) then
-                                call BC%MacroscopicDefGrad(i,j)%CreateConstantLoadHistory(0.0d0)
-                            elseif (DataFile%CompareStrings(ListOfValues(k),"One")) then
-                                call BC%MacroscopicDefGrad(i,j)%CreateConstantLoadHistory(1.0d0)
-                            else
-                                call BC%MacroscopicDefGrad(i,j)%ReadValueDiscretization(ListOfValues(k))
-                            endif
-
-                        enddo
-                    enddo
-
-
-                    ! Creating the class of the kinematic constraints 
-                    if (BC%TypeOfBCSolid == MultiscaleBCType%Taylor) then
-
-                        allocate(BC%NodalMultiscaleDispBC(size(GlobalNodesList)))
-
-                        do i=1,size(GlobalNodesList)
-                            BC%NodalMultiscaleDispBC(i)%Fmacro => BC%MacroscopicDefGrad
-                            BC%NodalMultiscaleDispBC(i)%Node => GlobalNodesList(i)
-                        enddo
-
-                    elseif (BC%TypeOfBCSolid == MultiscaleBCType%Linear) then
-
-                        ! Adding all the nodes of the boundary
-                        cont = 0
-                        do i=1,size(BC%BoundaryNodesSolid)
-                            cont = cont + size(BC%BoundaryNodesSolid(i)%Nodes)
-                        enddo
-
-                        allocate(BC%NodalMultiscaleDispBC(cont))
-
-                        cont = 0
-                        do i=1,size(BC%BoundaryNodesSolid)
-                            do j=1,size(BC%BoundaryNodesSolid(i)%Nodes)
-                                cont = cont + 1
-                                BC%NodalMultiscaleDispBC(cont)%Fmacro => BC%MacroscopicDefGrad
-                                BC%NodalMultiscaleDispBC(cont)%Node => GlobalNodesList(BC%BoundaryNodesSolid(i)%Nodes(j))
-                            enddo
-                        enddo
-
-
-                    else
-
-                        stop "Error: Kinematical Constraints not identified"
-                    endif
-
-                type is ( ClassMultiBCBiphFluidTaylorAndLinearSolidMinimal )
-
-                    BC%TypeOfBCSolid = MultiscaleBCType%Minimal
-
-                     allocate(BC%MacroscopicDefGrad(3,3))
-
-                        k=0
-                        do i=1,3
-                            do j=1,3
-
-                                k = k + 1
-
-                                call BC%MacroscopicDefGrad(i,j)%ReadTimeDiscretization(TimeFileName)
-
-                                if (DataFile%CompareStrings(ListOfValues(k),"Zero")) then
-                                    call BC%MacroscopicDefGrad(i,j)%CreateConstantLoadHistory(0.0d0)
-                                elseif (DataFile%CompareStrings(ListOfValues(k),"One")) then
-                                    call BC%MacroscopicDefGrad(i,j)%CreateConstantLoadHistory(1.0d0)
-                                else
-                                    call BC%MacroscopicDefGrad(i,j)%ReadValueDiscretization(ListOfValues(k))
-                                endif
-
-                            enddo
-                        enddo
-
-                    
-                        allocate(BC%NodalMultiscaleDispBC(size(GlobalNodesList)))
-
-                        do i=1,size(GlobalNodesList)
-                            BC%NodalMultiscaleDispBC(i)%Fmacro => BC%MacroscopicDefGrad
-                            BC%NodalMultiscaleDispBC(i)%Node => GlobalNodesList(i)
-                        enddo
-                        
                 
-                type is ( ClassMultiBCBiphFluidTaylorAndLinearSolidMinimalLinearD1 )
+                    ! Reading the values of deformation gradient
+                    call ReadMacroscopicDeformationGradientComponents(BC%MacroscopicDefGrad, DataFile, TimeFileName, ListofValues)
+                    ! Defining the nodal displacement constraint for each multiscale BC model.
+                    ! Global nodes or only Boundary nodes
+                    call DefineNodalMultiscaleDispBC(BC%TypeOfBCSolid, BC%BoundaryNodesSolid, BC%NodalMultiscaleDispBC , BC%MacroscopicDefGrad , GlobalNodesList)                  
+                      
 
-                    BC%TypeOfBCSolid = MultiscaleBCType%MinimalLinearD1
-
-                    allocate(BC%MacroscopicDefGrad(3,3))
-
-                        k=0
-                        do i=1,3
-                            do j=1,3
-
-                                k = k + 1
-
-                                call BC%MacroscopicDefGrad(i,j)%ReadTimeDiscretization(TimeFileName)
-
-                                if (DataFile%CompareStrings(ListOfValues(k),"Zero")) then
-                                    call BC%MacroscopicDefGrad(i,j)%CreateConstantLoadHistory(0.0d0)
-                                elseif (DataFile%CompareStrings(ListOfValues(k),"One")) then
-                                    call BC%MacroscopicDefGrad(i,j)%CreateConstantLoadHistory(1.0d0)
-                                else
-                                    call BC%MacroscopicDefGrad(i,j)%ReadValueDiscretization(ListOfValues(k))
-                                endif
-
-                            enddo
-                        enddo
-
-                        
-                        ! Adding all the nodes of the boundary
-                        cont = 0
-                        do i=1,size(BC%BoundaryNodesSolid)
-                            cont = cont + size(BC%BoundaryNodesSolid(i)%Nodes)
-                        enddo
-
-                        allocate(BC%NodalMultiscaleDispBC(cont))
-
-                        cont = 0
-                        do i=1,size(BC%BoundaryNodesSolid)
-                            do j=1,size(BC%BoundaryNodesSolid(i)%Nodes)
-                                cont = cont + 1
-                                BC%NodalMultiscaleDispBC(cont)%Fmacro => BC%MacroscopicDefGrad
-                                BC%NodalMultiscaleDispBC(cont)%Node => GlobalNodesList(BC%BoundaryNodesSolid(i)%Nodes(j))
-                            enddo
-                        enddo                        
-                        
-                        
-                        
-                        
-                type is ( ClassMultiBCBiphFluidTaylorAndLinearSolidMinimalLinearD3 )
-
-                    BC%TypeOfBCSolid = MultiscaleBCType%MinimalLinearD3
-
-                    allocate(BC%MacroscopicDefGrad(3,3))
-
-                        k=0
-                        do i=1,3
-                            do j=1,3
-
-                                k = k + 1
-
-                                call BC%MacroscopicDefGrad(i,j)%ReadTimeDiscretization(TimeFileName)
-
-                                if (DataFile%CompareStrings(ListOfValues(k),"Zero")) then
-                                    call BC%MacroscopicDefGrad(i,j)%CreateConstantLoadHistory(0.0d0)
-                                elseif (DataFile%CompareStrings(ListOfValues(k),"One")) then
-                                    call BC%MacroscopicDefGrad(i,j)%CreateConstantLoadHistory(1.0d0)
-                                else
-                                    call BC%MacroscopicDefGrad(i,j)%ReadValueDiscretization(ListOfValues(k))
-                                endif
-
-                            enddo
-                        enddo                        
-                        
-
-                        ! Adding all the nodes of the boundary
-                        cont = 0
-                        do i=1,size(BC%BoundaryNodesSolid)
-                            cont = cont + size(BC%BoundaryNodesSolid(i)%Nodes)
-                        enddo
-
-                        allocate(BC%NodalMultiscaleDispBC(cont))
-
-                        cont = 0
-                        do i=1,size(BC%BoundaryNodesSolid)
-                            do j=1,size(BC%BoundaryNodesSolid(i)%Nodes)
-                                cont = cont + 1
-                                BC%NodalMultiscaleDispBC(cont)%Fmacro => BC%MacroscopicDefGrad
-                                BC%NodalMultiscaleDispBC(cont)%Node => GlobalNodesList(BC%BoundaryNodesSolid(i)%Nodes(j))
-                            enddo
-                        enddo
-
-
-                class default
+            class default
                      stop "Error: Multiscale Settings - Select Type (BC)"
             end select
 
         endif
-
-
 
         BlockFound(iMacroscopicDeformationGradient)=.true.
         call DataFile%GetNextString(string)
@@ -1067,52 +672,95 @@ contains
 
     end subroutine
     !=======================================================================================================================
-
+    
     !=======================================================================================================================
-    subroutine ReadMacroscopicPressureAndGradientPressureMechanical(AnalysisSettings,DataFile,TimeFileName,BC,GlobalNodesList,isMultiscale)
-
+    subroutine ReadMacroscopicDeformationGradientComponents(MacroscopicDefGrad, DataFile, TimeFileName, ListofValues)
+ 
         implicit none
 
-        type (ClassParser)                              :: DataFile
-        type (ClassAnalysis)                            :: AnalysisSettings
-        type (ClassNodes) , pointer , dimension(:)      :: GlobalNodesList
-        class (ClassBoundaryConditions), pointer        :: BC
-        character(len=100)                              :: TimeFileName
-        logical                                         :: isMultiscale
-        character(len=255)                              :: string
-        character(len=100),dimension(4)                 :: ListOfOptions,ListOfValues
-        logical,dimension(4)                            :: FoundOption
-        integer                                         :: i
+        type (ClassLoadHistory), pointer,  dimension(:,:)     :: MacroscopicDefGrad
+        character(len=100)                                    :: TimeFileName
+        character(len=100),dimension(9)                       :: ListOfOptions,ListOfValues
+        type(ClassParser)                                     :: DataFile 
+        integer :: i, j, k, cont
+       
+        allocate(MacroscopicDefGrad(3,3))
+        k=0
+        do i=1,3
+            do j=1,3
 
+                k = k + 1
 
-        !-----------------------------------------------------------------
-        ! This routine only read the block. The Macroscopic Pressure is only for Biphasic Analysis
-        !-----------------------------------------------------------------
-        ListOfOptions=["P", "GradP1", "GradP2", "GradP3"]
+                call MacroscopicDefGrad(i,j)%ReadTimeDiscretization(TimeFileName)
 
-        call DataFile%FillListOfOptions(ListOfOptions,ListOfValues,FoundOption)
+                if (DataFile%CompareStrings(ListOfValues(k),"Zero")) then
+                    call MacroscopicDefGrad(i,j)%CreateConstantLoadHistory(0.0d0)
+                elseif (DataFile%CompareStrings(ListOfValues(k),"One")) then
+                    call MacroscopicDefGrad(i,j)%CreateConstantLoadHistory(1.0d0)
+                else
+                    call MacroscopicDefGrad(i,j)%ReadValueDiscretization(ListOfValues(k))
+                endif
 
-        call DataFile%CheckError
-
-        do i=1,size(FoundOption)
-            if (.not.FoundOption(i)) then
-                write(*,*) "Macroscopic Pressure And Gradient :: Option not found ["//trim(ListOfOptions(i))//"]"
-                stop
-            endif
-        enddo
-
-        BlockFound(iMacroscopicPressureAndGradient)=.true.
-        call DataFile%GetNextString(string)
-        if (.not.DataFile%CompareStrings(string,'end'//trim(BlockName(iMacroscopicPressureAndGradient)))) then
-            call DataFile%RaiseError("End of block was expected. BlockName="//trim(BlockName(iMacroscopicPressureAndGradient)))
-        endif
-
-
+            enddo
+        enddo                        
+                     
     end subroutine
     !=======================================================================================================================
     
     !=======================================================================================================================
-    subroutine ReadMacroscopicPressureAndGradientPressureBiphasic(AnalysisSettings,DataFile,TimeFileName,BC,GlobalNodesList,isMultiscale)
+    subroutine DefineNodalMultiscaleDispBC(TypeOfBC, BoundaryNodes, NodalMultiscaleDispBC , MacroscopicDefGrad , GlobalNodesList)
+        
+        implicit none
+
+            integer                                                   :: TypeOfBC
+            type (ClassBoundaryNodes),  dimension(:)                  :: BoundaryNodes
+            type (ClassMultiscaleNodalBC), allocatable, dimension(:)  :: NodalMultiscaleDispBC
+            type (ClassNodes) , pointer , dimension(:)                :: GlobalNodesList
+            type (ClassLoadHistory), pointer, dimension(:,:)                   :: MacroscopicDefGrad
+            integer :: i, j, k, cont
+       
+            ! Creating the class of the kinematic constraints
+            if (TypeOfBC == MultiscaleBCType%Taylor) then
+
+                allocate(NodalMultiscaleDispBC(size(GlobalNodesList)))
+
+                ! Adding all the nodes of the mesh
+                do i=1,size(GlobalNodesList)
+                    NodalMultiscaleDispBC(i)%Fmacro => MacroscopicDefGrad
+                    NodalMultiscaleDispBC(i)%Node => GlobalNodesList(i)
+                enddo
+                
+            elseif (TypeOfBC == MultiscaleBCType%Minimal) then
+                !Nothing to do
+
+
+            elseif (TypeOfBC == MultiscaleBCType%Linear .or. TypeOfBC == MultiscaleBCType%MinimalLinearD1 .or. TypeOfBC == MultiscaleBCType%MinimalLinearD3 ) then
+
+                ! Adding all the nodes of the boundary
+                cont = 0
+                do i=1,size(BoundaryNodes)
+                    cont = cont + size(BoundaryNodes(i)%Nodes)
+                enddo
+
+                allocate(NodalMultiscaleDispBC(cont))
+
+                cont = 0
+                do i=1,size(BoundaryNodes)
+                    do j=1,size(BoundaryNodes(i)%Nodes)
+                        cont = cont + 1
+                        NodalMultiscaleDispBC(cont)%Fmacro => MacroscopicDefGrad
+                        NodalMultiscaleDispBC(cont)%Node => GlobalNodesList(BoundaryNodes(i)%Nodes(j))
+                    enddo
+                enddo
+            else
+                stop "Error: Displacement Kinematical Constraints not identified: DefineNodalMultiscaleDispBC"
+            endif
+        
+    end subroutine
+    !=======================================================================================================================
+   
+    !=======================================================================================================================
+    subroutine ReadMacroscopicPressureAndGradientPressureBiphasic(AnalysisSettings,DataFile,TimeFileName,BC,GlobalNodesList)
 
         implicit none
 
@@ -1121,7 +769,6 @@ contains
         type (ClassNodes) , pointer , dimension(:)      :: GlobalNodesList
         class (ClassBoundaryConditions), pointer        :: BC
         character(len=100)                              :: TimeFileName
-        logical                                         :: isMultiscale
 
         character(len=255)::string
 
@@ -1143,101 +790,32 @@ contains
         enddo
 
 
-        if (isMultiscale) then
+        if (AnalysisSettings%MultiscaleAnalysis) then
 
             select type ( BC )
-                          
-            type is ( ClassMultiBCBiphFluidTaylorAndLinearSolidTaylorAndLinear )
+                
+            class is ( ClassMultiscaleBoundaryConditions )
+                ! Nothing to do
+               
+                
+            class is ( ClassMultiscaleBoundaryConditionsBiphasic )
                
                 ! Option: Kinematical Fluid Constraints
                 if (AnalysisSettings%MultiscaleModelFluid == MultiscaleModels%Taylor) then
-                     BC%TypeOfBCFluid = MultiscaleBCType%Taylor
+                    BC%TypeOfBCFluid = MultiscaleBCType%Taylor
                 elseif (AnalysisSettings%MultiscaleModelFluid == MultiscaleModels%Linear) then
                     BC%TypeOfBCFluid = MultiscaleBCType%Linear
+                elseif (AnalysisSettings%MultiscaleModelFluid == MultiscaleModels%Minimal) then
+                    BC%TypeOfBCFluid = MultiscaleBCType%Minimal
                 endif
 
-                allocate(BC%MacroscopicPressure(1))
-                allocate(BC%MacroscopicPresGrad(3))
-                
-                call BC%MacroscopicPressure(1)%ReadTimeDiscretization(TimeFileName)
-                if (DataFile%CompareStrings(ListOfValues(1),"Zero")) then
-                    call BC%MacroscopicPressure(1)%CreateConstantLoadHistory(0.0d0)
-                elseif (DataFile%CompareStrings(ListOfValues(1),"One")) then
-                    call BC%MacroscopicPressure(1)%CreateConstantLoadHistory(1.0d0)
-                else
-                    call BC%MacroscopicPressure(1)%ReadValueDiscretization(ListOfValues(1))
-                endif
-                k=0.0d0
-                do k=1,3
-                    call BC%MacroscopicPresGrad(k)%ReadTimeDiscretization(TimeFileName)
-                        if (DataFile%CompareStrings(ListOfValues(k),"Zero")) then
-                            call BC%MacroscopicPresGrad(k)%CreateConstantLoadHistory(0.0d0)
-                        elseif (DataFile%CompareStrings(ListOfValues(k),"One")) then
-                            call BC%MacroscopicPresGrad(k)%CreateConstantLoadHistory(1.0d0)
-                        else
-                            call BC%MacroscopicPresGrad(k)%ReadValueDiscretization(ListOfValues(k+1))
-                        endif
-                enddo
-                
-                
-                ! Criando a classe das restrições cinemáticas
-                if (BC%TypeOfBCFluid == MultiscaleBCType%Taylor) then
-
-                    call AnalysisSettings%GetTotalNumberOfDOF_fluid (GlobalNodesList, nDOFFluid)
-                    allocate(BC%NodalMultiscalePresBC(int(nDOFFluid/AnalysisSettings % Pdof )))
-                    
-                    k = 0.0d0
-                    do i=1,size(GlobalNodesList)
-                        if (GlobalNodesList(i)%IDFluid .ne. 0) then
-                            k = k+1
-                            BC%NodalMultiscalePresBC(k)%Pmacro     => BC%MacroscopicPressure
-                            BC%NodalMultiscalePresBC(k)%GradPmacro => BC%MacroscopicPresGrad
-                            BC%NodalMultiscalePresBC(k)%Node       => GlobalNodesList(i)
-                        endif
-                    enddo
-
-                elseif (BC%TypeOfBCFluid == MultiscaleBCType%Linear) then
-   
-                    !************************************************************************************
-                    ! somando todos os nós das fronteiras que são nós de fluido
-                    nNosFluid = 0.0d0
-                    do i=1,size(BC%BoundaryNodesFluid)
-                        do j=1, size(BC%BoundaryNodesFluid(i)%Nodes)
-                            node = BC%BoundaryNodesFluid(i)%Nodes(j)
-                             if (GlobalNodesList(node)%IDFluid .ne. 0) then
-                                nNosFluid = nNosFluid + 1
-                            endif
-                        enddo
-                    enddo
-		            !************************************************************************************
-                     
-                 allocate(BC%NodalMultiscalePresBC(nNosFluid))
-                 
-                 cont = 0
-                 do i=1,size(BC%BoundaryNodesFluid)
-                     do j=1,size(BC%BoundaryNodesFluid(i)%Nodes)
-                         node = BC%BoundaryNodesFluid(i)%Nodes(j)
-                         if (GlobalNodesList(node)%IDFluid .ne. 0) then
-                            cont = cont + 1
-                            BC%NodalMultiscalePresBC(cont)%Pmacro     => BC%MacroscopicPressure
-                            BC%NodalMultiscalePresBC(cont)%GradPmacro => BC%MacroscopicPresGrad
-                            BC%NodalMultiscalePresBC(cont)%Node       => GlobalNodesList(node)
-                         endif
-                     enddo
-                 enddo
-
-                else
-
-                     stop "Error: Kinematical Fluid Constraints not identified"
-                endif
+                ! Reading the values of macroscopic pressure and macroscopic pressure gradient
+                call ReadMacroscopicPressureAndGradientComponents(BC%MacroscopicPressure, BC%MacroscopicPresGrad, DataFile, TimeFileName, ListofValues)
+                ! Defining the nodal displacement constraint for each multiscale BC model.
+                ! Global nodes or only Boundary nodes
+                call DefineNodalMultiscalePresBC(AnalysisSettings, BC%TypeOfBCFluid, BC%BoundaryNodesFluid, BC%NodalMultiscalePresBC , BC%MacroscopicPressure, BC%MacroscopicPresGrad  , GlobalNodesList)
                              
-                
-            type is ( ClassMultiBCBiphFluidTaylorAndLinearSolidMinimal )
-                stop "Error: ReadMultiscaleMacroscopicPressureAndGradiente - Multiscale BC not implemented"
-            type is ( ClassMultiBCBiphFluidTaylorAndLinearSolidMinimalLinearD1 )
-                stop "Error: ReadMultiscaleMacroscopicPressureAndGradiente - Multiscale BC not implemented"
-            type is ( ClassMultiBCBiphFluidTaylorAndLinearSolidMinimalLinearD3 )
-                stop "Error: ReadMultiscaleMacroscopicPressureAndGradiente - Multiscale BC not implemented"
+           
             class default
                 stop "Error: ReadMultiscaleMacroscopicPressureAndGradiente - Multiscale BC not implemented"
             end select
@@ -1254,6 +832,118 @@ contains
     end subroutine
     !=======================================================================================================================
 
+    !=======================================================================================================================
+    subroutine ReadMacroscopicPressureAndGradientComponents(MacroscopicPressure, MacroscopicPresGrad, DataFile, TimeFileName, ListofValues)
+                
+        implicit none
+
+        type (ClassLoadHistory), pointer, dimension(:)                   :: MacroscopicPressure
+        type (ClassLoadHistory), pointer, dimension(:)                   :: MacroscopicPresGrad
+        character(len=100)                                               :: TimeFileName
+        character(len=100),dimension(4)                                  :: ListOfValues
+        type(ClassParser)                                                :: DataFile 
+        integer :: i, j, k, cont
+      
+       
+        allocate(MacroscopicPressure(1))
+        allocate(MacroscopicPresGrad(3))
+        
+        ! Reading the macroscopic pressure
+        call MacroscopicPressure(1)%ReadTimeDiscretization(TimeFileName)
+        if (DataFile%CompareStrings(ListOfValues(1),"Zero")) then
+            call MacroscopicPressure(1)%CreateConstantLoadHistory(0.0d0)
+        elseif (DataFile%CompareStrings(ListOfValues(1),"One")) then
+            call MacroscopicPressure(1)%CreateConstantLoadHistory(1.0d0)
+        else
+            call MacroscopicPressure(1)%ReadValueDiscretization(ListOfValues(1))
+        endif
+        
+        ! Reading the macroscopic pressure gradient components
+        do k=1,3
+            call MacroscopicPresGrad(k)%ReadTimeDiscretization(TimeFileName)
+                if (DataFile%CompareStrings(ListOfValues(k),"Zero")) then
+                    call MacroscopicPresGrad(k)%CreateConstantLoadHistory(0.0d0)
+                elseif (DataFile%CompareStrings(ListOfValues(k),"One")) then
+                    call MacroscopicPresGrad(k)%CreateConstantLoadHistory(1.0d0)
+                else
+                    call MacroscopicPresGrad(k)%ReadValueDiscretization(ListOfValues(k+1))
+                endif
+        enddo                  
+                     
+    end subroutine
+    !=======================================================================================================================
+      
+    !=======================================================================================================================
+    subroutine DefineNodalMultiscalePresBC(AnalysisSettings, TypeOfBCFluid, BoundaryNodesFluid, NodalMultiscalePresBC , MacroscopicPressure, MacroscopicPresGrad  , GlobalNodesList)
+                
+        implicit none
+
+        type (ClassAnalysis)                                            :: AnalysisSettings
+        integer                                                         :: TypeOfBCFluid
+        type (ClassBoundaryNodes),  dimension(:)                        :: BoundaryNodesFluid
+        type (ClassMultiscaleNodalBCFluid), allocatable, dimension(:)   :: NodalMultiscalePresBC
+        type (ClassNodes), pointer , dimension(:)                       :: GlobalNodesList
+        type (ClassLoadHistory), pointer, dimension(:)                  :: MacroscopicPressure
+        type (ClassLoadHistory), pointer, dimension(:)                  :: MacroscopicPresGrad                                                                          
+        integer :: i, j, k, cont, nDOFFluid, nNosFluid, node
+ 
+       
+        ! Creating the Taylor Fluid Multiscale BC    
+        if (TypeOfBCFluid == MultiscaleBCType%Taylor) then
+
+            call AnalysisSettings%GetTotalNumberOfDOF_fluid (GlobalNodesList, nDOFFluid)
+            allocate(NodalMultiscalePresBC(int(nDOFFluid)))
+                    
+            k = 0
+            do i=1,size(GlobalNodesList)
+                if (GlobalNodesList(i)%IDFluid .ne. 0) then
+                    k = k+1
+                    NodalMultiscalePresBC(k)%Pmacro     => MacroscopicPressure
+                    NodalMultiscalePresBC(k)%GradPmacro => MacroscopicPresGrad
+                    NodalMultiscalePresBC(k)%Node       => GlobalNodesList(i)
+                endif
+            enddo
+        ! Creating the Linear Fluid Multiscale BC
+        elseif (TypeOfBCFluid == MultiscaleBCType%Minimal) then
+            !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            
+        ! Creating the Linear Fluid Multiscale BC
+        elseif (TypeOfBCFluid == MultiscaleBCType%Linear) then
+   
+            !************************************************************************************
+            ! Searching the boundary nodes which are fluid nodes
+            nNosFluid = 0
+            do i=1,size(BoundaryNodesFluid)
+                do j=1, size(BoundaryNodesFluid(i)%Nodes)
+                    node = BoundaryNodesFluid(i)%Nodes(j)
+                        if (GlobalNodesList(node)%IDFluid .ne. 0) then
+                        nNosFluid = nNosFluid + 1
+                    endif
+                enddo
+            enddo
+		    !************************************************************************************      
+            allocate(NodalMultiscalePresBC(nNosFluid))
+                 
+            k = 0
+            do i=1,size(BoundaryNodesFluid)
+                do j=1,size(BoundaryNodesFluid(i)%Nodes)
+                    node = BoundaryNodesFluid(i)%Nodes(j)
+                    if (GlobalNodesList(node)%IDFluid .ne. 0) then
+                    k = k + 1
+                    NodalMultiscalePresBC(k)%Pmacro     => MacroscopicPressure
+                    NodalMultiscalePresBC(k)%GradPmacro => MacroscopicPresGrad
+                    NodalMultiscalePresBC(k)%Node       => GlobalNodesList(node)
+                    endif
+                enddo
+            enddo
+        
+        else
+            stop "Error: Pressure Constraints not identified: DefineNodalMultiscalePresBC"
+        endif
+            
+    end subroutine
+    !=======================================================================================================================   
+    
     !=======================================================================================================================
     subroutine ReadLinearSolver(DataFile,AnalysisSettings, LinearSolver)
     
@@ -2057,8 +1747,6 @@ contains
     !=======================================================================================================================
 
 
-
-
     ! TODO (Thiago#2#): Criar rotinas separadas para a leitura da malha de cada pre processador.
     ! Rotinas não estão adequadas para leitura de malha para análise de problemas bifásicos
     !=======================================================================================================================
@@ -2169,7 +1857,6 @@ contains
                 Read(line,*) id , GeoType , ENnodes , (ElemConec(j),j=1,ENnodes)
 
 
-
                 !---------------------------------------------------------------------------------------------------------------
                 selectcase (PreProcessorID)
                 !===============================================================================================================
@@ -2200,12 +1887,10 @@ contains
         call DataFile%GetNextString(string)
         IF (.not.DataFile%CompareStrings(string,'end connectivity')) call DataFile%RaiseError("Expected: End connectivity")
 
-
         call DataFile%GetNextString(string)
         IF (.not.DataFile%CompareStrings(string,'end mesh') ) then
             call DataFile%RaiseError("End of block was expected. BlockName=MESH")
         endif
-
 
         ! Material Constructor
         do i = 1,size(MatID)
@@ -2225,7 +1910,6 @@ contains
 
         enddo
 
-
     end subroutine
     !=======================================================================================================================
 
@@ -2238,16 +1922,12 @@ contains
         class (ClassBoundaryConditions),pointer         :: BC
         type (ClassAnalysis)                            :: AnalysisSettings
 
-
-
-
         character(len=255)::string, FileName
         integer:: i,j
         integer::nFS,nNF,nND,NDOFnode
         integer , allocatable , dimension(:,:) :: FSArray, NFArray, NDArray
         character*100 , allocatable , dimension(:) :: TablesList
         character*100 , allocatable , dimension(:,:) :: NFTable, NDTable
-
 
         NDOFnode = AnalysisSettings % NDOFnode
 
@@ -2351,7 +2031,6 @@ contains
                 call DataFile%GetNextString(string)
             end do LoopBC
 
-
         !************************************************************************************
         ! READING LOAD CASE TABLES : "INPUT_FILE.TAB"
         !************************************************************************************
@@ -2361,7 +2040,6 @@ contains
 
         ! Reading only the tables used in the analysis.
         allocate(BC%SetOfLoadHistory( size(TablesList) ))
-
 
         do i=1,size(TablesList)
             call BC%SetOfLoadHistory(i)%ReadTimeDiscretization(TimeFileName)
@@ -2377,6 +2055,4 @@ contains
     end subroutine
     !=======================================================================================================================
 
-   
     end module
-

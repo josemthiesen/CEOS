@@ -41,7 +41,7 @@ module ModFEMAnalysisBiphasic
             ! Class Methods
             !----------------------------------------------------------------------------------
             procedure :: Solve => SolveFEMAnalysisBiphasic
-            procedure :: AllocateKgSparse => AllocateKgSparseBiphasic!AllocateKgSparseUpperTriangularBiphasic 
+            procedure :: AllocateKgSparse => AllocateKgSparseBiphasic !AllocateKgSparseUpperTriangularBiphasic 
             !----------------------------------------------------------------------------------      
 
     end type

@@ -183,8 +183,7 @@ contains
                 case default
             end select
             
-            DX(61:68) = DX(61:68)   !CHUNCHO
-                
+                          
             !if (this%LinearSolver%status%error) then
             !    call this%Status%SetError(NewtonRaphsonFull_Errors%LinearSystemError,'Error Solving Linear System')
             !    return

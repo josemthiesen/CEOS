@@ -49,7 +49,7 @@ subroutine ExternalForceMultiscaleMinimalLinearD1( ElementList, AnalysisSettings
     Fext=0.0d0
     !$OMP PARALLEL DEFAULT(PRIVATE) SHARED(AnalysisSettings, ElementList, Lambda_F, Lambda_u, Fext ) 
     !$OMP DO
-     do  e = 1, size( ElementList )
+    do  e = 1, size( ElementList )
 
         call ElementList(e)%El%GetElementNumberDOF(AnalysisSettings , nDOFel)
 
@@ -63,7 +63,6 @@ subroutine ExternalForceMultiscaleMinimalLinearD1( ElementList, AnalysisSettings
         call ElementList(e)%El%Matrix_Ne_and_Ge(AnalysisSettings, Ne, Ge)
 
         Fe = matmul(transpose(Ge),Lambda_F) + matmul(transpose(Ne),Lambda_u)
-        !Fe = matmul(transpose(Ge),Lambda_F)
 
         !$OMP CRITICAL
         Fext(GM) = Fext(GM) + Fe

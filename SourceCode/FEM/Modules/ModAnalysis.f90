@@ -211,6 +211,9 @@ module ModAnalysis
         integer ::  MaxCutBack
         
         integer ::  Pdof
+        
+        ! Referential volume
+        real(8)                        :: TotalVolX = 0
 
         type(ClassStaggeredParameters) :: StaggeredParameters
         

@@ -28,7 +28,7 @@ module ModMultiscaleBoundaryConditions
     !
     !-----------------------------------------------------------------------------------
     type ClassMultiscaleNodalBC
-        type(ClassNodes), pointer :: Node
+        type(ClassNodes), pointer :: Node 
         type (ClassLoadHistory), pointer, dimension (:,:) :: Fmacro
     end type
     !-----------------------------------------------------------------------------------
@@ -241,10 +241,10 @@ module ModMultiscaleBoundaryConditions
         k=1
         do i = 1,3
             do j = 1,3
-
-                Fext(k) = this%NodalMultiscaleDispBC(1)%Fmacro(i,j)%LoadCase(LC)%Step(ST)%InitVal
-                DeltaFext(k) = this%NodalMultiscaleDispBC(1)%Fmacro(i,j)%LoadCase(LC)%Step(ST)%FinalVal - Fext(k)
-
+                
+                Fext(k) = this%MacroscopicDefGrad(i,j)%LoadCase(LC)%Step(ST)%InitVal
+                DeltaFext(k) = this%MacroscopicDefGrad(i,j)%LoadCase(LC)%Step(ST)%FinalVal - Fext(k)
+               
                 k = k + 1
 
             enddo
@@ -441,7 +441,7 @@ module ModMultiscaleBoundaryConditions
             UmicroYFinal = matmul((FMacroFinal - IdentityMatrix(3)),Y)
 
             ! Montando os deslocamentos micro prescritos nos graus de liberdade (analise mecânica)
-            ! Nesse caso apenas na direção 1 (X)
+
             do i = 1,AnalysisSettings%NDOFnode
                 !j = 1*(k -1 ) + i
                 j = AnalysisSettings%NDOFnode*(k -1 ) + i

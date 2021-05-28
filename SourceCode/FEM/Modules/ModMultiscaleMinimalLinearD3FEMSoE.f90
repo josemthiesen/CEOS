@@ -48,8 +48,6 @@ module ModMultiscaleMinimalLinearD3FEMSoE
         procedure :: EvaluateGradientSparse => EvaluateKt
         procedure :: PostUpdate => FEMUpdateMesh
 
-        procedure :: HomogenizeDeformationGradient
-        procedure :: HomogenizeDisplacement
 
     end type
 
@@ -59,6 +57,7 @@ module ModMultiscaleMinimalLinearD3FEMSoE
     subroutine EvaluateR(this,X,R)
 
         use ModInterfaces
+        use ModMultiscaleHomogenizations
         class(ClassMultiscaleMinimalLinearD3FEMSoE) :: this
         real(8),dimension(:) :: X,R
         integer :: nDOF, i, j, k, n
@@ -83,7 +82,7 @@ module ModMultiscaleMinimalLinearD3FEMSoE
                 return
             endif
 
-            call ExternalForceMultiscaleMinimalLinearD1( this%ElementList, this%AnalysisSettings, X((nDOF+1):(nDOF+9)),X((nDOF+10):(nDOF+12)), this%Fext )
+            call ExternalForceMultiscaleMinimal( this%ElementList, this%AnalysisSettings, X((nDOF+1):(nDOF+9)),X((nDOF+10):(nDOF+12)), this%Fext )
 
             ! Deve-se colocar as condições de contorno no Fext
             ! Para os nós do contorno, na direção 1, o vetor Fext deve ser zerado.
@@ -95,9 +94,8 @@ module ModMultiscaleMinimalLinearD3FEMSoE
             !   this%Fext(this%DispDOF(n)) = 0.0d0
 
             !enddo
-
-
-            call this%HomogenizeDeformationGradient(F_Homogenized,TotalVolX)
+                        
+            call GetHomogenizedDeformationGradient(this%AnalysisSettings, this%ElementList, F_Homogenized)
 
             ! Obs.: Mapeamento em linhas (ao contrário do Jog) pois a Matrix Gradiente de U (matrix G)
             ! foi mapeada deste modo para o cálculo da matriz rigidez.
@@ -109,9 +107,10 @@ module ModMultiscaleMinimalLinearD3FEMSoE
                 enddo
             enddo
 
-            call this%HomogenizeDisplacement( X(1:nDOF), u_Homogenized )
+            
+            call GetHomogenizedDisplacement( this%AnalysisSettings, this%ElementList,  X(1:nDOF), u_Homogenized )
 
-
+            TotalVolX = this%AnalysisSettings%TotalVolX
             ! Residual
             R = 0.0d0
             R(1:nDOF)              =  this%Fint - this%Fext
@@ -188,221 +187,6 @@ module ModMultiscaleMinimalLinearD3FEMSoE
 
     end subroutine
     !=================================================================================================
-
-    !=================================================================================================
-    subroutine HomogenizeDeformationGradient( this, HomogenizedF, TotalVolX )
-
-        !************************************************************************************
-        ! DECLARATIONS OF VARIABLES
-        !************************************************************************************
-        ! Modules and implicit declarations
-        ! -----------------------------------------------------------------------------------
-        implicit none
-
-        ! Object
-        ! -----------------------------------------------------------------------------------
-        class(ClassMultiscaleMinimalLinearD3FEMSoE) :: this
-
-        ! Input variables
-        ! -----------------------------------------------------------------------------------
-
-        ! Input/Output variables
-        ! -----------------------------------------------------------------------------------
-        real(8) :: HomogenizedF(3,3)
-
-        ! Internal variables
-        ! -----------------------------------------------------------------------------------
-        integer							    :: NDOFel , gp, e, nNodes, DimProb,i,j,n
-        real(8)							    :: detJX, TotalVolX , rX
-        real(8) , pointer , dimension(:)    :: Weight
-        real(8) , pointer , dimension(:,:)  :: NaturalCoord
-        real(8)                             :: F(3,3)
-        real(8) , dimension(:,:) , pointer :: DifSF
-        real(8) , dimension(this%AnalysisSettings%AnalysisDimension,this%AnalysisSettings%AnalysisDimension) :: JacobX
-        real(8) , dimension(:)   , pointer :: ShapeFunctions
-        !************************************************************************************
-
-        !************************************************************************************
-        ! HOMOGENISATION
-        !************************************************************************************
-
-        DimProb = this%AnalysisSettings%AnalysisDimension
-
-        TotalVolX = 0.0d0
-        !Loop over Elements
-        do e = 1,size(this%ElementList)
-            TotalVolX = TotalVolX + this%ElementList(e)%El%VolumeX
-        enddo
-
-
-        HomogenizedF = 0.0d0
-        !Loop over Elements
-        do e = 1,size(this%ElementList)
-
-            nNodes = this%ElementList(e)%El%GetNumberOfNodes()
-
-            DifSF => DifSF_Memory ( 1:nNodes , 1:DimProb )
-
-            ShapeFunctions => SF_Memory( 1:nNodes )
-
-            ! Number of degrees of freedom
-            call this%ElementList(e)%El%GetElementNumberDOF(this%AnalysisSettings,NDOFel)
-
-
-            ! Retrieving gauss points parameters for numerical integration
-            call this%ElementList(e)%El%GetGaussPoints(NaturalCoord,Weight)
-
-            !Loop over gauss points
-            do gp = 1, size(NaturalCoord,dim=1)
-
-
-                call this%ElementList(e)%El%GetDifShapeFunctions(NaturalCoord(gp,:) , DifSF )
-
-                !Jacobian
-                JacobX=0.0d0
-                do i=1,DimProb
-                    do j=1,DimProb
-                        do n=1,nNodes
-                            JacobX(i,j)=JacobX(i,j) + DifSf(n,i) * this%ElementList(e)%El%ElementNodes(n)%Node%CoordX(j)
-                        enddo
-                    enddo
-                enddo
-
-                !Determinant of the Jacobian
-                detJX = det(JacobX)
-
-                !Get F
-                F = this%ElementList(e)%El%GaussPoints(gp)%F
-
-                !Homogenized
-                 HomogenizedF = HomogenizedF + (F*Weight(gp)*detJX)/TotalVolX
-
-            enddo
-
-        enddo
-
-        !************************************************************************************
-
-
-    end subroutine
-    !=================================================================================================
-
-    !=================================================================================================
-    subroutine HomogenizeDisplacement( this, U, u_Homogenized )
-
-        !************************************************************************************
-        ! DECLARATIONS OF VARIABLES
-        !************************************************************************************
-        ! Modules and implicit declarations
-        ! -----------------------------------------------------------------------------------
-        implicit none
-
-        ! Object
-        ! -----------------------------------------------------------------------------------
-        class(ClassMultiscaleMinimalLinearD3FEMSoE) :: this
-
-        ! Input variables
-        ! -----------------------------------------------------------------------------------
-        real(8), dimension(:) :: U
-
-        ! Input/Output variables
-        ! -----------------------------------------------------------------------------------
-        real(8) :: u_Homogenized(3)
-
-        ! Internal variables
-        ! -----------------------------------------------------------------------------------
-        integer							    :: NDOFel , gp, e, nNodes, DimProb,i,j,n
-        real(8)							    :: detJX, TotalVolX , rX
-        real(8) , pointer , dimension(:)    :: Weight
-        real(8) , pointer , dimension(:,:)  :: NaturalCoord
-        real(8)                             :: u_pg(3)
-        real(8) , dimension(this%AnalysisSettings%AnalysisDimension,this%AnalysisSettings%AnalysisDimension) :: JacobX
-        real(8) , dimension(:)   , pointer  :: ShapeFunctions
-        real(8) , dimension(:,:) , pointer  :: DifSF
-        integer , pointer , dimension(:)    :: GM
-        real(8) , pointer , dimension(:,:)  :: Npg
-        !************************************************************************************
-
-        !************************************************************************************
-        ! HOMOGENISATION
-        !************************************************************************************
-
-        DimProb = this%AnalysisSettings%AnalysisDimension
-
-        TotalVolX = 0.0d0
-        !Loop over Elements
-        do e = 1,size(this%ElementList)
-            TotalVolX = TotalVolX + this%ElementList(e)%El%VolumeX
-        enddo
-
-
-        u_Homogenized = 0.0d0
-        !Loop over Elements
-        do e = 1,size(this%ElementList)
-
-
-            ! Number of degrees of freedom
-            call this%ElementList(e)%El%GetElementNumberDOF(this%AnalysisSettings,NDOFel)
-
-            nNodes = this%ElementList(e)%El%GetNumberOfNodes()
-
-            ShapeFunctions => SF_Memory( 1:nNodes )
-            DifSF => DifSF_Memory ( 1:nNodes , 1:DimProb )
-            GM => GM_Memory( 1:nDOFel )
-            Npg => Npg_Memory( 1:3 , 1:NDOFel )
-
-
-            ! Global Mapping
-            call this%ElementList(e)%El%GetGlobalMapping( this%AnalysisSettings, GM )
-
-            ! Retrieving gauss points parameters for numerical integration
-            call this%ElementList(e)%El%GetGaussPoints(NaturalCoord,Weight)
-
-
-            !Loop over gauss points
-            do gp = 1, size(NaturalCoord,dim=1)
-
-
-                call this%ElementList(e)%El%GetShapeFunctions(NaturalCoord(gp,:) , ShapeFunctions )
-
-                call this%ElementList(e)%El%GetDifShapeFunctions(NaturalCoord(gp,:) , DifSF )
-
-                !Jacobian
-                JacobX=0.0d0
-                do i=1,DimProb
-                    do j=1,DimProb
-                        do n=1,nNodes
-                            JacobX(i,j)=JacobX(i,j) + DifSf(n,i) * this%ElementList(e)%El%ElementNodes(n)%Node%CoordX(j)
-                        enddo
-                    enddo
-                enddo
-
-                !Determinant of the Jacobian
-                detJX = det(JacobX)
-
-                !Assemble Matrix Npg
-                Npg = 0.0d0
-                Npg(1,[(i,i=1,nDOFel,3)])=ShapeFunctions(:) !u1
-                Npg(2,[(i,i=2,nDOFel,3)])=ShapeFunctions(:) !u2
-                Npg(3,[(i,i=3,nDOFel,3)])=ShapeFunctions(:) !u3
-
-                !Displacement on Gauss Point
-                u_pg = matmul(Npg,U(GM))
-
-                !Homogenized Displacement
-                 u_Homogenized = u_Homogenized + (u_pg*Weight(gp)*detJX)/TotalVolX
-
-            enddo
-
-        enddo
-
-        !************************************************************************************
-
-
-    end subroutine
-    !=================================================================================================
-
-
 
 
 end module

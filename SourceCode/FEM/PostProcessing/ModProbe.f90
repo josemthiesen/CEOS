@@ -1140,6 +1140,7 @@ module ModProbe
             use ModContinuumMechanics
             use ModMultiscaleFEMAnalysis
             use ModVoigtNotation
+            use ModMultiscaleHomogenizations
 
             implicit none
 
@@ -1180,9 +1181,6 @@ module ModProbe
 
             call Comp%Setup()
 
-
-
-
             select type (FEA)
                 class is (ClassMultiscaleFEMAnalysis)
 
@@ -1191,7 +1189,8 @@ module ModProbe
                         ! Writing First Piola Stress
                         case (VariableNames%FirstPiolaStress)
 
-                            call FEA%HomogenizeStress(HomogenizedStress)
+                            call GetHomogenizedStress(FEA%AnalysisSettings, FEA%ElementList, HomogenizedStress)
+        
 
                             NumberOfComp = 9
                             if ( any( this%Components .gt. NumberOfComp ) ) then
@@ -1210,7 +1209,7 @@ module ModProbe
                         ! Writing Deformation Gradient
                         case (VariableNames%DeformationGradient)
 
-                            call FEA%HomogenizeDeformationGradient(HomogenizedF)
+                            call GetHomogenizedDeformationGradient(FEA%AnalysisSettings, FEA%ElementList, HomogenizedF)
 
                             NumberOfComp = 9
                             if ( any( this%Components .gt. NumberOfComp ) ) then
@@ -1231,14 +1230,14 @@ module ModProbe
                         case (VariableNames%CauchyStress)
 
                             ! Computing Homogenized First Piola (in Voigt Notation)
-                            call FEA%HomogenizeStress(HomogenizedStress)
+                            call GetHomogenizedStress(FEA%AnalysisSettings, FEA%ElementList, HomogenizedStress)
 
                             ! Mapping First Piola in Voigt to Tensor 3D
                             HomogenizedP = VoigtToTensor2(HomogenizedStress)
 
                             ! Computing Homogenized Deformation Gradient (in Tensor Notation)
-                            call FEA%HomogenizeDeformationGradient(HomogenizedF)
-
+                            call GetHomogenizedDeformationGradient(FEA%AnalysisSettings, FEA%ElementList, HomogenizedF)
+                                    
                             ! Push-Forward First Piola to Cauchy
                             HomogenizedCauchy = StressTransformation(HomogenizedF,HomogenizedP,StressMeasures%FirstPiola,StressMeasures%Cauchy)
 
@@ -1286,6 +1285,7 @@ module ModProbe
             use ModMultiscaleFEMAnalysis
             use ModMultiscaleFEMAnalysisBiphasic
             use ModVoigtNotation
+            use ModMultiscaleHomogenizations
 
             implicit none
 
@@ -1319,7 +1319,7 @@ module ModProbe
             real(8)                                 :: HomogenizedP(3,3),HomogenizedP_voigt(9)
             real(8)                                 :: HomogenizedCauchy(3,3), HomogenizedCauchy_Voigt(6)
             real(8)                                 :: HomogenizedPressure, HomogenizedPressureWrite(1)
-            real(8)                                 :: HomogenizedGradientPressure(3), HomogenizedwX(3)
+            real(8)                                 :: HomogenizedPressureGradient(3), HomogenizedwX(3)
             !************************************************************************************
             ! Test if the probe is active
             if (.not. this%Active) then
@@ -1340,7 +1340,7 @@ module ModProbe
                                 ! Writing First Piola Stress
                                 case (VariableNames%FirstPiolaStress)
 
-                                    call FEA%HomogenizeTotalStressBiphasic(HomogenizedStress)
+                                    call GetHomogenizedTotalStressBiphasic(FEA%AnalysisSettings, FEA%ElementList, FEA%P, HomogenizedStress)
 
                                     NumberOfComp = 9
                                     if ( any( this%Components .gt. NumberOfComp ) ) then
@@ -1359,7 +1359,7 @@ module ModProbe
                                 ! Writing Deformation Gradient
                                 case (VariableNames%DeformationGradient)
 
-                                    call FEA%HomogenizeDeformationGradientBiphasic(HomogenizedF)
+                                    call GetHomogenizedDeformationGradient(FEA%AnalysisSettings, FEA%ElementList, HomogenizedF)
 
                                     NumberOfComp = 9
                                     if ( any( this%Components .gt. NumberOfComp ) ) then
@@ -1380,13 +1380,13 @@ module ModProbe
                                 case (VariableNames%CauchyStress)
 
                                     ! Computing Homogenized First Piola (in Voigt Notation)
-                                    call FEA%HomogenizeTotalStressBiphasic(HomogenizedStress)
+                                    call GetHomogenizedTotalStressBiphasic(FEA%AnalysisSettings, FEA%ElementList, FEA%P, HomogenizedStress)
 
                                     ! Mapping First Piola in Voigt to Tensor 3D
                                     HomogenizedP = VoigtToTensor2(HomogenizedStress)
 
                                     ! Computing Homogenized Deformation Gradient (in Tensor Notation)
-                                    call FEA%HomogenizeDeformationGradientBiphasic(HomogenizedF)
+                                    call GetHomogenizedDeformationGradient(FEA%AnalysisSettings, FEA%ElementList, HomogenizedF)
 
                                     ! Push-Forward First Piola to Cauchy
                                     HomogenizedCauchy = StressTransformation(HomogenizedF,HomogenizedP,StressMeasures%FirstPiola,StressMeasures%Cauchy)
@@ -1410,7 +1410,7 @@ module ModProbe
                                 case (VariableNames%Pressure)
 
                                     ! Computing Homogenized Pressure
-                                    call FEA%HomogenizedPressureBiphasic(HomogenizedPressure)
+                                    call GetHomogenizedPressureBiphasic(FEA%AnalysisSettings, FEA%ElementList, FEA%P, HomogenizedPressure)
                                     HomogenizedPressureWrite(1) = HomogenizedPressure
 
                                     call this%WriteOnFile(FEA%Time , HomogenizedPressureWrite)
@@ -1420,15 +1420,15 @@ module ModProbe
                                 case (VariableNames%GradientPressure)
 
                                     ! Computing Homogenized Pressure
-                                    call FEA%HomogenizedGradientPressureBiphasic(HomogenizedGradientPressure)
+                                    call GetHomogenizedPressureGradientBiphasic( FEA%AnalysisSettings, FEA%ElementList, FEA%P, HomogenizedPressureGradient )
                                     
-                                    call this%WriteOnFile(FEA%Time , HomogenizedGradientPressure)
+                                    call this%WriteOnFile(FEA%Time , HomogenizedPressureGradient)
                                 
                                 ! Writing Relative Velocity wX
                                 case (VariableNames%RelativeVelocity)
 
                                     ! Computing Homogenized wX
-                                    call FEA%HomogenizedRelativeVelocitywXBiphasic( HomogenizedwX )
+                                    call GetHomogenizedRelativeVelocitywXBiphasic(FEA%AnalysisSettings, FEA%ElementList, FEA%VSolid, HomogenizedwX )
                                     
                                     call this%WriteOnFile(FEA%Time , HomogenizedwX)
                                     
