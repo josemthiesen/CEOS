@@ -164,7 +164,6 @@ module ModBoundaryConditions
         ! Internal variables
         ! -----------------------------------------------------------------------------------
         integer :: i , n , dof
-        real(8) :: penaliza
         real(8) , allocatable, dimension(:) ::  Udirichlet, Rmod
 
         !************************************************************************************
@@ -272,7 +271,7 @@ module ModBoundaryConditions
         ! -----------------------------------------------------------------------------------
         integer :: i , n , dof
         real(8) :: penaliza
-        real(8) , allocatable, dimension(:) ::  Udirichlet, Rmod
+        real(8) , allocatable, dimension(:) ::  DeltaXPresc, Rmod
 
         !************************************************************************************
 
@@ -280,8 +279,8 @@ module ModBoundaryConditions
         ! APPLYING BOUNDARY CONDITIONS
         !************************************************************************************
 
-        allocate( Udirichlet(size(U)), Rmod(size(U)) )
-        Udirichlet = 0.0d0
+        allocate( DeltaXPresc(size(U)), Rmod(size(U)) )
+        DeltaXPresc = 0.0d0
         Rmod = 0.0d0
 
         ! Applying prescribed boundary conditions
@@ -291,12 +290,12 @@ module ModBoundaryConditions
             do n=1,size(Presc_Disp_DOF)
                 dof=Presc_Disp_DOF(n)
                 ! Assembly the Dirichlet displacement BC
-                Udirichlet(dof) = ( Ubar(dof) - U(dof) )
+                DeltaXPresc(dof) = ( Ubar(dof) - U(dof) )
             enddo
 
             ! Multiplicação esparsa - Vetor Força para montagem da condição de contorno de rearranjo
-            !call mkl_dcsrgemv('N', size(U), Kg%Val, Kg%RowMap, Kg%Col, Udirichlet, Rmod)
-            call mkl_dcsrsymv('U', size(U), Kg%Val, Kg%RowMap, Kg%Col, Udirichlet, Rmod)
+            !call mkl_dcsrgemv('N', size(U), Kg%Val, Kg%RowMap, Kg%Col, DeltaXPresc, Rmod)
+            call mkl_dcsrsymv('U', size(U), Kg%Val, Kg%RowMap, Kg%Col, DeltaXPresc, Rmod)
 
             !Resíduo Modificado
             R = R - Rmod
@@ -309,7 +308,7 @@ module ModBoundaryConditions
             Kg%Val(PrescDispSparseMapONE) = 1.0d0
 
             ! Corrigindo resíduo por rearranjo de equações
-            R(Presc_Disp_DOF) = Udirichlet(Presc_Disp_DOF)
+            R(Presc_Disp_DOF) = DeltaXPresc(Presc_Disp_DOF)
 
             !**************************************************************
 

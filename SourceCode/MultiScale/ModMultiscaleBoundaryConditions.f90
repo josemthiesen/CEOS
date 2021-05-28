@@ -29,7 +29,6 @@ module ModMultiscaleBoundaryConditions
     !-----------------------------------------------------------------------------------
     type ClassMultiscaleNodalBC
         type(ClassNodes), pointer :: Node 
-        type (ClassLoadHistory), pointer, dimension (:,:) :: Fmacro
     end type
     !-----------------------------------------------------------------------------------
 
@@ -71,7 +70,7 @@ module ModMultiscaleBoundaryConditions
 
         contains
             procedure :: GetBoundaryConditions   => GetBoundaryConditionsMultiscaleMinimal
-            !procedure :: ApplyBoundaryConditions => ApplyBoundaryConditionsMultiscaleMinimal
+           
 
     end type
     !-----------------------------------------------------------------------------------
@@ -81,7 +80,6 @@ module ModMultiscaleBoundaryConditions
 
         contains
             procedure :: GetBoundaryConditions   => GetBoundaryConditionsMultiscaleMinimalLinearD1
-            procedure :: ApplyBoundaryConditionsNEW => ApplyBoundaryConditionsMultiscaleMinimalLinearD1
 
         end type
     !-----------------------------------------------------------------------------------
@@ -91,7 +89,6 @@ module ModMultiscaleBoundaryConditions
 
         contains
             procedure :: GetBoundaryConditions   => GetBoundaryConditionsMultiscaleMinimalLinearD3
-            procedure :: ApplyBoundaryConditionsNEW => ApplyBoundaryConditionsMultiscaleMinimalLinearD3
 
     end type
     !---------------------------------------------------------------------------------        
@@ -153,8 +150,8 @@ module ModMultiscaleBoundaryConditions
             ! Montando FMacro no tempo t baseado na curva informada pelo usuário
             do i = 1,3
                 do j = 1,3
-                FMacroInitial(i,j) = this%NodalMultiscaleDispBC(k)%Fmacro(i,j)%LoadCase(LC)%Step(ST)%InitVal
-                FMacroFinal(i,j)   = this%NodalMultiscaleDispBC(k)%Fmacro(i,j)%LoadCase(LC)%Step(ST)%FinalVal
+                FMacroInitial(i,j) = this%MacroscopicDefGrad(i,j)%LoadCase(LC)%Step(ST)%InitVal
+                FMacroFinal(i,j)   = this%MacroscopicDefGrad(i,j)%LoadCase(LC)%Step(ST)%FinalVal
                 enddo
             enddo
 
@@ -175,13 +172,11 @@ module ModMultiscaleBoundaryConditions
             enddo
         enddo
 
-
         DeltaUPresc=0.0d0
         do i = 1, size(NodalDispDOF)
             U( NodalDispDOF(i) ) = ActiveInitialValue(i)
             DeltaUPresc( NodalDispDOF(i) ) =  ActiveFinalValue(i) - ActiveInitialValue(i)
         enddo
-
 
         !************************************************************************************
 
@@ -240,16 +235,12 @@ module ModMultiscaleBoundaryConditions
         ! o cálculo da matriz rigidez.
         k=1
         do i = 1,3
-            do j = 1,3
-                
+            do j = 1,3 
                 Fext(k) = this%MacroscopicDefGrad(i,j)%LoadCase(LC)%Step(ST)%InitVal
                 DeltaFext(k) = this%MacroscopicDefGrad(i,j)%LoadCase(LC)%Step(ST)%FinalVal - Fext(k)
-               
                 k = k + 1
-
             enddo
         enddo
-
 
         !************************************************************************************
 
@@ -257,7 +248,8 @@ module ModMultiscaleBoundaryConditions
     !=================================================================================================
                
     !=================================================================================================
-    subroutine GetBoundaryConditionsMultiscaleMinimalLinearD1( this, AnalysisSettings, GlobalNodesList, LC, ST, Fext, DeltaFext, NodalDispDOF, U, DeltaUPresc)
+    subroutine GetBoundaryConditionsMultiscaleMinimalLinearD1( this, AnalysisSettings, GlobalNodesList, LC, ST, Fext, &
+                                                               DeltaFext, NodalDispDOF, U, DeltaUPresc)
 
         !************************************************************************************
         ! DECLARATIONS OF VARIABLES
@@ -272,9 +264,9 @@ module ModMultiscaleBoundaryConditions
         ! Input variables
         ! -----------------------------------------------------------------------------------
         class(ClassMultiscaleBoundaryConditionsMinimalLinearD1) :: this
-        class(ClassAnalysis)                     :: AnalysisSettings
-        type (ClassNodes),   pointer, dimension(:)  :: GlobalNodesList
-        integer                                  :: LC, ST
+        class(ClassAnalysis)                                    :: AnalysisSettings
+        type (ClassNodes),   pointer, dimension(:)              :: GlobalNodesList
+        integer                                                 :: LC, ST
 
         ! Output variables
         ! -----------------------------------------------------------------------------------
@@ -284,15 +276,16 @@ module ModMultiscaleBoundaryConditions
 
         ! Internal variables
         ! -----------------------------------------------------------------------------------
-        integer                                :: i,j,k, nActive
+        integer                                :: i,j,k, nActive, NDOFMinimalLinearD1, cont
         real(8), allocatable, dimension(:) :: ActiveInitialValue, ActiveFinalValue
         real(8) :: FMacroInitial(3,3), FMacroFinal(3,3), Y(3), UmicroYInitial(3),UmicroYFinal(3)
 
         !************************************************************************************
 
         !************************************************************************************
-        Fext = 0.0d0
-        DeltaFext = 0.0d0
+        Fext = 0.0d0        !This variable represent the Macroscopic Deformation Gradient at time tn
+        DeltaFext = 0.0d0   !This variable represent the Delta Macroscopic Deformation Gradient at time tn+1
+        NDOFMinimalLinearD1 = 1
 
         if (associated(NodalDispDOF))          deallocate(NodalDispDOF)
 
@@ -307,26 +300,32 @@ module ModMultiscaleBoundaryConditions
         ! Guardando o gradiente de deformação macro no incremento corrente no vetor DeltaFext
         ! Obs.: Mapeamento em linhas (ao contrário do Jog) pois a Matrix Gradiente de U foi mapeada deste modo para
         ! o cálculo da matriz rigidez.
-        k=1
+        cont=1
         do i = 1,3
             do j = 1,3
-                Fext(k) = this%NodalMultiscaleDispBC(1)%Fmacro(i,j)%LoadCase(LC)%Step(ST)%InitVal
-                DeltaFext(k) = this%NodalMultiscaleDispBC(1)%Fmacro(i,j)%LoadCase(LC)%Step(ST)%FinalVal - Fext(k)
-                k = k + 1
-
+                ! Montando FMacro no tempo t baseado na curva informada pelo usuário
+                FMacroInitial(i,j) = this%MacroscopicDefGrad(i,j)%LoadCase(LC)%Step(ST)%InitVal
+                FMacroFinal(i,j)  = this%MacroscopicDefGrad(i,j)%LoadCase(LC)%Step(ST)%FinalVal
+                
+                ! Montando o gradiente de deformação F para uso na satisfação da cond. de mínimo
+                Fext(cont) = this%MacroscopicDefGrad(i,j)%LoadCase(LC)%Step(ST)%InitVal
+                DeltaFext(cont) = this%MacroscopicDefGrad(i,j)%LoadCase(LC)%Step(ST)%FinalVal - Fext(cont)
+                cont = cont + 1
+               
             enddo
         enddo
 
+        
         !CRIAÇÃO DO VETOR E MONTAGEM DAS CONDIÇÕES DOS GRAUS DE LIBERDADE UTILIZADOS
         do k=1,size(this%NodalMultiscaleDispBC)
 
-            ! Montando FMacro no tempo t baseado na curva informada pelo usuário
-            do i = 1,3
-                do j = 1,3
-                FMacroInitial(i,j) = this%NodalMultiscaleDispBC(k)%Fmacro(i,j)%LoadCase(LC)%Step(ST)%InitVal
-                FMacroFinal(i,j)   = this%NodalMultiscaleDispBC(k)%Fmacro(i,j)%LoadCase(LC)%Step(ST)%FinalVal
-                enddo
-            enddo
+            ! !Montando FMacro no tempo t baseado na curva informada pelo usuário
+            !do i = 1,3
+            !    do j = 1,3
+            !    FMacroInitial(i,j) = this%MacroscopicDefGrad(i,j)%LoadCase(LC)%Step(ST)%InitVal
+            !    FMacroFinal(i,j)   = this%MacroscopicDefGrad(i,j)%LoadCase(LC)%Step(ST)%FinalVal
+            !    enddo
+            !enddo
 
             ! Obter a coordenada do nó onde será aplicada a condição de contorno prescrita
             Y = 0.0d0
@@ -338,7 +337,7 @@ module ModMultiscaleBoundaryConditions
 
             ! Montando os deslocamentos micro prescritos nos graus de liberdade (analise mecânica)
             ! Nesse caso apenas na direção 1 (X)
-            do i = 1,1
+            do i = 1,NDOFMinimalLinearD1
                 j = 1*(k -1 ) + i
                 NodalDispDOF(j) = AnalysisSettings%NDOFnode*(this%NodalMultiscaleDispBC(k)%Node%ID -1 ) + i
                 ActiveInitialValue(j) = UmicroYInitial(i)
@@ -376,9 +375,9 @@ module ModMultiscaleBoundaryConditions
         ! Input variables
         ! -----------------------------------------------------------------------------------
         class(ClassMultiscaleBoundaryConditionsMinimalLinearD3) :: this
-        class(ClassAnalysis)                     :: AnalysisSettings
-        type (ClassNodes),   pointer, dimension(:)  :: GlobalNodesList
-        integer                                  :: LC, ST
+        class(ClassAnalysis)                                    :: AnalysisSettings
+        type (ClassNodes),   pointer, dimension(:)              :: GlobalNodesList
+        integer                                                 :: LC, ST
 
         ! Output variables
         ! -----------------------------------------------------------------------------------
@@ -388,22 +387,22 @@ module ModMultiscaleBoundaryConditions
 
         ! Internal variables
         ! -----------------------------------------------------------------------------------
-        integer                                :: i,j,k, nActive
-        real(8), allocatable, dimension(:) :: ActiveInitialValue, ActiveFinalValue
+        integer                                :: i,j,k, nActive, cont
+        real(8), allocatable, dimension(:)     :: ActiveInitialValue, ActiveFinalValue
         real(8) :: FMacroInitial(3,3), FMacroFinal(3,3), Y(3), UmicroYInitial(3),UmicroYFinal(3)
 
         !************************************************************************************
 
         !************************************************************************************
-        Fext = 0.0d0
-        DeltaFext = 0.0d0
+        Fext = 0.0d0        !This variable represent the Macroscopic Deformation Gradient at time tn
+        DeltaFext = 0.0d0   !This variable represent the Delta Macroscopic Deformation Gradient at time tn+1
 
         if (associated(NodalDispDOF))          deallocate(NodalDispDOF)
 
 
         !CONTANDO QUANTAS CONDIÇÕES ATIVAS (número total de graus de liberdade com deslocamento prescrito)
         nActive = size(this%NodalMultiscaleDispBC)*AnalysisSettings%NDOFnode !Aplicado BC apenas nas direçoes x, y e z
-        !nActive = size(this%NodalMultiscaleDispBC)*1 !Aplicado BC apenas na direção x - (1)
+      
 
         Allocate( NodalDispDOF(nActive) , ActiveInitialValue(nActive) , ActiveFinalValue(nActive) )
 
@@ -411,26 +410,22 @@ module ModMultiscaleBoundaryConditions
         ! Guardando o gradiente de deformação macro no incremento corrente no vetor DeltaFext
         ! Obs.: Mapeamento em linhas (ao contrário do Jog) pois a Matrix Gradiente de U foi mapeada deste modo para
         ! o cálculo da matriz rigidez.
-        k=1
+        cont=1
         do i = 1,3
             do j = 1,3
-                Fext(k) = this%NodalMultiscaleDispBC(1)%Fmacro(i,j)%LoadCase(LC)%Step(ST)%InitVal
-                DeltaFext(k) = this%NodalMultiscaleDispBC(1)%Fmacro(i,j)%LoadCase(LC)%Step(ST)%FinalVal - Fext(k)
-                k = k + 1
+                ! Montando FMacro no tempo t baseado na curva informada pelo usuário
+                FMacroInitial(i,j) = this%MacroscopicDefGrad(i,j)%LoadCase(LC)%Step(ST)%InitVal
+                FMacroFinal(i,j)   = this%MacroscopicDefGrad(i,j)%LoadCase(LC)%Step(ST)%FinalVal
+                
+                Fext(cont)      = this%MacroscopicDefGrad(i,j)%LoadCase(LC)%Step(ST)%InitVal
+                DeltaFext(cont) = this%MacroscopicDefGrad(i,j)%LoadCase(LC)%Step(ST)%FinalVal - Fext(cont)
+                cont = cont + 1
 
             enddo
         enddo
-
+        
         !CRIAÇÃO DO VETOR E MONTAGEM DAS CONDIÇÕES DOS GRAUS DE LIBERDADE UTILIZADOS
-        do k=1,size(this%NodalMultiscaleDispBC)
-
-            ! Montando FMacro no tempo t baseado na curva informada pelo usuário
-            do i = 1,3
-                do j = 1,3
-                FMacroInitial(i,j) = this%NodalMultiscaleDispBC(k)%Fmacro(i,j)%LoadCase(LC)%Step(ST)%InitVal
-                FMacroFinal(i,j)   = this%NodalMultiscaleDispBC(k)%Fmacro(i,j)%LoadCase(LC)%Step(ST)%FinalVal
-                enddo
-            enddo
+        do k=1,size(this%NodalMultiscaleDispBC)        
 
             ! Obter a coordenada do nó onde será aplicada a condição de contorno prescrita
             Y = 0.0d0
@@ -443,7 +438,6 @@ module ModMultiscaleBoundaryConditions
             ! Montando os deslocamentos micro prescritos nos graus de liberdade (analise mecânica)
 
             do i = 1,AnalysisSettings%NDOFnode
-                !j = 1*(k -1 ) + i
                 j = AnalysisSettings%NDOFnode*(k -1 ) + i
                 NodalDispDOF(j) = AnalysisSettings%NDOFnode*(this%NodalMultiscaleDispBC(k)%Node%ID -1 ) + i
                 ActiveInitialValue(j) = UmicroYInitial(i)
@@ -451,217 +445,17 @@ module ModMultiscaleBoundaryConditions
             enddo
         enddo
 
-
         DeltaUPresc=0.0d0
         do i = 1, size(NodalDispDOF)
             U( NodalDispDOF(i) ) = ActiveInitialValue(i)
             DeltaUPresc( NodalDispDOF(i) ) =  ActiveFinalValue(i) - ActiveInitialValue(i)
         enddo
 
-
-
         !************************************************************************************
 
     end subroutine
     !=================================================================================================
     
-
-    !=================================================================================================
-    subroutine ApplyBoundaryConditionsMultiscaleMinimalLinearD1(this, Kg , R , Presc_Disp_DOF , Ubar , U , PrescDispSparseMapZERO, PrescDispSparseMapONE, FixedSupportSparseMapZERO, FixedSupportSparseMapONE )
-
-        !************************************************************************************
-        ! DECLARATIONS OF VARIABLES
-        !************************************************************************************
-        ! Modules and implicit declarations
-        ! -----------------------------------------------------------------------------------
-        use ModGlobalSparseMatrix
-        implicit none
-
-        ! Input variables
-        ! -----------------------------------------------------------------------------------
-        class(ClassMultiscaleBoundaryConditionsMinimalLinearD1)  :: this
-        integer , dimension(:) , intent(in) :: Presc_Disp_DOF
-        integer , dimension(:) :: PrescDispSparseMapZERO
-        integer , dimension(:) :: PrescDispSparseMapONE
-        integer , dimension(:) :: FixedSupportSparseMapZERO
-        integer , dimension(:) :: FixedSupportSparseMapONE
-        
-        ! Input/Output variables
-        ! -----------------------------------------------------------------------------------
-        real(8) , dimension(:) , intent(inout) :: R , Ubar, U
-        type(ClassGlobalSparseMatrix) :: Kg
-
-        ! Internal variables
-        ! -----------------------------------------------------------------------------------
-        integer :: i , n , dof, nVAR
-        real(8) :: penaliza
-        real(8) , allocatable, dimension(:) ::  Xdirichlet, Rmod, Raux
-
-        !************************************************************************************
-
-        !************************************************************************************
-        ! APPLYING BOUNDARY CONDITIONS
-        !************************************************************************************
-        nVAR = size(U)
-        allocate( Xdirichlet(nVAR), Raux(nVAR), Rmod(nVAR) )
-        Xdirichlet = 0.0d0
-        Rmod = 0.0d0
-       
-        
-        ! Applying prescribed boundary conditions
-        if ( size(Presc_Disp_DOF) .ne. 0 ) then
-
-            ! Loop over the prescribed degrees of freedom
-             do n=1,size(Presc_Disp_DOF)
-                dof=Presc_Disp_DOF(n)
-                ! Assembly the Dirichlet displacement BC
-                Xdirichlet(dof) = ( Ubar(dof) - U(dof) )
-            enddo
-
-            ! Multiplicação esparça - Vetor Força para montagem da condição de contorno de rearranjo
-            !call mkl_dcsrgemv('N', size(Xdirichlet), Kg%Val, Kg%RowMap, Kg%Col, Xdirichlet, Rmod)
-            call mkl_dcsrsymv('U', size(Xdirichlet), Kg%Val, Kg%RowMap, Kg%Col, Xdirichlet, Rmod)
-            
-            !Resíduo Modificado
-            R = R - Rmod
-           
-            !**************************************************************
-            ! Zerando linhas e colunas
-            Kg%Val(PrescDispSparseMapZERO) = 0.0d0
-            
-            ! Adicionando 1 na diagonal principal
-            Kg%Val(PrescDispSparseMapONE) = 1.0d0
-
-            ! Corrigindo resíduo por rearranjo de equações
-            R(Presc_Disp_DOF) = Xdirichlet(Presc_Disp_DOF)
-
-            !**************************************************************
-
-
-        end if
-
-
-        ! Applying homogeneous boundary conditions (fixed supports)
-        if ( size(this%FixedSupport%dof) .ne. 0 ) then
-
-
-            !**************************************************************
-            ! Zerando linhas e colunas
-            Kg%Val(FixedSupportSparseMapZERO) = 0.0d0
-
-            ! Adicionando 1 na diagonal principal
-            Kg%Val(FixedSupportSparseMapONE) = 1.0d0
-
-            ! Corrigindo resíduo por rearranjo de equações
-            R(this%FixedSupport%dof) = 0.0d0
-
-            !**************************************************************
-        end if
-
-        !************************************************************************************
-
-        end subroutine
-    !=================================================================================================
-
-    !=================================================================================================
-    subroutine ApplyBoundaryConditionsMultiscaleMinimalLinearD3(this, Kg , R , Presc_Disp_DOF , Ubar , U , PrescDispSparseMapZERO, PrescDispSparseMapONE, FixedSupportSparseMapZERO, FixedSupportSparseMapONE )
-
-        !************************************************************************************
-        ! DECLARATIONS OF VARIABLES
-        !************************************************************************************
-        ! Modules and implicit declarations
-        ! -----------------------------------------------------------------------------------
-        use ModGlobalSparseMatrix
-        implicit none
-
-        ! Input variables
-        ! -----------------------------------------------------------------------------------
-        class(ClassMultiscaleBoundaryConditionsMinimalLinearD3)  :: this
-        integer , dimension(:) , intent(in) :: Presc_Disp_DOF
-        integer , dimension(:) :: PrescDispSparseMapZERO
-        integer , dimension(:) :: PrescDispSparseMapONE
-        integer , dimension(:) :: FixedSupportSparseMapZERO
-        integer , dimension(:) :: FixedSupportSparseMapONE
-        
-        ! Input/Output variables
-        ! -----------------------------------------------------------------------------------
-        real(8) , dimension(:) , intent(inout) :: R , Ubar, U
-        type(ClassGlobalSparseMatrix) :: Kg
-
-        ! Internal variables
-        ! -----------------------------------------------------------------------------------
-        integer :: i , n , dof, nVAR
-        real(8) :: penaliza
-        real(8) , allocatable, dimension(:) ::  Xdirichlet, Rmod, Raux
-
-        !************************************************************************************
-
-        !************************************************************************************
-        ! APPLYING BOUNDARY CONDITIONS
-        !************************************************************************************
-        nVAR = size(U)
-        allocate( Xdirichlet(nVAR), Raux(nVAR), Rmod(nVAR) )
-        Xdirichlet = 0.0d0
-        Rmod = 0.0d0
-       
-        
-        ! Applying prescribed boundary conditions
-        if ( size(Presc_Disp_DOF) .ne. 0 ) then
-
-            ! Loop over the prescribed degrees of freedom
-             do n=1,size(Presc_Disp_DOF)
-                dof=Presc_Disp_DOF(n)
-                ! Assembly the Dirichlet displacement BC
-                Xdirichlet(dof) = ( Ubar(dof) - U(dof) )
-            enddo
-
-            ! Multiplicação esparça - Vetor Força para montagem da condição de contorno de rearranjo
-            !call mkl_dcsrgemv('N', size(Xdirichlet), Kg%Val, Kg%RowMap, Kg%Col, Xdirichlet, Rmod)
-            call mkl_dcsrsymv('U', size(Xdirichlet), Kg%Val, Kg%RowMap, Kg%Col, Xdirichlet, Rmod)
-            
-            !Resíduo Modificado
-            R = R - Rmod
-           
-            !**************************************************************
-            ! Zerando linhas e colunas
-            Kg%Val(PrescDispSparseMapZERO) = 0.0d0
-            
-            ! Adicionando 1 na diagonal principal
-            Kg%Val(PrescDispSparseMapONE) = 1.0d0
-
-            ! Corrigindo resíduo por rearranjo de equações
-            R(Presc_Disp_DOF) = Xdirichlet(Presc_Disp_DOF)
-
-            !**************************************************************
-
-
-        end if
-
-
-        ! Applying homogeneous boundary conditions (fixed supports)
-        if ( size(this%FixedSupport%dof) .ne. 0 ) then
-
-
-            !**************************************************************
-            ! Zerando linhas e colunas
-            Kg%Val(FixedSupportSparseMapZERO) = 0.0d0
-
-            ! Adicionando 1 na diagonal principal
-            Kg%Val(FixedSupportSparseMapONE) = 1.0d0
-
-            ! Corrigindo resíduo por rearranjo de equações
-            R(this%FixedSupport%dof) = 0.0d0
-
-            !**************************************************************
-        end if
-
-        !************************************************************************************
-
-    end subroutine
-    !=================================================================================================        
-
-
-
 
 
 end module

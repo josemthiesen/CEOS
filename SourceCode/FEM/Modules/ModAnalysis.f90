@@ -213,8 +213,11 @@ module ModAnalysis
         integer ::  Pdof
         
         ! Referential volume
-        real(8)                        :: TotalVolX = 0
-
+        real(8) :: TotalVolX = 0
+        
+        real(8) :: MultiscaleEpsilonParameter      
+        
+        ! Staggered Parameter
         type(ClassStaggeredParameters) :: StaggeredParameters
         
         contains

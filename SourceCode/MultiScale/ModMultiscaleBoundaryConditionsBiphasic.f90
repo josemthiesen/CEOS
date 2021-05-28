@@ -21,8 +21,6 @@ module ModMultiscaleBoundaryConditionsBiphasic
     !-----------------------------------------------------------------------------------
     type ClassMultiscaleNodalBCFluid
         type(ClassNodes), pointer :: Node
-        type (ClassLoadHistory), pointer, dimension(:) :: Pmacro
-        type (ClassLoadHistory), pointer, dimension(:) :: GradPmacro
     end type
     !-----------------------------------------------------------------------------------
 
@@ -141,8 +139,8 @@ module ModMultiscaleBoundaryConditionsBiphasic
             ! Montando FMacro no tempo t baseado na curva informada pelo usuário
             do i = 1,3
                 do j = 1,3
-                FMacroInitial(i,j) = this%NodalMultiscaleDispBC(k)%Fmacro(i,j)%LoadCase(LC)%Step(ST)%InitVal
-                FMacroFinal(i,j)   = this%NodalMultiscaleDispBC(k)%Fmacro(i,j)%LoadCase(LC)%Step(ST)%FinalVal
+                FMacroInitial(i,j) = this%MacroscopicDefGrad(i,j)%LoadCase(LC)%Step(ST)%InitVal
+                FMacroFinal(i,j)   = this%MacroscopicDefGrad(i,j)%LoadCase(LC)%Step(ST)%FinalVal
                 enddo
             enddo
 
@@ -204,7 +202,7 @@ module ModMultiscaleBoundaryConditionsBiphasic
 
         ! Internal variables
         ! -----------------------------------------------------------------------------------
-        integer                                :: i,j,k, nActive
+        integer                                :: i,j,k, nActive, cont
         real(8), allocatable, dimension(:) :: ActiveInitialValue, ActiveFinalValue
         real(8) :: FMacroInitial(3,3), FMacroFinal(3,3), Y(3), UmicroYInitial(3),UmicroYFinal(3)
 
@@ -226,14 +224,14 @@ module ModMultiscaleBoundaryConditionsBiphasic
         ! Guardando o gradiente de deformação macro no incremento corrente no vetor DeltaFext
         ! Obs.: Mapeamento em linhas (ao contrário do Jog) pois a Matrix Gradiente de U foi mapeada deste modo para
         ! o cálculo da matriz rigidez.
-        k=1
+        cont=1
         do i = 1,3
             do j = 1,3
 
-                Fext(k) = this%NodalMultiscaleDispBC(1)%Fmacro(i,j)%LoadCase(LC)%Step(ST)%InitVal
-                DeltaFext(k) = this%NodalMultiscaleDispBC(1)%Fmacro(i,j)%LoadCase(LC)%Step(ST)%FinalVal - Fext(k)
+                Fext(cont)      = this%MacroscopicDefGrad(i,j)%LoadCase(LC)%Step(ST)%InitVal
+                DeltaFext(cont) = this%MacroscopicDefGrad(i,j)%LoadCase(LC)%Step(ST)%FinalVal - Fext(cont)
 
-                k = k + 1
+                cont = cont + 1
 
             enddo
         enddo
@@ -272,15 +270,16 @@ module ModMultiscaleBoundaryConditionsBiphasic
 
         ! Internal variables
         ! -----------------------------------------------------------------------------------
-        integer                                :: i,j,k, nActive
+        integer                                :: i,j,k, nActive, NDOFMinimalLinearD1, cont
         real(8), allocatable, dimension(:) :: ActiveInitialValue, ActiveFinalValue
         real(8) :: FMacroInitial(3,3), FMacroFinal(3,3), Y(3), UmicroYInitial(3),UmicroYFinal(3)
 
         !************************************************************************************
 
         !************************************************************************************
-        Fext = 0.0d0
-        DeltaFext = 0.0d0
+        Fext = 0.0d0        !This variable represent the Macroscopic Deformation Gradient at time tn
+        DeltaFext = 0.0d0   !This variable represent the Delta Macroscopic Deformation Gradient at time tn+1
+        NDOFMinimalLinearD1 = 1
 
         if (associated(NodalDispDOF))          deallocate(NodalDispDOF)
 
@@ -295,26 +294,32 @@ module ModMultiscaleBoundaryConditionsBiphasic
         ! Guardando o gradiente de deformação macro no incremento corrente no vetor DeltaFext
         ! Obs.: Mapeamento em linhas (ao contrário do Jog) pois a Matrix Gradiente de U foi mapeada deste modo para
         ! o cálculo da matriz rigidez.
-        k=1
+        cont=1
         do i = 1,3
             do j = 1,3
-                Fext(k) = this%NodalMultiscaleDispBC(1)%Fmacro(i,j)%LoadCase(LC)%Step(ST)%InitVal
-                DeltaFext(k) = this%NodalMultiscaleDispBC(1)%Fmacro(i,j)%LoadCase(LC)%Step(ST)%FinalVal - Fext(k)
-                k = k + 1
-
+                ! Montando FMacro no tempo t baseado na curva informada pelo usuário
+                FMacroInitial(i,j) = this%MacroscopicDefGrad(i,j)%LoadCase(LC)%Step(ST)%InitVal
+                FMacroFinal(i,j)  = this%MacroscopicDefGrad(i,j)%LoadCase(LC)%Step(ST)%FinalVal
+                
+                ! Montando o gradiente de deformação F para uso na satisfação da cond. de mínimo
+                Fext(cont) = this%MacroscopicDefGrad(i,j)%LoadCase(LC)%Step(ST)%InitVal
+                DeltaFext(cont) = this%MacroscopicDefGrad(i,j)%LoadCase(LC)%Step(ST)%FinalVal - Fext(cont)
+                cont = cont + 1
+               
             enddo
         enddo
 
+        
         !CRIAÇÃO DO VETOR E MONTAGEM DAS CONDIÇÕES DOS GRAUS DE LIBERDADE UTILIZADOS
         do k=1,size(this%NodalMultiscaleDispBC)
 
-            ! Montando FMacro no tempo t baseado na curva informada pelo usuário
-            do i = 1,3
-                do j = 1,3
-                FMacroInitial(i,j) = this%NodalMultiscaleDispBC(k)%Fmacro(i,j)%LoadCase(LC)%Step(ST)%InitVal
-                FMacroFinal(i,j)   = this%NodalMultiscaleDispBC(k)%Fmacro(i,j)%LoadCase(LC)%Step(ST)%FinalVal
-                enddo
-            enddo
+            ! !Montando FMacro no tempo t baseado na curva informada pelo usuário
+            !do i = 1,3
+            !    do j = 1,3
+            !    FMacroInitial(i,j) = this%MacroscopicDefGrad(i,j)%LoadCase(LC)%Step(ST)%InitVal
+            !    FMacroFinal(i,j)   = this%MacroscopicDefGrad(i,j)%LoadCase(LC)%Step(ST)%FinalVal
+            !    enddo
+            !enddo
 
             ! Obter a coordenada do nó onde será aplicada a condição de contorno prescrita
             Y = 0.0d0
@@ -326,7 +331,7 @@ module ModMultiscaleBoundaryConditionsBiphasic
 
             ! Montando os deslocamentos micro prescritos nos graus de liberdade (analise mecânica)
             ! Nesse caso apenas na direção 1 (X)
-            do i = 1,1
+            do i = 1,NDOFMinimalLinearD1
                 j = 1*(k -1 ) + i
                 NodalDispDOF(j) = AnalysisSettings%NDOFnode*(this%NodalMultiscaleDispBC(k)%Node%ID -1 ) + i
                 ActiveInitialValue(j) = UmicroYInitial(i)
@@ -376,22 +381,22 @@ module ModMultiscaleBoundaryConditionsBiphasic
 
         ! Internal variables
         ! -----------------------------------------------------------------------------------
-        integer                                :: i,j,k, nActive
+        integer                                :: i,j,k, nActive, cont
         real(8), allocatable, dimension(:) :: ActiveInitialValue, ActiveFinalValue
         real(8) :: FMacroInitial(3,3), FMacroFinal(3,3), Y(3), UmicroYInitial(3),UmicroYFinal(3)
 
         !************************************************************************************
 
         !************************************************************************************
-        Fext = 0.0d0
-        DeltaFext = 0.0d0
+        Fext = 0.0d0        !This variable represent the Macroscopic Deformation Gradient at time tn
+        DeltaFext = 0.0d0   !This variable represent the Delta Macroscopic Deformation Gradient at time tn+1
 
         if (associated(NodalDispDOF))          deallocate(NodalDispDOF)
 
 
         !CONTANDO QUANTAS CONDIÇÕES ATIVAS (número total de graus de liberdade com deslocamento prescrito)
         nActive = size(this%NodalMultiscaleDispBC)*AnalysisSettings%NDOFnode !Aplicado BC apenas nas direçoes x, y e z
-        !nActive = size(this%NodalMultiscaleDispBC)*1 !Aplicado BC apenas na direção x - (1)
+      
 
         Allocate( NodalDispDOF(nActive) , ActiveInitialValue(nActive) , ActiveFinalValue(nActive) )
 
@@ -399,26 +404,22 @@ module ModMultiscaleBoundaryConditionsBiphasic
         ! Guardando o gradiente de deformação macro no incremento corrente no vetor DeltaFext
         ! Obs.: Mapeamento em linhas (ao contrário do Jog) pois a Matrix Gradiente de U foi mapeada deste modo para
         ! o cálculo da matriz rigidez.
-        k=1
+        cont=1
         do i = 1,3
             do j = 1,3
-                Fext(k) = this%NodalMultiscaleDispBC(1)%Fmacro(i,j)%LoadCase(LC)%Step(ST)%InitVal
-                DeltaFext(k) = this%NodalMultiscaleDispBC(1)%Fmacro(i,j)%LoadCase(LC)%Step(ST)%FinalVal - Fext(k)
-                k = k + 1
+                ! Montando FMacro no tempo t baseado na curva informada pelo usuário
+                FMacroInitial(i,j) = this%MacroscopicDefGrad(i,j)%LoadCase(LC)%Step(ST)%InitVal
+                FMacroFinal(i,j)   = this%MacroscopicDefGrad(i,j)%LoadCase(LC)%Step(ST)%FinalVal
+                
+                Fext(cont)      = this%MacroscopicDefGrad(i,j)%LoadCase(LC)%Step(ST)%InitVal
+                DeltaFext(cont) = this%MacroscopicDefGrad(i,j)%LoadCase(LC)%Step(ST)%FinalVal - Fext(cont)
+                cont = cont + 1
 
             enddo
         enddo
-
+        
         !CRIAÇÃO DO VETOR E MONTAGEM DAS CONDIÇÕES DOS GRAUS DE LIBERDADE UTILIZADOS
-        do k=1,size(this%NodalMultiscaleDispBC)
-
-            ! Montando FMacro no tempo t baseado na curva informada pelo usuário
-            do i = 1,3
-                do j = 1,3
-                FMacroInitial(i,j) = this%NodalMultiscaleDispBC(k)%Fmacro(i,j)%LoadCase(LC)%Step(ST)%InitVal
-                FMacroFinal(i,j)   = this%NodalMultiscaleDispBC(k)%Fmacro(i,j)%LoadCase(LC)%Step(ST)%FinalVal
-                enddo
-            enddo
+        do k=1,size(this%NodalMultiscaleDispBC)        
 
             ! Obter a coordenada do nó onde será aplicada a condição de contorno prescrita
             Y = 0.0d0
@@ -429,9 +430,8 @@ module ModMultiscaleBoundaryConditionsBiphasic
             UmicroYFinal = matmul((FMacroFinal - IdentityMatrix(3)),Y)
 
             ! Montando os deslocamentos micro prescritos nos graus de liberdade (analise mecânica)
-            ! Nesse caso apenas na direção 1 (X)
+
             do i = 1,AnalysisSettings%NDOFnode
-                !j = 1*(k -1 ) + i
                 j = AnalysisSettings%NDOFnode*(k -1 ) + i
                 NodalDispDOF(j) = AnalysisSettings%NDOFnode*(this%NodalMultiscaleDispBC(k)%Node%ID -1 ) + i
                 ActiveInitialValue(j) = UmicroYInitial(i)
@@ -439,13 +439,11 @@ module ModMultiscaleBoundaryConditionsBiphasic
             enddo
         enddo
 
-
         DeltaUPresc=0.0d0
         do i = 1, size(NodalDispDOF)
             U( NodalDispDOF(i) ) = ActiveInitialValue(i)
             DeltaUPresc( NodalDispDOF(i) ) =  ActiveFinalValue(i) - ActiveInitialValue(i)
         enddo
-
 
         !************************************************************************************
 
@@ -698,17 +696,19 @@ module ModMultiscaleBoundaryConditionsBiphasic
         
         
         NodalPresDOF = 0.0d0
-        !CRIAÇÃO DO VETOR E MONTAGEM DAS CONDIÇÕES DOS GRAUS DE LIBERDADE UTILIZADOS
+        
+        ! Montando PMacro e GradPMacro no tempo t baseado na curva informada pelo usuário
+        PMacroInitial = this%MacroscopicPressure(1)%LoadCase(LC)%Step(ST)%InitVal
+        PMacroFinal   = this%MacroscopicPressure(1)%LoadCase(LC)%Step(ST)%FinalVal
+        do i = 1,3
+            GradPMacroInitial(i) = this%MacroscopicPresGrad(i)%LoadCase(LC)%Step(ST)%InitVal
+            GradPMacroFinal(i)   = this%MacroscopicPresGrad(i)%LoadCase(LC)%Step(ST)%FinalVal
+        enddo
+        
+            !CRIAÇÃO DO VETOR E MONTAGEM DAS CONDIÇÕES DOS GRAUS DE LIBERDADE UTILIZADOS
         do k=1,size(this%NodalMultiscalePresBC)
         
-            ! Montando PMacro e GradPMacro no tempo t baseado na curva informada pelo usuário
-            PMacroInitial = this%NodalMultiscalePresBC(k)%Pmacro(1)%LoadCase(LC)%Step(ST)%InitVal
-            PMacroFinal   = this%NodalMultiscalePresBC(k)%Pmacro(1)%LoadCase(LC)%Step(ST)%FinalVal
-            do i = 1,3
-                GradPMacroInitial(i) = this%NodalMultiscalePresBC(k)%GradPmacro(i)%LoadCase(LC)%Step(ST)%InitVal
-                GradPMacroFinal(i)   = this%NodalMultiscalePresBC(k)%GradPmacro(i)%LoadCase(LC)%Step(ST)%FinalVal
-            enddo
-        
+                    
             ! Obter a coordenada do nó onde se será aplicada a condição de contorno prescrita
             Y = 0.0d0
             Y(1:size(this%NodalMultiscalePresBC(k)%Node%CoordX)) = this%NodalMultiscalePresBC(k)%Node%CoordX

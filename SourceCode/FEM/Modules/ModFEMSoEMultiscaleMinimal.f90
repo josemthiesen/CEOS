@@ -118,7 +118,7 @@ module ModFEMSoEMultiscaleMinimal
         use ModInterfaces
         use ModMathRoutines
         class(ClassMultiscaleMinimalFEMSoE)        :: this
-        class (ClassGlobalSparseMatrix), pointer :: G
+        class (ClassGlobalSparseMatrix), pointer   :: G
         real(8),dimension(:) :: X , R
         real(8) :: norma
         integer :: nDOF
@@ -130,7 +130,7 @@ module ModFEMSoEMultiscaleMinimal
         
         call this%AnalysisSettings%GetTotalNumberOfDOF (this%GlobalNodesList, nDOF)
 
-        call TangentStiffnessMatrix(this%AnalysisSettings , this%ElementList , nDOF, this%Kg )
+        call TangentStiffnessMatrixMultiscaleMinimal(this%AnalysisSettings , this%ElementList , nDOF, this%Kg )
 
         ! As CC de deslocamento prescrito estão sendo aplicadas no sistema Kx=-R e não em Kx=R!!!
         R = -R

@@ -201,14 +201,15 @@ contains
         type (ClassAnalysis) :: AnalysisSettings
         character(len=255)::string
 
-        character(len=100),dimension(12)::ListOfOptions,ListOfValues
-        logical,dimension(12)::FoundOption
+        character(len=100),dimension(13)::ListOfOptions,ListOfValues
+        logical,dimension(13)::FoundOption
         integer :: i
 
 
         ListOfOptions=["Problem Type","Analysis Type","Nonlinear Analysis","Hypothesis of Analysis", &
                         "Element Technology","Maximum Cut Backs","Multiscale Analysis","Multiscale Model", &
-                        "Multiscale Model Fluid", "Fiber Reinforced Analysis", "Fiber Data File", "Solution Scheme"]
+                        "Multiscale Model Fluid", "Fiber Reinforced Analysis", "Fiber Data File", "Solution Scheme",&
+                        "Multiscale Epsilon Parameter"]
 
 
         call DataFile%FillListOfOptions(ListOfOptions,ListOfValues,FoundOption)
@@ -342,6 +343,11 @@ contains
         else
             call Error( "Solution Scheme not identified" )
         endif
+        
+
+         ! Option Multiscale Epsilon Parameter
+        AnalysisSettings%MultiscaleEpsilonParameter = ListOfValues(13)
+
 
         BlockFound(iAnalysisSettings)=.true.
         call DataFile%GetNextString(string)
@@ -726,7 +732,6 @@ contains
 
                 ! Adding all the nodes of the mesh
                 do i=1,size(GlobalNodesList)
-                    NodalMultiscaleDispBC(i)%Fmacro => MacroscopicDefGrad
                     NodalMultiscaleDispBC(i)%Node => GlobalNodesList(i)
                 enddo
                 
@@ -748,7 +753,6 @@ contains
                 do i=1,size(BoundaryNodes)
                     do j=1,size(BoundaryNodes(i)%Nodes)
                         cont = cont + 1
-                        NodalMultiscaleDispBC(cont)%Fmacro => MacroscopicDefGrad
                         NodalMultiscaleDispBC(cont)%Node => GlobalNodesList(BoundaryNodes(i)%Nodes(j))
                     enddo
                 enddo
@@ -898,14 +902,12 @@ contains
             do i=1,size(GlobalNodesList)
                 if (GlobalNodesList(i)%IDFluid .ne. 0) then
                     k = k+1
-                    NodalMultiscalePresBC(k)%Pmacro     => MacroscopicPressure
-                    NodalMultiscalePresBC(k)%GradPmacro => MacroscopicPresGrad
                     NodalMultiscalePresBC(k)%Node       => GlobalNodesList(i)
                 endif
             enddo
         ! Creating the Linear Fluid Multiscale BC
         elseif (TypeOfBCFluid == MultiscaleBCType%Minimal) then
-            !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            ! Nothing to do
             
         ! Creating the Linear Fluid Multiscale BC
         elseif (TypeOfBCFluid == MultiscaleBCType%Linear) then
@@ -930,8 +932,6 @@ contains
                     node = BoundaryNodesFluid(i)%Nodes(j)
                     if (GlobalNodesList(node)%IDFluid .ne. 0) then
                     k = k + 1
-                    NodalMultiscalePresBC(k)%Pmacro     => MacroscopicPressure
-                    NodalMultiscalePresBC(k)%GradPmacro => MacroscopicPresGrad
                     NodalMultiscalePresBC(k)%Node       => GlobalNodesList(node)
                     endif
                 enddo

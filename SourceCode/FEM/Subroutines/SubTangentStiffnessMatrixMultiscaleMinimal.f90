@@ -11,7 +11,7 @@
 ! Date: 2017        Author: Bruno Klahr
 !##################################################################################################
 
-subroutine TangentStiffnessMatrix( AnalysisSettings , ElementList , nDOF, Kg )
+subroutine TangentStiffnessMatrixMultiscaleMinimal( AnalysisSettings , ElementList , nDOF, Kg )
 
     !************************************************************************************
     ! DECLARATIONS OF VARIABLES
@@ -24,7 +24,9 @@ subroutine TangentStiffnessMatrix( AnalysisSettings , ElementList , nDOF, Kg )
     use ModGlobalSparseMatrix
     use ModTimer
 
+
     implicit none
+
 
     ! Input variables
     ! -----------------------------------------------------------------------------------
@@ -32,6 +34,7 @@ subroutine TangentStiffnessMatrix( AnalysisSettings , ElementList , nDOF, Kg )
     type(ClassElementsWrapper) , dimension(:) , intent(in)    :: ElementList
     type(ClassGlobalSparseMatrix)             , intent(in)    :: Kg
     integer                                                   :: nDOF
+    
 
     ! Internal variables
     ! -----------------------------------------------------------------------------------
@@ -49,30 +52,57 @@ subroutine TangentStiffnessMatrix( AnalysisSettings , ElementList , nDOF, Kg )
     !************************************************************************************
     Kg%Val = 0.0d0
 
-    ! Assemble Tangent Stiffness Matrix - Multiscale Taylor and Linear
+    
+    ! Assemble Tangent Stiffness Matrix - Multiscale Minimal
     !---------------------------------------------------------------------------------
-    !$OMP PARALLEL DEFAULT(PRIVATE) SHARED(Kg, ElementList, AnalysisSettings)
+            
+    !$OMP PARALLEL DEFAULT(PRIVATE) SHARED(Kg, ElementList, AnalysisSettings, nDOF)
     !$OMP DO
     do  e = 1, size( ElementList )
 
         call ElementList(e)%El%GetElementNumberDOF( AnalysisSettings , nDOFel )
 
         Ke => Ke_Memory( 1:nDOFel , 1:nDOFel )
-        GM => GM_Memory( 1:nDOFel )
+        Ge => Ge_Memory( 1:9 , 1:nDOFel )
+        Ne => Ne_Memory( 1:3 , 1:nDOFel )
+        Kte => Kte_Memory( 1:(nDOFel+12) , 1:(nDOFel+12) )
 
+        GM => GM_Memory( 1:(nDOFel+12) )
+
+        ! Global Mapping
         call ElementList(e)%El%GetGlobalMapping( AnalysisSettings, GM )
+               
+        do i=1,12
+            GM( nDOFel + i ) = nDOF + i
+        enddo
 
+        !Assembly Kte
         call ElementList(e)%El%ElementStiffnessMatrix( Ke, AnalysisSettings )
-                
-        !$OMP CRITICAL
-        !call AssembleGlobalMatrix( GM, Ke, Kg )
-        call AssembleGlobalMatrixUpperTriangular( GM, Ke, Kg )
-        !$OMP END CRITICAL
 
+        call ElementList(e)%El%Matrix_Ne_and_Ge(AnalysisSettings, Ne, Ge)
+
+        !MaterialID = ElementList(e)%El%ElementMaterialID
+
+        Kte = AnalysisSettings%MultiscaleEpsilonParameter   !1.0d-14  ! Definir um valor muito pequeno invés de Zero
+        Kte( 1:nDOFel , 1:nDOFel ) = Ke
+        Kte( (nDOFel+1):(nDOFel+9),1:nDOFel) = -Ge
+        Kte( (nDOFel+10):(nDOFel+12),1:nDOFel) = -Ne
+        Kte( 1:nDOFel, (nDOFel+1):(nDOFel+9)) = -transpose(Ge)
+        Kte( 1:nDOFel, (nDOFel+10):(nDOFel+12)) = -transpose(Ne)
+
+        !$OMP CRITICAL
+        !Assembly Kg
+        !call AssembleGlobalMatrix( GM, Ke, Kg )
+        call AssembleGlobalMatrixUpperTriangular( GM, Kte, Kg )
+        !$OMP END CRITICAL
+                
     enddo
     !$OMP END DO
     !$OMP END PARALLEL
     !---------------------------------------------------------------------------------
-    
 
+
+       
+
+  
 end subroutine

@@ -290,6 +290,32 @@ module ModInterfaces
         !==========================================================================================
         
         !==========================================================================================
+        subroutine TangentStiffnessMatrixMultiscaleMinimal( AnalysisSettings , ElementList ,  nDOF, Kg )
+
+            !************************************************************************************
+            ! DECLARATIONS OF VARIABLES
+            !************************************************************************************
+            ! Modules and implicit declarations
+            ! -----------------------------------------------------------------------------------
+            use ModAnalysis
+            use ModElementLibrary
+            use ModGlobalSparseMatrix
+
+            implicit none
+
+            ! Input variables
+            ! -----------------------------------------------------------------------------------
+            type(ClassAnalysis)                       , intent(in) :: AnalysisSettings
+            type(ClassElementsWrapper) , dimension(:) , intent(in) :: ElementList
+            type(ClassGlobalSparseMatrix)             , intent(in) :: Kg
+            integer                                                :: nDOF
+
+            !************************************************************************************
+
+        end subroutine
+        !==========================================================================================
+        
+        !==========================================================================================
         subroutine TangentStiffnessMatrixSolid( AnalysisSettings , ElementList , P, Kg )
 
             !************************************************************************************

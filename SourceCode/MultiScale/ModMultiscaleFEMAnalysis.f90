@@ -220,7 +220,7 @@ module ModMultiscaleFEMAnalysis
     
         ! Internal variables
         ! -----------------------------------------------------------------------------------
-        real(8), allocatable, dimension(:) :: X , R , DeltaFext, DeltaUPresc, Fext_alpha0, Ubar_alpha0, Xconverged
+        real(8), allocatable, dimension(:) :: X , R , DeltaMacroscopicF, DeltaUPresc, MacroscopicF_alpha0, Ubar_alpha0, Xconverged
         real(8) :: DeltaTime , Time_alpha0
         real(8) :: alpha, alpha_max, alpha_min, alpha_aux
         integer :: LC , ST , nSteps, nLoadCases ,  CutBack, SubStep, e,gp, nDOF, FileID_FEMAnalysisResults, Flag_EndStep
@@ -259,8 +259,11 @@ module ModMultiscaleFEMAnalysis
         allocate( FEMSoE%Fint(nDOF) , FEMSoE%Fext(nDOF) , FEMSoE%Ubar(nDOF) , FEMSoE%Fmacro_current(9) )
     
         ! Allocating arrays
-        allocate( R(nDOF), DeltaFext(nDOF),   Fext_alpha0(nDOF) )
+        allocate( R(nDOF) )
         allocate( X(nDOF+12), DeltaUPresc(nDOF), Ubar_alpha0(nDOF), Xconverged(nDOF+12)  )
+        
+        allocate( DeltaMacroscopicF(9),   MacroscopicF_alpha0(9) )
+        
     
         ! Initial Guess
         X = 0.0d0
@@ -289,10 +292,10 @@ module ModMultiscaleFEMAnalysis
                 write(*,'(4x,a,i3,a,i3,a)')'Step: ',ST,' (LC: ',LC,')'
                 write(*,*)''
     
-                ! Rotina utilizada para obter o gradiente de deformação macro no instante anterior (n), a variável Fext_alpha0 e a variável DeltaFext.
+                ! Rotina utilizada para obter o gradiente de deformação macro no instante anterior (n), a variável MacroscopicF_alpha0 e a variável DeltaMacroscopicF.
                 ! Além dos deslocamento prescritos quando assim necessário.
                 !-------------------------------------------------------------
-                call BC%GetBoundaryConditions(AnalysisSettings, GlobalNodesList, LC, ST, Fext_alpha0, DeltaFext,FEMSoE%DispDOF, X, DeltaUPresc)
+                call BC%GetBoundaryConditions(AnalysisSettings, GlobalNodesList, LC, ST, MacroscopicF_alpha0, DeltaMacroscopicF,FEMSoE%DispDOF, X, DeltaUPresc)
     
                 ! Mapeando os graus de liberdade da matrix esparsa para a aplicação
                 ! da CC de deslocamento prescrito
@@ -339,7 +342,7 @@ module ModMultiscaleFEMAnalysis
     
                     FEMSoE % Ubar = Ubar_alpha0 + alpha*DeltaUPresc
                     FEMSoE % Time = Time_alpha0 + alpha*DeltaTime
-                    FEMSoE%Fmacro_current(1:9) = Fext_alpha0 + alpha*DeltaFext(1:9)
+                    FEMSoE%Fmacro_current = MacroscopicF_alpha0 + alpha*DeltaMacroscopicF
     
                     call NLSolver%Solve( FEMSoE , XGuess = Xconverged , X=X, Phase = 1 )
     
