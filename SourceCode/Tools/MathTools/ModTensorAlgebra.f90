@@ -495,6 +495,5 @@ module ModTensorAlgebra
 
         end function
         !==========================================================================================
-! TODO (Thiago#1#12/06/15): Colocar os push-pull entre os modulos tangente no módulo de mecânica do contínuo.
 
 end module

@@ -21,37 +21,37 @@ module ModNonLinearSystemOfEquations
 
     contains
 
-        procedure :: EvaluateSystem => EvaluateSystemBase
-        procedure :: EvaluateGradientFull => EvaluateGradientBase
+        procedure :: EvaluateSystem         => EvaluateSystemBase
+        procedure :: EvaluateGradientFull   => EvaluateGradientBase
         procedure :: EvaluateGradientSparse => EvaluateGradientSparseBase
-        generic   :: EvaluateGradient => EvaluateGradientFull , EvaluateGradientSparse
-        procedure :: PostUpdate => PostUpdateBase
+        generic   :: EvaluateGradient       => EvaluateGradientFull , EvaluateGradientSparse
+        procedure :: PostUpdate             => PostUpdateBase
 
     end type
 
     contains
 
-!__________________________________________________________________________________________________
+    !__________________________________________________________________________________________________
     subroutine EvaluateSystemBase(this,x,R)
         class(ClassNonLinearSystemOfEquations)::this
         real(8),dimension(:)::x,R
         stop "EvaluateSystem Not Implemented"
     end subroutine
-!__________________________________________________________________________________________________
+    !__________________________________________________________________________________________________
     subroutine EvaluateGradientBase(this,x,R,G)
         class(ClassNonLinearSystemOfEquations)::this
         real(8),dimension(:)::x,R
         real(8),dimension(:,:),pointer::G
         stop "EvaluateGradient Not Implemented"
     end subroutine
-!__________________________________________________________________________________________________
+    !__________________________________________________________________________________________________
     subroutine EvaluateGradientSparseBase(this,x,R,G)
         class(ClassNonLinearSystemOfEquations)::this
         class(ClassGlobalSparseMatrix) , pointer :: G
         real(8),dimension(:)::x,R
         stop "EvaluateGradient Not Implemented"
     end subroutine
-!__________________________________________________________________________________________________
+    !__________________________________________________________________________________________________
     subroutine PostUpdateBase(this,X)
         class(ClassNonLinearSystemOfEquations)::this
         real(8),dimension(:)::X

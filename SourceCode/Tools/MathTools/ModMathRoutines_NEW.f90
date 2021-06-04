@@ -38,7 +38,6 @@
 !##################################################################################################
 
 
-! TODO (Thiago#2#12/06/15): ModMathRoutines_NEW ainda não está sendo usada.
 
 module ModMathRoutines_NEW
 
@@ -52,8 +51,6 @@ module ModMathRoutines_NEW
 
 
     contains
-
-
 
         !==========================================================================================
         subroutine Error(MSG)
@@ -209,6 +206,7 @@ module ModMathRoutines_NEW
         end subroutine
         !==========================================================================================
         
+        !==========================================================================================
         subroutine VectorMultiplyTransposeVector( A, B, C)
 
             implicit none
@@ -228,7 +226,9 @@ module ModMathRoutines_NEW
             end do
   
         end subroutine
+        !==========================================================================================
         
+        !==========================================================================================
         subroutine VectorMultiplyTransposeVector_MatrixForm( A, B, C)
 
             implicit none
@@ -248,7 +248,9 @@ module ModMathRoutines_NEW
             end do
   
         end subroutine
+        !==========================================================================================
         
+        !==========================================================================================
         subroutine DotProductMatrixForm_Vector( A, B, C)
 
             implicit none
@@ -272,6 +274,7 @@ module ModMathRoutines_NEW
             
   
         end subroutine
+        !==========================================================================================
         
         !==========================================================================================
         subroutine MatrixMatrixMultiply_Trans ( A, B, C, alpha, beta )
@@ -309,42 +312,42 @@ module ModMathRoutines_NEW
         end subroutine
         !==========================================================================================
         
-        !######################################################################################################################################################################################
-         subroutine MatrixMatrixMultiply_TransB ( A, B, C, alpha, beta )
+        !==========================================================================================
+        subroutine MatrixMatrixMultiply_TransB ( A, B, C, alpha, beta )
 
-        implicit none
+            implicit none
 
-        real(8),dimension(:,:)   :: A, B, C
-        real(8)                  :: alpha, beta
-        integer                  :: m, n, k, lda, ldb, ldc
-        character(len=1)         :: transA, transB
+            real(8),dimension(:,:)   :: A, B, C
+            real(8)                  :: alpha, beta
+            integer                  :: m, n, k, lda, ldb, ldc
+            character(len=1)         :: transA, transB
 
-        ! The routine compute a scalar-matrix-matrix product and add the result to a
-        ! scalar-matrix product, with general matrices. The operation is defined as:
-        ! C := alpha*op(A)*op(B) + beta*C,
-        ! where:
-        ! op(X) is one of op(X) = X or op(X) = X^T
+            ! The routine compute a scalar-matrix-matrix product and add the result to a
+            ! scalar-matrix product, with general matrices. The operation is defined as:
+            ! C := alpha*op(A)*op(B) + beta*C,
+            ! where:
+            ! op(X) is one of op(X) = X or op(X) = X^T
 
-        ! transA or transB: Specifies the form of op(X) used in the matrix multiplication:
-        ! if trans = 'N' or 'n', then op(X) = X;
-        ! if trans = 'T' or 't', then op(X) = X^T;
+            ! transA or transB: Specifies the form of op(X) used in the matrix multiplication:
+            ! if trans = 'N' or 'n', then op(X) = X;
+            ! if trans = 'T' or 't', then op(X) = X^T;
 
-        transA = 'N'
-        transB = 'T'
+            transA = 'N'
+            transB = 'T'
 
-        m = size(C,1)
-        n = size(C,2)
-        k = size(B,1)
+            m = size(C,1)
+            n = size(C,2)
+            k = size(B,1)
 
-        lda = k
-        ldb = k
-        ldc = m
+            lda = k
+            ldb = k
+            ldc = m
 
-        call dgemm(transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
+            call dgemm(transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
 
-    end subroutine
-        !######################################################################################################################################################################################
-
+        end subroutine
+        !==========================================================================================
+        
         !==========================================================================================
         subroutine MatrixMatrixMultiply_Sym ( A, B, C, alpha, beta )
 
@@ -445,7 +448,6 @@ module ModMathRoutines_NEW
 
         end subroutine
         !==========================================================================================
-
 
 
 end module

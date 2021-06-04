@@ -38,12 +38,12 @@ module ModElementTri3
         contains
             ! Class Methods
             !--------------------------------------------------------------------------------------
-            procedure :: GetProfile          => GetProfile_Tri3
-            procedure :: GetGaussPoints      => GetGaussPoints_Tri3
-            procedure :: GetNumberOfNodes    => GetNumberOfNodes_Tri3
-            procedure :: GetShapeFunctions   => GetShapeFunctions_Tri3
-            procedure :: GetDifShapeFunctions=> GetDifShapeFunctions_Tri3
-            procedure :: AllocateGaussPoints => AllocateGaussPointsParameters_Tri3
+            procedure :: GetProfile             => GetProfile_Tri3
+            procedure :: GetGaussPoints         => GetGaussPoints_Tri3
+            procedure :: GetNumberOfNodes       => GetNumberOfNodes_Tri3
+            procedure :: GetShapeFunctions      => GetShapeFunctions_Tri3
+            procedure :: GetDifShapeFunctions   => GetDifShapeFunctions_Tri3
+            procedure :: AllocateGaussPoints    => AllocateGaussPointsParameters_Tri3
 
     end type
 	!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX

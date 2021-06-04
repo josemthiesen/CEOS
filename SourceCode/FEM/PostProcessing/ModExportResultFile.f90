@@ -13,6 +13,7 @@
 !##################################################################################################
 module ModExportResultFile
 
+    use ModElementBiphasic
     use ModFEMAnalysis
     use ModFEMAnalysisBiphasic
     use ModProbe
@@ -20,16 +21,17 @@ module ModExportResultFile
     use ModGid
     use ModHyperView
     use ModParser
+    use ModStatus
     use OMP_LIB
+    use ModGlobalFEMBiphasic
 
     contains
 
     !==========================================================================================
-    ! Subroutine Description:
+    ! Subroutine Description: Read the post processing file
     !==========================================================================================
     subroutine  ReadPostProcessingInputFile(FileName,ProbeList,PostProcessor)
-        ! TODO (Thiago#2#): Organizar melhor a lógica de leitura dos Probes.
-
+        
         !************************************************************************************
         ! DECLARATIONS OF VARIABLES
         !************************************************************************************
@@ -263,8 +265,7 @@ module ModExportResultFile
             stop 'Error in ReadPostProcessingInputFile - ProbleLocation - not identified'
         endif
 
-    end do
-
+        end do
         !************************************************************************************
 
     end subroutine
@@ -280,12 +281,8 @@ module ModExportResultFile
         !************************************************************************************
         ! Modules and implicit declarations
         ! -----------------------------------------------------------------------------------
-        use ModParser
-        use ModInterfaces
-        use ModStatus
         use ModIO
         implicit none
-
 
         ! Input variables
         ! -----------------------------------------------------------------------------------
@@ -302,7 +299,6 @@ module ModExportResultFile
         real(8) , allocatable, target, dimension(:) :: U
         character(len=255) :: OptionName, OptionValue, String, FileName
         integer :: Flag_EndStep, NumberOfIterations,IterationFile
-
 
         !************************************************************************************
 
@@ -442,12 +438,8 @@ module ModExportResultFile
         !************************************************************************************
         ! Modules and implicit declarations
         ! -----------------------------------------------------------------------------------
-        use ModParser
-        use ModInterfaces
-        use ModStatus
         use ModIO
         implicit none
-
 
         ! Input variables
         ! -----------------------------------------------------------------------------------
@@ -471,8 +463,6 @@ module ModExportResultFile
         character(len=255) :: FileNameSolid, FileNameFluid
         integer :: Flag_EndStep, NumberOfIterations,IterationFile
         logical :: CalculateRelativeVelocity, InterpolatePressure
-
-
         !************************************************************************************
 
         write(*,*) 'Post Processing Results...'
@@ -742,7 +732,6 @@ module ModExportResultFile
        real(8)                                         :: Pinterpolated
        real(8) , pointer , dimension(:)                :: Pe
        integer , pointer , dimension(:)                :: GM_fluid
-       !real(8), dimension(3,10)                        :: NodalNaturalCoordT10
        real(8), allocatable, dimension(:,:)            :: NodalNaturalCoord
        real(8), dimension(3)                           :: NaturalCoord
        
@@ -810,9 +799,7 @@ module ModExportResultFile
        end do
        !!$OMP END DO
        !!$OMP END PARALLEL
-       !---------------------------------------------------------------------------------
-        
-        
+       !---------------------------------------------------------------------------------             
     end subroutine
     !==========================================================================================
 
@@ -824,9 +811,7 @@ module ModExportResultFile
         !************************************************************************************
         ! Modules and implicit declarations
         ! -----------------------------------------------------------------------------------
-        implicit none
-        
-        
+        implicit none     
         ! Input variables
         ! -----------------------------------------------------------------------------------  
         class (ClassFEMAnalysis)                        :: FEA
@@ -913,14 +898,10 @@ module ModExportResultFile
                 Psolid(i) = Psolid(i)/TotalVolumeNo                
             endif
             
-        end do
-        
-        !$OMP END DO
-   
+        end do       
+        !$OMP END DO  
         !$OMP END PARALLEL
-        !---------------------------------------------------------------------------------
-        
-        
+        !---------------------------------------------------------------------------------            
     end subroutine
     !==========================================================================================
     
@@ -932,10 +913,6 @@ module ModExportResultFile
         !************************************************************************************
         ! Modules and implicit declarations
         ! -----------------------------------------------------------------------------------
-        use ModElementLibrary
-        use ModAnalysis
-        use ModStatus
-
 
         implicit none
 
@@ -949,7 +926,6 @@ module ModExportResultFile
 
         ! Internal variables
         ! -----------------------------------------------------------------------------------
-
         integer :: e , gp , nDOFel_Fluid
         integer , pointer , dimension(:)     :: GM_fluid
         real(8) , pointer , dimension(:,:)   :: NaturalCoord
@@ -985,11 +961,11 @@ module ModExportResultFile
             Pe = P(GM_fluid)
 
             ! Loop over the Gauss Points
-            do gp = 1 , size(ElBiphasic%GaussPoints)
+            do gp = 1 , size(ElBiphasic%GaussPoints_fluid)
                 
                 !Get the permeability k of the Gauss Point
                 Kf = 0.0d0
-                call ElBiphasic%GaussPoints(gp)%GetPermeabilityTensor(Kf)
+                call ElBiphasic%GaussPoints_fluid(gp)%GetPermeabilityTensor(Kf)
 
                 !Get matrix H
                 call ElBiphasic%MatrixH_ThreeDimensional(AnalysisSettings, NaturalCoord(gp,:), H, detJ , FactorAxi)
@@ -1012,11 +988,6 @@ module ModExportResultFile
         !************************************************************************************
         ! Modules and implicit declarations
         ! -----------------------------------------------------------------------------------
-        use ModElementLibrary
-        use ModAnalysis
-        use ModStatus
-
-
         implicit none
 
         ! Input variables
@@ -1029,7 +1000,6 @@ module ModExportResultFile
 
         ! Internal variables
         ! -----------------------------------------------------------------------------------
-
         integer :: e , gp , nDOFel_Fluid
         integer , pointer , dimension(:)     :: GM_fluid
         real(8) , pointer , dimension(:,:)   :: NaturalCoord

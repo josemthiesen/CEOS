@@ -11,19 +11,19 @@
 ! - Biphasic Analysis
 !
 !--------------------------------------------------------------------------------------------------
-! Date: 2014/02
-!
+! Date: 2014
 ! Authors:  Jan-Michel Farias
 !           Thiago Andre Carniel
 !           Paulo Bastos de Castro
 !
 ! Date: 2016 - 2022
-! 
 ! Author:   Bruno Klahr
+!
+! Date: 2020 - 2022
+! Author:   José L. Thiesen
 !!------------------------------------------------------------------------------------------------
 
 program MAIN
-
 
 	!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 	! DECLARATIONS OF VARIABLES
@@ -186,9 +186,6 @@ program MAIN
         write(*,*) ''
         !**********************************************************************************************
     endif
-
-
-    ! TODO (Thiago#1#11/03/15): Padronizar gerenciamento de erros.
 
 	!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 end program MAIN

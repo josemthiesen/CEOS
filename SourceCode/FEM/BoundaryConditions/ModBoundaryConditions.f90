@@ -255,17 +255,17 @@ module ModBoundaryConditions
 
         ! Input variables
         ! -----------------------------------------------------------------------------------
-        class(ClassBoundaryConditions)  :: this
+        class(ClassBoundaryConditions)      :: this
         integer , dimension(:) , intent(in) :: Presc_Disp_DOF
-        integer , dimension(:) :: PrescDispSparseMapZERO
-        integer , dimension(:) :: PrescDispSparseMapONE
-        integer , dimension(:) :: FixedSupportSparseMapZERO
-        integer , dimension(:) :: FixedSupportSparseMapONE
+        integer , dimension(:)              :: PrescDispSparseMapZERO
+        integer , dimension(:)              :: PrescDispSparseMapONE
+        integer , dimension(:)              :: FixedSupportSparseMapZERO
+        integer , dimension(:)              :: FixedSupportSparseMapONE
 
         ! Input/Output variables
         ! -----------------------------------------------------------------------------------
-        real(8) , dimension(:) , intent(inout) :: R , Ubar , U
-        type(ClassGlobalSparseMatrix) :: Kg
+        real(8) , dimension(:) , intent(inout)  :: R , Ubar , U
+        type(ClassGlobalSparseMatrix)           :: Kg
 
         ! Internal variables
         ! -----------------------------------------------------------------------------------
@@ -627,7 +627,8 @@ module ModBoundaryConditions
 !=================================================================================================
     
 !=================================================================================================
-    subroutine GetBoundaryConditionsFluid( this, AnalysisSettings, GlobalNodesList, LC, ST, FluxExt, DeltaFluxExt, NodalPresDOF, P, DeltaPPresc )
+    subroutine GetBoundaryConditionsFluid( this, AnalysisSettings, GlobalNodesList, LC, ST, FluxExt, DeltaFluxExt, NodalPresDOF, P, DeltaPPresc, &
+                                             PMacro , DeltaPMacro, PGradMacro , DeltaPGradMacro )
         !************************************************************************************
         ! DECLARATIONS OF VARIABLES
         use ModAnalysis
@@ -642,6 +643,8 @@ module ModBoundaryConditions
         ! -----------------------------------------------------------------------------------
         real(8) , dimension(:)               :: FluxExt , DeltaFluxExt
         real(8) , dimension(:)               :: P, DeltaPPresc
+        real(8) , dimension(:)               :: PGradMacro , DeltaPGradMacro ! Used only in multiscale analysis
+        real(8)                              :: PMacro , DeltaPMacro         ! Used only in multiscale analysis
         integer , pointer , dimension(:)     :: NodalPresDOF
         stop "Erro::GetBoundaryConditionsFluid::Dummy"
     end subroutine

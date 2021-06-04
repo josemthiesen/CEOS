@@ -55,7 +55,7 @@ module ModHyperBiphasicSpilker  ! Isotropic Model
              procedure :: CopyProperties               => CopyProperties_HyperIsotropicBiphasicSpilker
              
              ! Fluid
-            procedure :: GetPermeabilityTensor         => GetPermeabilityTensorHyperIsotropicBiphasicSpilker
+             !procedure :: GetPermeabilityTensor         => GetPermeabilityTensorHyperIsotropicBiphasicSpilker
 
     end type
 	!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX

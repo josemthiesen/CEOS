@@ -44,10 +44,10 @@ module ModConstitutiveModel
         real(8)                             :: F(3,3)=0.0d0
         real(8)                             :: T
         real(8)                             :: Time = 0.0d0
-        real(8)                             :: FluidCauchyStress(6)=0.0d0 ! Fluid Stress on voigt notation (posprocess)
+        real(8)                             :: FluidCauchyStress(6)=0.0d0 ! Fluid Stress on voigt notation (postprocess)
 
-        type (ClassAdditionalVariables) ::  AdditionalVariables
-        type (ClassStaggeredVariables)  ::  StaggeredVariables
+        type (ClassAdditionalVariables)     ::  AdditionalVariables
+        type (ClassStaggeredVariables)      ::  StaggeredVariables
 
         contains
         
@@ -71,10 +71,7 @@ module ModConstitutiveModel
             procedure :: LoadInternalVariablesFromVector => LoadInternalVariablesFromVectorBase
             procedure :: ExportInternalVariablesToVector => ExportInternalVariablesToVectorBase
                         
-            ! Fluid
-            procedure :: GetPermeabilityTensor              => GetPermeabilityTensorBase
-            procedure :: GetTangentPermeabilityTensor       => GetTangentPermeabilityTensorBase
-
+ 
         end type
 
 	!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -172,22 +169,22 @@ module ModConstitutiveModel
             end subroutine
             !==========================================================================================
             
-            !==========================================================================================
-            subroutine GetPermeabilityTensorBase(this,Kf)
-                class(ClassConstitutiveModel)::this
-                real(8),dimension(:,:),intent(inout)::Kf
-                stop "Error: Permeability Tensor"
-            end subroutine
-            !==========================================================================================
-            
-            !==========================================================================================
-            subroutine GetTangentPermeabilityTensorBase(this,Kftg)
-                class(ClassConstitutiveModel)::this
-                real(8),dimension(:,:),intent(inout)::Kftg
-                stop "Error: Tangent Permeability Tensor"
-            end subroutine
-            !==========================================================================================
-            
+            !!==========================================================================================
+            !subroutine GetPermeabilityTensorBase(this,Kf)
+            !    class(ClassConstitutiveModel)::this
+            !    real(8),dimension(:,:),intent(inout)::Kf
+            !    stop "Error: Permeability Tensor"
+            !end subroutine
+            !!==========================================================================================
+            !
+            !!==========================================================================================
+            !subroutine GetTangentPermeabilityTensorBase(this,Kftg)
+            !    class(ClassConstitutiveModel)::this
+            !    real(8),dimension(:,:),intent(inout)::Kftg
+            !    stop "Error: Tangent Permeability Tensor"
+            !end subroutine
+            !!==========================================================================================
+            !
             
             !==========================================================================================
             subroutine UpdateStressAndStateVariablesBase(this,Status)

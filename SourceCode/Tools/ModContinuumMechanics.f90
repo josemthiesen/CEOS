@@ -125,8 +125,6 @@ module ModContinuumMechanics
             real(8), dimension(size(InputStress,1),size(InputStress,2))  :: OutputStress
             real(8) :: J
 
-
-
             J = det(F)
             OutputStress = 0.0d0
 

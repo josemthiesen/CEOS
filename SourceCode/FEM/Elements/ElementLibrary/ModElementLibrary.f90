@@ -80,7 +80,6 @@ module ModElementLibrary
             type(ClassElementTetraU10P4) , pointer :: ElTetraU10P4  => null()
             type(ClassElementHexa20)  , pointer :: ElHexa20   => null()
             type(ClassElementHexaU20P8), pointer :: ElHexaU20P8 => null()
-
 		    !************************************************************************************
 
 		    !************************************************************************************
@@ -136,10 +135,8 @@ module ModElementLibrary
             end select
 
 		    !************************************************************************************
-
         end subroutine
         !==========================================================================================
-
 
 		!==========================================================================================
         ! Routine ElementIdentifier: Routine that identifies the element type.
@@ -209,7 +206,9 @@ LOOP:      do el = 1 , size(AvailableElements)
             call Error("Error::ElementIdentifier:: Element not identified.")
 
         end subroutine
-
+        !==========================================================================================
+        
+        !==========================================================================================
         subroutine ElementIdentifier_IsQuadratic( IsQuadratic , DimProb ,  ENnode , ElementTech , ElemType )
             use ModAnalysis
             implicit none
@@ -267,34 +266,35 @@ LOOP:      do el = 1 , size(AvailableElements)
         end subroutine
         !==========================================================================================
 
+        !==========================================================================================
+        subroutine GetAvailableElements(AvailableElements)
 
-    subroutine GetAvailableElements(AvailableElements)
+            type(ClassElementProfile),dimension(:),allocatable::AvailableElements
+            integer::NumberOfAvailableElements
+            type(ClassElementTri3)    :: ElTri3
+            type(ClassElementQuad4)   :: ElQuad4
+            type(ClassElementTetra4)  :: ElTetra4
+            type(ClassElementHexa8)   :: ElHexa8
+            type(ClassElementTetra10) :: ElTetra10
+            type(ClassElementTetraU10P4) :: ElTetraU10P4
+            type(ClassElementHexa20)  :: ElHexa20
+            type(ClassElementHexaU20P8) :: ElHexaU20P8
 
-        type(ClassElementProfile),dimension(:),allocatable::AvailableElements
-        integer::NumberOfAvailableElements
-        type(ClassElementTri3)    :: ElTri3
-        type(ClassElementQuad4)   :: ElQuad4
-        type(ClassElementTetra4)  :: ElTetra4
-        type(ClassElementHexa8)   :: ElHexa8
-        type(ClassElementTetra10) :: ElTetra10
-        type(ClassElementTetraU10P4) :: ElTetraU10P4
-        type(ClassElementHexa20)  :: ElHexa20
-        type(ClassElementHexaU20P8) :: ElHexaU20P8
+            NumberOfAvailableElements = 8
 
-        NumberOfAvailableElements = 8
+            if (allocated(AvailableElements)) deallocate(AvailableElements)
+            allocate( AvailableElements(NumberOfAvailableElements))
 
-        if (allocated(AvailableElements)) deallocate(AvailableElements)
-        allocate( AvailableElements(NumberOfAvailableElements))
+            call ElTri3  %GetProfile(AvailableElements(1)) ; AvailableElements(1)%ElementType = ElementTypes % Tri3
+            call ElQuad4 %GetProfile(AvailableElements(2)) ; AvailableElements(2)%ElementType = ElementTypes % Quad4
+            call ElTetra4%GetProfile(AvailableElements(3)) ; AvailableElements(3)%ElementType = ElementTypes % Tetra4
+            call ElHexa8 %GetProfile(AvailableElements(4)) ; AvailableElements(4)%ElementType = ElementTypes % Hexa8
+            call ElTetra10%GetProfile(AvailableElements(5)) ; AvailableElements(5)%ElementType = ElementTypes % Tetra10
+            call ElTetraU10P4%GetProfile(AvailableElements(6)) ; AvailableElements(6)%ElementType = ElementTypes % TetraU10P4
+            call ElHexa8 %GetProfile(AvailableElements(7)) ; AvailableElements(7)%ElementType = ElementTypes % Hexa20
+            call ElHexaU20P8%GetProfile(AvailableElements(8)) ; AvailableElements(8)%ElementType = ElementTypes%HexaU20P8
 
-        call ElTri3  %GetProfile(AvailableElements(1)) ; AvailableElements(1)%ElementType = ElementTypes % Tri3
-        call ElQuad4 %GetProfile(AvailableElements(2)) ; AvailableElements(2)%ElementType = ElementTypes % Quad4
-        call ElTetra4%GetProfile(AvailableElements(3)) ; AvailableElements(3)%ElementType = ElementTypes % Tetra4
-        call ElHexa8 %GetProfile(AvailableElements(4)) ; AvailableElements(4)%ElementType = ElementTypes % Hexa8
-        call ElTetra10%GetProfile(AvailableElements(5)) ; AvailableElements(5)%ElementType = ElementTypes % Tetra10
-        call ElTetraU10P4%GetProfile(AvailableElements(6)) ; AvailableElements(6)%ElementType = ElementTypes % TetraU10P4
-        call ElHexa8 %GetProfile(AvailableElements(7)) ; AvailableElements(7)%ElementType = ElementTypes % Hexa20
-        call ElHexaU20P8%GetProfile(AvailableElements(8)) ; AvailableElements(8)%ElementType = ElementTypes%HexaU20P8
-
-    end subroutine
-
+        end subroutine
+        !==========================================================================================
+        
 end module

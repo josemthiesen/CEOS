@@ -15,9 +15,10 @@ module ModBoundaryConditionsBiphasic
 
     use ModLoadHistoryData
     use ModNodes
-    use ModElement
+    use ModElementBiphasic
     use ModAnalysis
     use ModBoundaryConditions
+    use ModGlobalSparseMatrix
 
     !-----------------------------------------------------------------------------------
     type, extends(ClassBoundaryConditions) :: ClassBoundaryConditionsBiphasic
@@ -35,17 +36,14 @@ module ModBoundaryConditionsBiphasic
    
     contains
 
-!=================================================================================================
+    !=================================================================================================
     subroutine AllocatePrescPresSparseMappingBiphasic (this, Kg, Presc_Pres_DOF, KgValZERO, KgValONE, contZERO, contONE)
-
         !************************************************************************************
         ! DECLARATIONS OF VARIABLES
         !************************************************************************************
         ! Modules and implicit declarations
         ! -----------------------------------------------------------------------------------
         use OMP_LIB
-        use ModGlobalSparseMatrix
-
         implicit none
 
         ! Object
@@ -63,9 +61,7 @@ module ModBoundaryConditionsBiphasic
         ! -----------------------------------------------------------------------------------
         integer :: i, n, dof, NumberOfThreads, nCC_Presc, RowSize
         integer :: AuxZERO(size(Kg%Val))  , AuxONE(size(Kg%Val))
-
         !************************************************************************************
-
 
         ! Mapeando as posições do vetor de valores da matrix de rigidez esparsa (Kg%Val)
         ! para receber os valores de ZERO e UM na aplicação da CC de deslocamento prescrito
@@ -88,7 +84,6 @@ module ModBoundaryConditionsBiphasic
                        FirstPrivate ( nCC_Presc )
 
         !$OMP DO
-
         do n=1, nCC_Presc
 
             do i=1, RowSize
@@ -104,9 +99,7 @@ module ModBoundaryConditionsBiphasic
             enddo
 
         enddo
-
         !$OMP END DO
-
         !$OMP END PARALLEL
         !---------------------------------------------------------------------------------
 
@@ -123,16 +116,12 @@ module ModBoundaryConditionsBiphasic
                 contONE = contONE + 1
                 KgValONE(contONE) = i
             endif
-
         enddo
-
-
         !************************************************************************************
-
     end subroutine
-!=================================================================================================
+    !=================================================================================================
     
-!=================================================================================================
+    !=================================================================================================
     subroutine ApplyBoundaryConditionsBiphasicFluid(this, Kg , R , Presc_Pres_DOF , Pbar , P, PrescPresSparseMapZERO, PrescPresSparseMapONE)
         
         !************************************************************************************
@@ -140,7 +129,6 @@ module ModBoundaryConditionsBiphasic
         !************************************************************************************
         ! Modules and implicit declarations
         ! -----------------------------------------------------------------------------------
-        use ModGlobalSparseMatrix
         implicit none
         ! Input variables
         ! -----------------------------------------------------------------------------------
@@ -158,7 +146,6 @@ module ModBoundaryConditionsBiphasic
         integer :: i , n , dof
         real(8) :: penaliza
         real(8) , allocatable, dimension(:) ::  Pdirichlet, Rmod
-
         !************************************************************************************
 
         !************************************************************************************
@@ -197,15 +184,12 @@ module ModBoundaryConditionsBiphasic
             R(Presc_Pres_DOF) = Pdirichlet(Presc_Pres_DOF)
 
             !**************************************************************
-
         endif
-
-        !************************************************************************************
-        
+        !************************************************************************************      
     end subroutine
-!=================================================================================================
+    !=================================================================================================
     
-!=================================================================================================
+    !=================================================================================================
     subroutine GetBoundaryConditionsBiphasicSolid( this, AnalysisSettings, GlobalNodesList, LC, ST, Fext, DeltaFext, NodalDispDOF, U, DeltaUPresc )
 
         !************************************************************************************
@@ -213,8 +197,6 @@ module ModBoundaryConditionsBiphasic
         !************************************************************************************
         ! Modules and implicit declarations
         ! -----------------------------------------------------------------------------------
-        use ModAnalysis
-
         implicit none
 
         ! Input variables
@@ -229,30 +211,25 @@ module ModBoundaryConditionsBiphasic
         real(8) , dimension(:)               :: Fext , DeltaFext
         real(8) , dimension(:)               :: U, DeltaUPresc
         integer , pointer , dimension(:)     :: NodalDispDOF
-
         !************************************************************************************
 
         !************************************************************************************
-
         call this%GetExternalForces(LC, ST, Fext, DeltaFext)
-
         call this%GetPrescribedDisplacements(LC , ST, NodalDispDOF, U, DeltaUPresc)
-
         !************************************************************************************
 
     end subroutine
-!=================================================================================================
+    !=================================================================================================
     
-!=================================================================================================
-    subroutine GetBoundaryConditionsBiphasicFluid( this, AnalysisSettings, GlobalNodesList, LC, ST, FluxExt, DeltaFluxExt, NodalPresDOF, P, DeltaPPresc )
+    !=================================================================================================
+    subroutine GetBoundaryConditionsBiphasicFluid( this, AnalysisSettings, GlobalNodesList, LC, ST, FluxExt, DeltaFluxExt, NodalPresDOF, P, DeltaPPresc, &
+                                                    PMacro , DeltaPMacro, PGradMacro , DeltaPGradMacro)
 
         !************************************************************************************
         ! DECLARATIONS OF VARIABLES
         !************************************************************************************
         ! Modules and implicit declarations
         ! -----------------------------------------------------------------------------------
-        use ModAnalysis
-
         implicit none
 
         ! Input variables
@@ -260,17 +237,26 @@ module ModBoundaryConditionsBiphasic
         class(ClassBoundaryConditionsBiphasic)      :: this
         class(ClassAnalysis)                        :: AnalysisSettings
         type (ClassNodes),   pointer, dimension(:)  :: GlobalNodesList
-        integer                        :: LC, ST
+        integer                                     :: LC, ST
         ! Output variables
         ! -----------------------------------------------------------------------------------
         real(8) , dimension(:)               :: FluxExt , DeltaFluxExt
         real(8) , dimension(:)               :: P, DeltaPPresc
+        real(8) , dimension(:)               :: PGradMacro , DeltaPGradMacro ! Used only in multiscale analysis
+        real(8)                              :: PMacro , DeltaPMacro         ! Used only in multiscale analysis
         integer , pointer , dimension(:)     :: NodalPresDOF
         
         ! Internal variables
         integer              :: i
         real(8), allocatable, dimension(:) :: MappingNodesSolidFluid
-
+        !************************************************************************************
+        
+        !************************************************************************************
+        ! Values only used in Multiscale Analysis
+        PMacro              = 0.0d0    
+        DeltaPMacro         = 0.0d0
+        PGradMacro          = 0.0d0
+        DeltaPGradMacro     = 0.0d0
         !************************************************************************************
         allocate( MappingNodesSolidFluid(size(GlobalNodesList)) )
         
@@ -280,25 +266,19 @@ module ModBoundaryConditionsBiphasic
         enddo            
 
         !************************************************************************************
-
-        call this%GetExternalForcesFlux(MappingNodesSolidFluid, LC, ST, FluxExt, DeltaFluxExt)
-
+        call this%GetExternalForcesFlux(MappingNodesSolidFluid, LC , ST, FluxExt, DeltaFluxExt)
         call this%GetPrescribedPressure(MappingNodesSolidFluid, LC , ST, NodalPresDOF, P, DeltaPPresc)
-
         !************************************************************************************
-
     end subroutine
-!=================================================================================================
+    !=================================================================================================
 
-!=================================================================================================
+    !=================================================================================================
     subroutine GetExternalForcesFlux( this, MappingNodesSolidFluid, LC, ST, FluxExt, DeltaFluxExt )
-
         !************************************************************************************
         ! DECLARATIONS OF VARIABLES
         !************************************************************************************
         ! Modules and implicit declarations
         ! -----------------------------------------------------------------------------------
-
         implicit none
 
         ! Input variables
@@ -314,7 +294,6 @@ module ModBoundaryConditionsBiphasic
         ! Internal variables
         ! -----------------------------------------------------------------------------------
         real(8) , allocatable, dimension(:) :: InitialValue , FinalValue
-
         !************************************************************************************
 
         !************************************************************************************
@@ -332,19 +311,16 @@ module ModBoundaryConditionsBiphasic
         DeltaFluxExt = FinalValue - InitialValue
 
         !************************************************************************************
-
     end subroutine
-!=================================================================================================
+    !=================================================================================================
 
-!=================================================================================================
+    !=================================================================================================
     subroutine GetPrescribedPressure ( this , MappingNodesSolidFluid, LC , ST, NodalPresDOF, P, DeltaPPresc )
-
         !************************************************************************************
         ! DECLARATIONS OF VARIABLES
         !************************************************************************************
         ! Modules and implicit declarations
         ! -----------------------------------------------------------------------------------
-
         implicit none
 
         ! Input variables
@@ -362,7 +338,6 @@ module ModBoundaryConditionsBiphasic
         ! -----------------------------------------------------------------------------------
         real(8) , pointer, dimension(:) :: InitialValue , FinalValue
         integer                         :: i
-
         !************************************************************************************
 
         !************************************************************************************
@@ -379,16 +354,13 @@ module ModBoundaryConditionsBiphasic
         enddo
 
         !************************************************************************************
-
     end subroutine
-!=================================================================================================
+    !=================================================================================================
 
-    
-    
-! Subrotinas do Módulo apenas
-!=================================================================================================
+       
+    ! Module subroutines
+    !=================================================================================================
     subroutine GetActiveDOFNodalPressure( NodalBC , MappingNodesSolidFluid, LC, ST , ActiveDOF , ActiveInitialValue, ActiveFinalValue )
-
         implicit none
         integer :: LC, ST
         integer       , pointer , dimension(:)      :: ActiveDOF
@@ -426,9 +398,9 @@ module ModBoundaryConditionsBiphasic
         enddo
 
     end subroutine
-!=================================================================================================
+    !=================================================================================================
 
-!=================================================================================================
+    !=================================================================================================
     subroutine AssembleNodalExternalFlux( NodalFluxBC , MappingNodesSolidFluid, LC, ST, InitialValue, FinalValue )
 
         implicit none
@@ -448,7 +420,7 @@ module ModBoundaryConditionsBiphasic
         enddo
 
     end subroutine
-!=================================================================================================
+    !=================================================================================================
     
 
 end module

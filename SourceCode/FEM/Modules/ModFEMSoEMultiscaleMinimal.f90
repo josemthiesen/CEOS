@@ -19,20 +19,20 @@ module ModFEMSoEMultiscaleMinimal
     use ModBoundaryConditions
     use ModElementLibrary
     use ModGlobalSparseMatrix
+    use ModGlobalFEMMultiscale
     
-
     implicit none
 
     type , extends(ClassNonLinearSystemOfEquations) :: ClassMultiscaleMinimalFEMSoE
 
         real(8),dimension(:),allocatable                       :: Fint , Fext , UBar
         real (8)                                               :: Time
-        integer                      , dimension(:) , pointer  :: DispDOF
+        integer, dimension(:) , pointer                        :: DispDOF
 
-        integer, dimension(:), allocatable                   :: PrescDispSparseMapZERO
-        integer, dimension(:), allocatable                   :: PrescDispSparseMapONE
-        integer, dimension(:), allocatable                   :: FixedSupportSparseMapZERO
-        integer, dimension(:), allocatable                   :: FixedSupportSparseMapONE
+        integer, dimension(:), allocatable                     :: PrescDispSparseMapZERO
+        integer, dimension(:), allocatable                     :: PrescDispSparseMapONE
+        integer, dimension(:), allocatable                     :: FixedSupportSparseMapZERO
+        integer, dimension(:), allocatable                     :: FixedSupportSparseMapONE
         
         type (ClassElementsWrapper)  , dimension(:) , pointer  :: ElementList
         type (ClassNodes)            , dimension(:) , pointer  :: GlobalNodesList
@@ -45,9 +45,9 @@ module ModFEMSoEMultiscaleMinimal
 
     contains
 
-        procedure :: EvaluateSystem => EvaluateR
+        procedure :: EvaluateSystem         => EvaluateR
         procedure :: EvaluateGradientSparse => EvaluateKt
-        procedure :: PostUpdate => FEMUpdateMesh
+        procedure :: PostUpdate             => FEMUpdateMesh
 
 
     end type
@@ -57,7 +57,6 @@ module ModFEMSoEMultiscaleMinimal
     !=================================================================================================
     subroutine EvaluateR(this,X,R)
 
-        use ModInterfaces
         use ModMultiscaleHomogenizations
         
         class(ClassMultiscaleMinimalFEMSoE) :: this
@@ -85,7 +84,6 @@ module ModFEMSoEMultiscaleMinimal
             endif
 
             call ExternalForceMultiscaleMinimal( this%ElementList, this%AnalysisSettings, X((nDOF+1):(nDOF+9)),  X((nDOF+10):(nDOF+12)), this%Fext )
-
             
             call GetHomogenizedDeformationGradient(this%AnalysisSettings, this%ElementList, F_Homogenized)
 
@@ -108,14 +106,12 @@ module ModFEMSoEMultiscaleMinimal
             R((nDOF+1):(nDOF+9))   =  TotalVolX*( this%Fmacro_current - F_Homogenized_Voigt )
             R((nDOF+10):(nDOF+12)) =  TotalVolX*( -u_Homogenized )
 
-
     end subroutine
     !=================================================================================================
 
     !=================================================================================================
     subroutine EvaluateKt(this,X,R,G)
 
-        use ModInterfaces
         use ModMathRoutines
         class(ClassMultiscaleMinimalFEMSoE)        :: this
         class (ClassGlobalSparseMatrix), pointer   :: G
@@ -124,8 +120,8 @@ module ModFEMSoEMultiscaleMinimal
         integer :: nDOF
 
         !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-        real(8) :: Matrix( (24+12),(24+12) )
-        integer :: i,j,k
+        !real(8) :: Matrix( (24+12),(24+12) )
+        !integer :: i,j,k
         !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
         
         call this%AnalysisSettings%GetTotalNumberOfDOF (this%GlobalNodesList, nDOF)
@@ -158,8 +154,6 @@ module ModFEMSoEMultiscaleMinimal
         !
         !close(87)
         !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-
-
 
     end subroutine
     !=================================================================================================

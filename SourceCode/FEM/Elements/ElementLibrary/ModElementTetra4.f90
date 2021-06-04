@@ -36,12 +36,12 @@ module ModElementTetra4
         contains
             ! Class Methods
             !--------------------------------------------------------------------------------------
-            procedure :: GetProfile          => GetProfile_Tetra4
-            procedure :: GetGaussPoints      => GetGaussPoints_Tetra4
-            procedure :: GetNumberOfNodes    => GetNumberOfNodes_Tetra4
-            procedure :: GetShapeFunctions   => GetShapeFunctions_Tetra4
-            procedure :: GetDifShapeFunctions=> GetDifShapeFunctions_Tetra4
-            procedure :: AllocateGaussPoints => AllocateGaussPointsParameters_Tetra4
+            procedure :: GetProfile             => GetProfile_Tetra4
+            procedure :: GetGaussPoints         => GetGaussPoints_Tetra4
+            procedure :: GetNumberOfNodes       => GetNumberOfNodes_Tetra4
+            procedure :: GetShapeFunctions      => GetShapeFunctions_Tetra4
+            procedure :: GetDifShapeFunctions   => GetDifShapeFunctions_Tetra4
+            procedure :: AllocateGaussPoints    => AllocateGaussPointsParameters_Tetra4
 
     end type
 	!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX

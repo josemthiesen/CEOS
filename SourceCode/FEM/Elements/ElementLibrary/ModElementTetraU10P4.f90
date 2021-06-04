@@ -21,7 +21,7 @@ module ModElementTetraU10P4
 	!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 	! Modules and implicit declarations
 	! ---------------------------------------------------------------------------------------------
-    use ModElement
+    use ModElementBiphasic
 
 	! Global variables within the module
 	! -------------------------------------------------------------------------------------------
@@ -52,11 +52,11 @@ module ModElementTetraU10P4
             
             ! Parte do Fluido
             procedure :: GetProfile_fluid            => GetProfile_Tetra4
-            procedure :: GetGaussPoints_fluid        => GetGaussPoints_Tetra4 
+            procedure :: GetGaussPoints_fluid        => GetGaussPoints_Tetra10 
             procedure :: GetNumberOfNodes_fluid      => GetNumberOfNodes_Tetra4
             procedure :: GetShapeFunctions_fluid     => GetShapeFunctions_Tetra4
             procedure :: GetDifShapeFunctions_fluid  => GetDifShapeFunctions_Tetra4
-            procedure :: AllocateGaussPoints_fluid   => AllocateGaussPointsParameters_Tetra4 
+            procedure :: AllocateGaussPoints_fluid   => AllocateGaussPointsParameters_Tetra10 !!! 
 
     end type
 	!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX

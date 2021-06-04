@@ -25,10 +25,8 @@ module ModFEMAnalysis
     use ModMathRoutines
     use ModLoadHistoryData
     use ModSparseMatrixRoutines
-    use ModElement
 
     implicit none
-
 
 	!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     ! ClassFEMAnalysis: Definitions of FEM analysis
@@ -43,13 +41,13 @@ module ModFEMAnalysis
         class (ClassBoundaryConditions) , pointer                    :: BC
         type  (ClassGlobalSparseMatrix) , pointer                    :: Kg
         
-        !***********************************************************************************************
+        !----------------------------------------------------------------------------------------
         type  (ClassGlobalSparseMatrix) , pointer                    :: KgFluid
-        !***********************************************************************************************
+        !----------------------------------------------------------------------------------------
         
         class (ClassNonLinearSolver)    , pointer                    :: NLSolver
 
-        ! Para usar no Probe...
+        ! For PostProcessing reasons...
         real(8), pointer, dimension(:) :: U => null()
         real(8), pointer, dimension(:) :: P => null()
         real(8), pointer, dimension(:) :: Psolid => null()
@@ -64,13 +62,14 @@ module ModFEMAnalysis
             procedure :: ReadInputData
             procedure :: Solve => SolveFEMAnalysis
             procedure :: AdditionalMaterialModelRoutine
-            procedure :: AllocateKgSparse => AllocateKgSparseUpperTriangular
+            procedure :: AllocateKgSparse => AllocateKgSparseUpperTriangular  
             
-       
-            
-    end type
-
+        end type
+    !----------------------------------------------------------------------------------
         
+    !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    ! ClassFiberProperties: Definitions of Fiber parameters
+	!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX    
     type ClassFiberProperties
         ! Class Attributes
         !----------------------------------------------------------------------------------------
@@ -79,29 +78,26 @@ module ModFEMAnalysis
         real(8)             :: Pitch
         real(8)             :: Hand
         real(8)             :: Theta
+        real(8)             :: ThetaX
         integer             :: ElemRef
         integer             :: NodeRef
         character(len=100)  :: FiberDataFileName
+        character(len=100)  :: TypeofFiber
         !----------------------------------------------------------------------------------------
         contains
         ! Class Methods
         !----------------------------------------------------------------------------------
             procedure :: ReadFiberDataFile
             
-    end type
+        end type
+    !----------------------------------------------------------------------------------
         
     contains
-
-
         !==========================================================================================
-        ! Method ClassFEMAnalysis:
+        ! subroutine  ReadInputData
         !------------------------------------------------------------------------------------------
-        ! Modifications:
-        ! Date:         Author:
         !==========================================================================================
         subroutine  ReadInputData(this,FileName)
-
-
 		    !************************************************************************************
             ! DECLARATIONS OF VARIABLES
 		    !************************************************************************************
@@ -121,7 +117,7 @@ module ModFEMAnalysis
 		    !************************************************************************************
 
  		    !************************************************************************************
-            ! SELECT PARAMETERS OF THE analysis type
+            ! SELECT PARAMETERS OF THE ANALYSIS TYPE
 		    !************************************************************************************
             allocate(this%BC)
             allocate(this%Kg)
@@ -129,17 +125,14 @@ module ModFEMAnalysis
             !************************************************************************************
             call ReadInputFile( FileName, this%AnalysisSettings , this%GlobalNodesList , this%ElementList , &
                                 this%BC , this%NLSolver )
-		    !************************************************************************************
-            
-            
-            
+		    !************************************************************************************                     
 
         end subroutine
         !==========================================================================================
 
 
         !##################################################################################################
-        ! This routine pre-allocates the size of the global stiffness matrix in the sparse format.
+        ! These routines pre-allocates the size of the global stiffness matrix in the sparse format.
         !--------------------------------------------------------------------------------------------------
         ! Date: 2014/02
         !
@@ -148,22 +141,14 @@ module ModFEMAnalysis
         !           Paulo Bastos de Castro
         !!------------------------------------------------------------------------------------------------
         ! Modifications:
-        ! Date:         Author:
-       
-        !##################################################################################################
+        ! Date:         Author:      
+        !==========================================================================================
         subroutine AllocateGlobalSparseStiffnessMatrix (this)
-
             !************************************************************************************
             ! DECLARATIONS OF VARIABLES
             !************************************************************************************
             ! Modules and implicit declarations
             ! -----------------------------------------------------------------------------------
-            
-            !use ModSparseMatrixRoutines
-            !use ModAnalysis
-            !use ModElement
-            !use ModGlobalSparseMatrix
-
             implicit none
 
             ! Object
@@ -176,9 +161,7 @@ module ModFEMAnalysis
             real(8) , pointer , dimension(:,:)  :: Ke
             integer , pointer , dimension(:)    :: GM
             integer ::  e, nDOFel, nDOF
-
             !************************************************************************************
-
 
             !************************************************************************************
             ! PRE-ALLOCATING THE GLOBAL STIFFNESS MATRIX
@@ -213,23 +196,18 @@ module ModFEMAnalysis
 
             !Releasing memory
             call SparseMatrixKill(KgSparse)
-
             !************************************************************************************
 
         end subroutine
-        !##################################################################################################
+        !==========================================================================================
+        
+        !==========================================================================================
         subroutine AllocateKgSparseUpperTriangular (this)
-
             !************************************************************************************
             ! DECLARATIONS OF VARIABLES
             !************************************************************************************
             ! Modules and implicit declarations
             ! -----------------------------------------------------------------------------------
-            
-            !use ModSparseMatrixRoutines
-            !use ModAnalysis
-            !use ModElement
-            !use ModGlobalSparseMatrix
 
             implicit none
 
@@ -243,10 +221,7 @@ module ModFEMAnalysis
             real(8) , pointer , dimension(:,:)  :: Ke
             integer , pointer , dimension(:)    :: GM
             integer ::  e, nDOFel, nDOF
-
             !************************************************************************************
-
-
             !************************************************************************************
             ! PRE-ALLOCATING THE GLOBAL STIFFNESS MATRIX
             !************************************************************************************
@@ -280,17 +255,13 @@ module ModFEMAnalysis
 
             !Releasing memory
             call SparseMatrixKill(KgSparse)
-
             !************************************************************************************
-
         end subroutine
-        !##################################################################################################
-        !################################################################################################## 
+        !==========================================================================================
 
-        
         
         !==========================================================================================
-        ! Method ClassFEMAnalysis:
+        ! subroutine  SolveFEMAnalysis -> To solve the analysis
         !------------------------------------------------------------------------------------------
         ! Modifications:
         ! Date:         Author:
@@ -312,12 +283,9 @@ module ModFEMAnalysis
             ! -----------------------------------------------------------------------------------
             integer :: nDOF
 
- 		    !************************************************************************************
-            ! SELECT PARAMETERS OF THE analysis type
-		    !************************************************************************************
-
-            
+ 		           
             ! Calling the additional material routine, which defines the orientation of the fibers, when necessary
+            !************************************************************************************
             if(this%AnalysisSettings%FiberReinforcedAnalysis) then
                 write(*,*) "Calling the Additional Material Routine in order to define the fiber direction."
                 call this%AdditionalMaterialModelRoutine()
@@ -335,24 +303,18 @@ module ModFEMAnalysis
                 case default
                     stop "Error in AnalysisType - ModFEMAnalysis"
             end select
-
-
-
 		    !************************************************************************************
 
         end subroutine
         !==========================================================================================
 
-
-
         !==========================================================================================
-        ! Method ClassFEMAnalysis:
+        ! subroutine WriteFEMResults -> To write the results
         !------------------------------------------------------------------------------------------
         ! Modifications:
         ! Date:         Author:
         !==========================================================================================
         subroutine  WriteFEMResults( U, Time, LC, ST, CutBack, SubStep, Flag_EndStep, FileID, NumberOfIterations )
-
 		    !************************************************************************************
             ! DECLARATIONS OF VARIABLES
 		    !************************************************************************************
@@ -362,8 +324,7 @@ module ModFEMAnalysis
 
             ! Object
             ! -----------------------------------------------------------------------------------
-            !class(ClassFEMAnalysis) :: this
-
+  
             ! Input variables
             ! -----------------------------------------------------------------------------------
             real(8) :: Time
@@ -383,16 +344,15 @@ module ModFEMAnalysis
             do i = 1,size(U)
                 write(FileID,*) U(i)
             enddo
-
 		    !************************************************************************************
 
         end subroutine
         !==========================================================================================
 
-        !##################################################################################################
+        !==========================================================================================
         ! This routine contains the procedures to solve a quasi-static analysis based in a incremental-
         ! iterative approach.
-        !##################################################################################################
+        !==========================================================================================
         subroutine QuasiStaticAnalysisFEM( ElementList , AnalysisSettings , GlobalNodesList , BC  , &
                                            Kg , NLSolver )
 
@@ -400,20 +360,8 @@ module ModFEMAnalysis
             ! DECLARATIONS OF VARIABLES
             !************************************************************************************
             ! Modules and implicit declarations
-            ! -----------------------------------------------------------------------------------
-            !use ModElementLibrary
-            !use ModAnalysis
-            !use ModNodes
-            !use ModBoundaryConditions
-            !use ModGlobalSparseMatrix
-            !use ModNonlinearSolver
-            !use ModInterfaces
-            !use ModMathRoutines
-            !use ModLoadHistoryData
-                        
+            ! -----------------------------------------------------------------------------------                        
             use ModFEMSystemOfEquations
-            
-            
 
             implicit none
 
@@ -442,7 +390,6 @@ module ModFEMAnalysis
 
             FileID_FEMAnalysisResults = 42
             open (FileID_FEMAnalysisResults,file='FEMAnalysis.result',status='unknown')
-
             !************************************************************************************
 
             !************************************************************************************
@@ -480,7 +427,6 @@ module ModFEMAnalysis
             ! NOTE (Thiago#1#11/19/15): OBS.: As condições de contorno iniciais devem sair do tempo zero.
             Flag_EndStep = 1
             call WriteFEMResults( U, 0.0d0, 1, 1, 0, 0, Flag_EndStep, FileID_FEMAnalysisResults, NumberOfIterations=0  )
-
 
             !LOOP - LOAD CASES
             LOAD_CASE:  do LC = 1 , nLoadCases
@@ -520,7 +466,6 @@ module ModFEMAnalysis
                         FEMSoE%FixedSupportSparseMapONE(:) = KgValONE(1:contONE)
 
                         deallocate( KgValZERO, KgValONE )
-
 
                     end if
                     !-----------------------------------------------------------------------------------
@@ -634,23 +579,20 @@ module ModFEMAnalysis
             close (FileID_FEMAnalysisResults)
             !************************************************************************************
         end subroutine
-        !##################################################################################################                                   
-                                                                                            
+        !==========================================================================================                                  
+                                                                                           
                                
-        !!==========================================================================================
-        ! Method ClassFEMAnalysis:
+        !==========================================================================================
+        ! subroutine  AdditionalMaterialModelRoutine -> To calculate some additional consitutive parameters
+        !     -> Fiber direction mX on Gauss Points
         !------------------------------------------------------------------------------------------
-        ! Modifications:
-        ! Date:         Author:
         !==========================================================================================
         subroutine  AdditionalMaterialModelRoutine( this )
-
 		    !************************************************************************************
             ! DECLARATIONS OF VARIABLES
 		    !************************************************************************************
             ! Modules and implicit declarations
             ! -----------------------------------------------------------------------------------
-            !use ModMathRoutines
             implicit none
            
             ! Input variables
@@ -666,6 +608,7 @@ module ModFEMAnalysis
             real(8) :: R, L, pitch, hand, theta, Xgp, X0ref, tXgp, norm_mX
             real(8) :: mX(3), NodalValuesX(50)
             integer :: ElemRef, NodeRef, e, gp, n, NumberOfNodes
+            class(ClassElementBiphasic), pointer :: ElementBiphasic
 
 
             real(8) , pointer , dimension(:,:) :: NaturalCoord
@@ -673,84 +616,119 @@ module ModFEMAnalysis
 
  		    !************************************************************************************
             ! ADDITIONAL COMPUTATIONS ON GAUSS POINTS
-		    !************************************************************************************
-            ! TODO (Thiago#1#): Passar os enumeradores dos modelos para realizar as contas somente nos elementos que possuem o devido modelo material.           
-            
+		    !************************************************************************************        
             ! File data file name
             FiberProperties%FiberDataFileName = this%AnalysisSettings%FiberDataFileName
             ! Reading fiber data file
-            call FiberProperties%ReadFiberDataFile()
+            call FiberProperties%ReadFiberDataFile()   
             
-            !####################################################################################
-            ! Cálculo das tangentes da hélice
-            !####################################################################################
-            ! Parâmetros da Hélice
-            R     = FiberProperties%Radius !2.30d-3     !0.1d0   !1 fibra de 3 voltas: 2.30d-3 mm
-            L     = FiberProperties%Length !99.3d-3     !1.00d0  !1 fibra de 3 voltas: 297.90d-3 / 1 volta: 99.3d-3 mm
-            pitch = FiberProperties%Pitch  !1.0d0
-            hand  = FiberProperties%Hand   !-1.0d0
-            theta = FiberProperties%Theta  !0.0d0   !CUIDAR A ORDEM DO DESENHO NO SOLIDWORKS!!!!!   !1 fibra de 3 voltas: 0.0d0
-
-            ! Elemento e Nó de Referência
-            ElemRef = FiberProperties%ElemRef !77     !16308  !1  !211 !166 !45271 
-            NodeRef = FiberProperties%NodeRef !1334    !19670  !75         !1064 !110 !289 !5150           
+            if (FiberProperties%TypeofFiber .eq. "helicoidal") then
                 
-            !Obtendo o ID do Nó de Referência
-            NumberOfNodes =  this%ElementList(ElemRef)%El%GetNumberOfNodes()
-            do n = 1,NumberOfNodes
-                if (this%ElementList(ElemRef)%El%ElementNodes(n)%Node%ID .eq. NodeRef) then
-                    NodeRef = n
-                    exit
-                endif
-            enddo
+                !************************************************************************************
+                ! Helice parameters
+                R     = FiberProperties%Radius !2.30d-3     !0.1d0   !1 fibra de 3 voltas: 2.30d-3 mm
+                L     = FiberProperties%Length !99.3d-3     !1.00d0  !1 fibra de 3 voltas: 297.90d-3 / 1 volta: 99.3d-3 mm
+                pitch = FiberProperties%Pitch  !1.0d0
+                hand  = FiberProperties%Hand   !-1.0d0
+                theta = FiberProperties%Theta  !0.0d0   !CUIDAR A ORDEM DO DESENHO NO SOLIDWORKS!!!!!   !1 fibra de 3 voltas: 0.0d0
 
-            ! Cálculando a tangente nos pontos de Gauss (Para toda a malha!!!!)
-            NodalValuesX = 0.0d0
-            do e = 1 , size(this%ElementList)
-
-                NumberOfNodes = this%ElementList(e)%El%GetNumberOfNodes()
-
-                do gp = 1,size(this%ElementList(e)%El%GaussPoints)
-
-                    ! Obtendo as coordenadas nodais X do elemento
-                    do n = 1,NumberOfNodes
-                        NodalValuesX(n) = this%ElementList(e)%El%ElementNodes(n)%Node%CoordX(1)
-                    enddo
-
-                    call this%ElementList(e)%El%GetGaussPoints(NaturalCoord,Weight)
-
-                    call this%ElementList(e)%El%ElementInterpolation(NodalValuesX(1:NumberOfNodes),NaturalCoord(gp,:),Xgp)
-
-                    ! Coordenada X do nó de referência (ponto onde o parâmetro t=0)
-                    X0ref = this%ElementList(ElemRef)%El%ElementNodes(NodeRef)%Node%CoordX(1)
-
-                    tXgp = (2.0d0*Pi*pitch/L)*( Xgp - X0ref )
-
-                    mX(1) =  L/(2.0d0*Pi*pitch )
-                    mX(2) = -R*dsin( tXgp + (theta*Pi/180.0d0) )
-                    mX(3) =  hand*R*dcos( tXgp + (theta*Pi/180.0d0) )
-
-                    norm_mX = ( mX(1)*mX(1)+mX(2)*mX(2)+mX(3)*mX(3) )**0.50d0
-                    mX = mX/norm_mX
-
-                    ! Fibras Retas
-                    !----------------------
-                    !mX(1) = 1.0d0
-                    !mX(2) = 0.0d0
-                    !mX(3) = 0.0d0
-                    !-----------------------
-
-                    this%ElementList(e)%El%GaussPoints(gp)%AdditionalVariables%mX = mX
-
+                ! Elemento e Nó de Referência
+                ElemRef = FiberProperties%ElemRef !77     !16308  !1  !211 !166 !45271 
+                NodeRef = FiberProperties%NodeRef !1334    !19670  !75         !1064 !110 !289 !5150           
+                
+                !Obtendo o ID do Nó de Referência
+                NumberOfNodes =  this%ElementList(ElemRef)%El%GetNumberOfNodes()
+                do n = 1,NumberOfNodes
+                    if (this%ElementList(ElemRef)%El%ElementNodes(n)%Node%ID .eq. NodeRef) then
+                        NodeRef = n
+                        exit
+                    endif
                 enddo
-            enddo
-            !####################################################################################
+                
+                ! Coordenada X do nó de referência (ponto onde o parâmetro t=0)
+                X0ref = this%ElementList(ElemRef)%El%ElementNodes(NodeRef)%Node%CoordX(1)
 
- 		    !************************************************************************************
+                ! Cálculando a tangente nos pontos de Gauss (Para toda a malha!!!!)
+                NodalValuesX = 0.0d0
+                do e = 1 , size(this%ElementList)
 
+                    NumberOfNodes = this%ElementList(e)%El%GetNumberOfNodes()
+
+                    do gp = 1,size(this%ElementList(e)%El%GaussPoints)
+
+                        ! Obtendo as coordenadas nodais X do elemento
+                        do n = 1,NumberOfNodes
+                            NodalValuesX(n) = this%ElementList(e)%El%ElementNodes(n)%Node%CoordX(1)
+                        enddo
+
+                        call this%ElementList(e)%El%GetGaussPoints(NaturalCoord,Weight)
+
+                        call this%ElementList(e)%El%ElementInterpolation(NodalValuesX(1:NumberOfNodes),NaturalCoord(gp,:),Xgp)
+
+                        tXgp = (2.0d0*Pi*pitch/L)*( Xgp - X0ref )
+
+                        mX(1) =  L/(2.0d0*Pi*pitch )
+                        mX(2) = -R*dsin( tXgp + (theta*Pi/180.0d0) )
+                        mX(3) =  hand*R*dcos( tXgp + (theta*Pi/180.0d0) )
+
+                        norm_mX = ( mX(1)*mX(1)+mX(2)*mX(2)+mX(3)*mX(3) )**0.50d0
+                        mX = mX/norm_mX
+
+                        this%ElementList(e)%El%GaussPoints(gp)%AdditionalVariables%mX = mX
+
+                    enddo
+                    if (this%AnalysisSettings%ProblemType .eq. ProblemTypes%Biphasic) then
+                        NodalValuesX = 0.0d0
+                        call ConvertElementToElementBiphasic(this%ElementList(e)%El, ElementBiphasic)
+                        NumberOfNodes = ElementBiphasic%GetNumberOfNodes_fluid()
+                        do gp = 1,size(ElementBiphasic%GaussPoints_fluid) 
+                        
+                            ! Obtendo as coordenadas nodais X do elemento
+                            do n = 1,NumberOfNodes
+                                NodalValuesX(n) = ElementBiphasic%ElementNodes_fluid(n)%Node%CoordX(1)
+                            enddo
+
+                            call ElementBiphasic%GetGaussPoints_fluid(NaturalCoord,Weight)
+
+                            call ElementBiphasic%ElementInterpolation_fluid(NodalValuesX(1:NumberOfNodes),NaturalCoord(gp,:),Xgp)
+
+                            tXgp = (2.0d0*Pi*pitch/L)*( Xgp - X0ref )
+
+                            mX(1) =  L/(2.0d0*Pi*pitch )
+                            mX(2) = -R*dsin( tXgp + (theta*Pi/180.0d0) )
+                            mX(3) =  hand*R*dcos( tXgp + (theta*Pi/180.0d0) )
+
+                            norm_mX = ( mX(1)*mX(1)+mX(2)*mX(2)+mX(3)*mX(3) )**0.50d0
+                            mX = mX/norm_mX
+
+                            ElementBiphasic%GaussPoints_fluid(gp)%AdditionalVariables%mX = mX
+                    
+                        enddo
+                    endif
+                enddo
+                !####################################################################################
+            elseif(FiberProperties%TypeofFiber .eq. "straight") then
+                ! Fibras Retas
+                !----------------------
+                mX(1)=cos(FiberProperties%ThetaX*Pi/180)
+                mX(2)=sin(FiberProperties%ThetaX*Pi/180)
+                mX(3)=0 
+                do e = 1 , size(this%ElementList)
+                     do gp = 1,size(this%ElementList(e)%El%GaussPoints)
+                        this%ElementList(e)%El%GaussPoints(gp)%AdditionalVariables%mX=mX
+                     enddo
+                     if (this%AnalysisSettings%ProblemType .eq. ProblemTypes%Biphasic) then
+                        call ConvertElementToElementBiphasic(this%ElementList(e)%El, ElementBiphasic)
+                        do gp = 1,size(ElementBiphasic%GaussPoints_fluid) 
+                            ElementBiphasic%GaussPoints_fluid(gp)%AdditionalVariables%mX = mX
+                        enddo
+                    endif
+                enddo
+                       
+            endif
+ 		    !************************************************************************************      
         end subroutine
-        !==========================================================================================
-        
+        !==========================================================================================      
         
         !=================================================================================================
         subroutine ReadFiberDataFile(this)
@@ -766,8 +744,8 @@ module ModFEMAnalysis
             ! Internal Variables
             type (ClassParser) :: DataFile
             
-            character(len=100),dimension(7)  :: ListOfOptions,ListOfValues
-            logical,dimension(7)             :: FoundOption
+            character(len=100),dimension(9)  :: ListOfOptions,ListOfValues
+            logical,dimension(9)             :: FoundOption
             character(len=255)               :: string , endstring, DataFileName
             integer                          :: i
 
@@ -786,7 +764,7 @@ module ModFEMAnalysis
                 stop
             endif 
             
-            ListOfOptions=["Radius","Length","Pitch","Hand","theta","ElemRef","NodeRef"]
+            ListOfOptions=["TypeofFiber","ThetaX","Radius","Length","Pitch","Hand","theta","ElemRef","NodeRef"]
 
 		    call DataFile%FillListOfOptions(ListOfOptions,ListOfValues,FoundOption)
             call DataFile%CheckError
@@ -798,13 +776,15 @@ module ModFEMAnalysis
                 endif
             enddo
             
-            this%Radius  = ListOfValues(1)
-            this%Length  = ListOfValues(2)
-            this%Pitch   = ListOfValues(3)
-            this%Hand    = ListOfValues(4)
-            this%Theta   = ListOfValues(5)
-            this%ElemRef = ListOfValues(6)
-            this%NodeRef = ListOfValues(7)
+            this%TypeofFiber  = ListOfValues(1)
+            this%ThetaX       = ListOfValues(2)
+            this%Radius       = ListOfValues(3)
+            this%Length       = ListOfValues(4)
+            this%Pitch        = ListOfValues(5)
+            this%Hand         = ListOfValues(6)
+            this%Theta        = ListOfValues(7)
+            this%ElemRef      = ListOfValues(8)
+            this%NodeRef      = ListOfValues(9)
             
             !Finish the reading
             call DataFile%CloseFile
@@ -813,7 +793,6 @@ module ModFEMAnalysis
 
     end subroutine
         !=================================================================================================
-
 
 end module
 

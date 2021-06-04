@@ -48,7 +48,8 @@ module ModElementHexa20
 	!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
     contains
-
+             
+        !==========================================================================================
         subroutine GetProfile_Hexa20(this,Profile)
             class(ClassElementHexa20)::this
             type(ClassElementProfile)::Profile
@@ -62,7 +63,8 @@ module ModElementHexa20
             ElementDimension = 3 )
 
         end subroutine
-
+        !==========================================================================================
+        
         !==========================================================================================
         ! Method GetGaussPoints_Hexa20:  This method points to the natural coordinates and weights
         ! used in the Gaussian Quadrature.
@@ -220,7 +222,6 @@ module ModElementHexa20
 
         end subroutine
         !==========================================================================================
-
 
         !==========================================================================================
         ! Method GetDifShapeFunctions_Hexa20:  This method returns the shape funtions derivatives
@@ -485,7 +486,6 @@ module ModElementHexa20
 
             end subroutine
         !==========================================================================================
-
 
 
 end module

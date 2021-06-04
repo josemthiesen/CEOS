@@ -34,16 +34,8 @@ module ModConstitutiveModelLibrary
     use ModGlassy
     use ModVVHW
     use ModVarViscoHydrolysis
-    ! Biphasic models
-    use ModCompressibleNeoHookBiphasic
-    use ModCompressibleNeoHookBiphasicTransIso
     use ModHyperBiphasicSpilker
-    use ModStVenantKirchhoffBiphasic
-    use ModNeoHookIsochoricBiphasic
-    use ModNeoHookIsochoricBiphasicTransIso
-    use ModViscoelasticMatrixFiberBTI
-    use ModViscoelasticMatrixBiphasic
-    use ModHyperelasticBiphasicTransIso
+   
 
     ! Constitutive Models ID registered:
     type ClassConstitutiveModels                                
@@ -63,15 +55,7 @@ module ModConstitutiveModelLibrary
         integer   :: VVHW                                           = 14
         integer   :: Glassy                                         = 15
         integer   :: VarViscoHydrolysisModel                        = 16
-        integer   :: CompressibleNeoHookeanBiphasicModel            = 17
-        integer   :: HyperIsotropicBiphasicSpilkerModel             = 18
-        integer   :: StVenantKirchhoffBiphasicModel                 = 19
-        integer   :: NeoHookeanIsochoricBiphasicModel               = 20
-        integer   :: CompressibleNeoHookeanBiphasicTransIsoModel    = 21
-        integer   :: NeoHookeanIsochoricBiphasicTransIsoModel       = 22
-        integer   :: ViscoelasticMatrixFiberBiphasicTransIsoModel   = 23
-        integer   :: ViscoelasticMatrixBiphasicModel                = 24
-        integer   :: HyperelasticTransIsoModelBiphasicTransIsoModel = 25
+        integer   :: HyperIsotropicBiphasicSpilkerModel             = 17
         
     end type
 
@@ -122,44 +106,26 @@ module ModConstitutiveModelLibrary
             type(ClassStVenantKirchhoff_Axisymmetric)  , pointer , dimension(:) :: StVK_Axisymmetric
             type(ClassStVenantKirchhoff_PlaneStrain)   , pointer , dimension(:) :: StVK_PlaneStrain
             
-            type(ClassStVenantKirchhoffBiphasic_3D)            , pointer , dimension(:) :: StVKBiphasic_ThreeDimensional
-            type(ClassStVenantKirchhoffBiphasic_Axisymmetric)  , pointer , dimension(:) :: StVKBiphasic_Axisymmetric
-            type(ClassStVenantKirchhoffBiphasic_PlaneStrain)   , pointer , dimension(:) :: StVKBiphasic_PlaneStrain
-
             type(ClassHyperelasticQ1P0_3D)             , pointer , dimension(:) :: HEQ1P0_3D
             type(ClassHyperelasticQ1P0_Axisymmetric)   , pointer , dimension(:) :: HEQ1P0_Axisymmetric
 
             type(ClassCompressibleNeoHookean_3D)       , pointer , dimension(:) :: CNH_3D
             type(ClassCompressibleNeoHookean_PlaneStrain) , pointer , dimension(:) :: CNH_PlaneStrain
             
-            type(ClassCompressibleNeoHookeanBiphasic_3D)       , pointer , dimension(:) :: CNHBiphasic_3D
-            type(ClassCompressibleNeoHookeanBiphasic_PlaneStrain) , pointer , dimension(:) :: CNHBiphasic_PlaneStrain
-            
-            !Thayller - Adicionado ponteiros do modelo Neo Hookean Bifasico Transversalmente Isotropico
-            type(ClassCompressibleNeoHookeanBiphasicTransIso_3D)       , pointer , dimension(:) :: CNHTIBiphasic_3D
-            type(ClassCompressibleNeoHookeanBiphasicTransIso_PlaneStrain) , pointer , dimension(:) :: CNHTIBiphasic_PlaneStrain
 
             type(ClassNeoHookeanIsochoric_PlaneStrain) , pointer , dimension(:) :: NHI_PlaneStrain
             type(ClassNeoHookeanIsochoric_3D)          , pointer , dimension(:) :: NHI_3D
-            
-            type(ClassNeoHookeanIsochoricBiphasic_PlaneStrain) , pointer , dimension(:) :: NHIBiphasic_PlaneStrain
-            type(ClassNeoHookeanIsochoricBiphasic_3D)   , pointer , dimension(:) :: NHIBiphasic_3D
-            
-            type(ClassNeoHookeanIsochoricBiphasicTI_PStrain) , pointer , dimension(:) :: NHITIBiphasic_PlaneStrain
-            type(ClassNeoHookeanIsochoricBiphasicTI_3D)   , pointer , dimension(:) :: NHITIBiphasic_3D
 
             type(ClassHyperelasticTransIso_3D)         , pointer , dimension(:) :: HTI_3D
-            type(ClassHyperelasticTransIsoBiphasicTransIso_3D)         , pointer , dimension(:) :: HTIBiphasicTransIso_3D
 
             type(ClassHyperelasticTransIsoComp_3D)     , pointer , dimension(:) :: HTIC_3D
 
             type(ClassViscoelasticFiber_3D)            , pointer , dimension(:) :: VF_3D
 
             type(ClassViscoelasticMatrix_3D)           , pointer , dimension(:) :: ViscoMatrix_3D
-            type(ClassViscoelasticMatrixBiphasic_3D)   , pointer , dimension(:) :: ViscoMatrixBiphasic_3D
+
 
             type(ClassViscoelasticMatrixFiber_3D)      , pointer , dimension(:) :: ViscoMatrixFiber_3D
-            type(ClassViscoelasticMatrixFiberBiphasicTransIso_3D), pointer , dimension(:) :: ViscoMatrixFiberBiphasicTransIso_3D
             
             type(ClassVarViscoHydrolysis_3D)  , pointer , dimension(:) :: VARVISHYDR_3D
             type(ClassVarViscoHydrolysis_AXI)  , pointer , dimension(:) :: VARVISHYDR_AXI
@@ -171,11 +137,8 @@ module ModConstitutiveModelLibrary
             type(ClassGlassy_AXI)  , pointer , dimension(:) :: Glassy_AXI
             
             type(ClassHyperIsotropicBiphasicSpilker_3D)          , pointer , dimension(:) :: CHISBiphasic_3D
-            type(ClassHyperIsotropicBiphasicSpilker_PlaneStrain) , pointer , dimension(:) :: CHISBiphasic_PlaneStrain
+            type(ClassHyperIsotropicBiphasicSpilker_PlaneStrain) , pointer , dimension(:) :: CHISBiphasic_PlaneStrain          
             
-            
-! TODO (Thiago#1#02/13/15): Trocar threeDimensional para 3D
-
 		    !************************************************************************************
 
             !************************************************************************************
@@ -289,32 +252,6 @@ module ModConstitutiveModelLibrary
                     endif
                 ! -----------------------------------------------------------------------------
                     
-                    
-                ! -------------------------------------------------------------------------------
-                !  St. Venant-Kirchhoff Biphasic Model
-                ! -------------------------------------------------------------------------------
-                case (ConstitutiveModels % StVenantKirchhoffBiphasicModel)
-
-                    if ( AnalysisSettings%Hypothesis == HypothesisOfAnalysis%ThreeDimensional ) then
-
-                            allocate( StVKBiphasic_ThreeDimensional(nGP) )
-                            GaussPoints => StVKBiphasic_ThreeDimensional
-
-                    elseif ( AnalysisSettings%Hypothesis == HypothesisOfAnalysis%Axisymmetric ) then
-
-                            allocate( StVKBiphasic_Axisymmetric(nGP) )
-                            GaussPoints => StVKBiphasic_Axisymmetric
-
-                    elseif ( AnalysisSettings%Hypothesis == HypothesisOfAnalysis%PlaneStrain ) then
-
-                            allocate( StVKBiphasic_PlaneStrain(nGP) )
-                            GaussPoints => StVKBiphasic_PlaneStrain
-
-                    else
-                            call Error("Error: St. Venant-Kirchhoff Biphasic Model - analysis type not available.")
-
-                    endif
-                ! -----------------------------------------------------------------------------
 
                 ! -------------------------------------------------------------------------------
                 ! Hyperelastic Model - Mean Dilatation
@@ -357,49 +294,7 @@ module ModConstitutiveModelLibrary
 
                     endif
                 ! -------------------------------------------------------------------------------
-                    
-                ! -------------------------------------------------------------------------------
-                ! Compressible Neo-Hookean Biphasic Model
-                ! -------------------------------------------------------------------------------
-                case (ConstitutiveModels % CompressibleNeoHookeanBiphasicModel)
-
-                    if ( AnalysisSettings%Hypothesis == HypothesisOfAnalysis%ThreeDimensional ) then
-
-                            allocate( CNHBiphasic_3D(nGP) )
-                            GaussPoints => CNHBiphasic_3D
-
-                    elseif ( AnalysisSettings%Hypothesis == HypothesisOfAnalysis%PlaneStrain ) then
-
-                            allocate( CNHBiphasic_PlaneStrain(nGP) )
-                            GaussPoints => CNHBiphasic_PlaneStrain
-
-                    else
-                            call Error("Error: Compressible Neo Hookean Biphasic Model - analysis type not available.")
-
-                    endif
-                ! -------------------------------------------------------------------------------    
-                
-                !Thayller - Adicionado modelo Neo Hookean Bifasico Transversalmente isotropico    
-                ! -------------------------------------------------------------------------------
-                ! Compressible Neo-Hookean Biphasic Transversaly Isotropic Model
-                ! -------------------------------------------------------------------------------
-                case (ConstitutiveModels % CompressibleNeoHookeanBiphasicTransIsoModel)
-
-                    if ( AnalysisSettings%Hypothesis == HypothesisOfAnalysis%ThreeDimensional ) then
-
-                            allocate( CNHTIBiphasic_3D(nGP) )
-                            GaussPoints => CNHTIBiphasic_3D
-
-                    elseif ( AnalysisSettings%Hypothesis == HypothesisOfAnalysis%PlaneStrain ) then
-
-                            allocate( CNHTIBiphasic_PlaneStrain(nGP) )
-                            GaussPoints => CNHTIBiphasic_PlaneStrain
-
-                    else
-                            call Error("Error: Compressible Neo Hookean Biphasic Model - analysis type not available.")
-
-                    endif
-                ! -------------------------------------------------------------------------------    
+                       
                     
                 ! -------------------------------------------------------------------------------
                 ! Hyperlastic Isotropic material model for Biphasic Materials - Spilker
@@ -421,8 +316,7 @@ module ModConstitutiveModelLibrary
 
                     endif
                 ! -------------------------------------------------------------------------------       
-                    
-                    
+                          
                     
                 ! -------------------------------------------------------------------------------
                 ! Neo-Hookean Isochoric Model
@@ -446,49 +340,7 @@ module ModConstitutiveModelLibrary
                     endif
                 ! -------------------------------------------------------------------------------
                     
-                ! -------------------------------------------------------------------------------
-                ! Neo-Hookean Isochoric Biphasic Model
-                ! -------------------------------------------------------------------------------
-                case (ConstitutiveModels % NeoHookeanIsochoricBiphasicModel)
-
-                    if ( AnalysisSettings%Hypothesis == HypothesisOfAnalysis%PlaneStrain ) then
-
-                            allocate( NHIBiphasic_PlaneStrain(nGP) )
-                            GaussPoints => NHIBiphasic_PlaneStrain
-
-
-                    elseif ( AnalysisSettings%Hypothesis == HypothesisOfAnalysis%ThreeDimensional ) then
-
-                            allocate( NHIBiphasic_3D(nGP) )
-                            GaussPoints => NHIBiphasic_3D
-
-                    else
-                            call Error("Error: Neo Hookean Isochoric Biphasic Model - analysis type not available.")
-
-                    endif
-                ! -------------------------------------------------------------------------------
-
-                ! -------------------------------------------------------------------------------
-                ! Neo-Hookean Isochoric Biphasic Transversaly Isotropic Model
-                ! -------------------------------------------------------------------------------
-                case (ConstitutiveModels % NeoHookeanIsochoricBiphasicTransIsoModel)
-
-                    if ( AnalysisSettings%Hypothesis == HypothesisOfAnalysis%PlaneStrain ) then
-
-                            allocate( NHITIBiphasic_PlaneStrain(nGP) )
-                            GaussPoints => NHITIBiphasic_PlaneStrain
-
-
-                    elseif ( AnalysisSettings%Hypothesis == HypothesisOfAnalysis%ThreeDimensional ) then
-
-                            allocate( NHITIBiphasic_3D(nGP) )
-                            GaussPoints => NHITIBiphasic_3D
-
-                    else
-                            call Error("Error: Neo Hookean Isochoric Biphasic Transversaly Isotropic Model - analysis type not available.")
-
-                    endif
-                ! -------------------------------------------------------------------------------
+                
                 ! -------------------------------------------------------------------------------
                 ! Hyperelastic Transverse Isotropic Model
                 ! -------------------------------------------------------------------------------
@@ -505,21 +357,6 @@ module ModConstitutiveModelLibrary
                     endif
                 ! -------------------------------------------------------------------------------
                     
-                ! -------------------------------------------------------------------------------
-                ! Hyperelastic Transverse Isotropic Biphasic Transverse Isotropic Model
-                ! -------------------------------------------------------------------------------
-                case (ConstitutiveModels % HyperelasticTransIsoModelBiphasicTransIsoModel)
-
-                    if ( AnalysisSettings%Hypothesis == HypothesisOfAnalysis%ThreeDimensional ) then
-
-                            allocate(  HTIBiphasicTransIso_3D(nGP) )
-                            GaussPoints =>  HTIBiphasicTransIso_3D
-
-                    else
-                            call Error("Error: Hyperelastic Transverse Isotropic Biphasic Transverse Isotropic Model - analysis type not available.")
-
-                    endif
-                ! -------------------------------------------------------------------------------
 
                 ! -------------------------------------------------------------------------------
                 ! Hyperelastic Transverse Isotropic (Compressive Transition) Model
@@ -567,23 +404,7 @@ module ModConstitutiveModelLibrary
                             call Error("Error: Viscoelastic Model (Matrix) - analysis type not available.")
 
                     endif
-                ! -------------------------------------------------------------------------------
-                    
-                ! -------------------------------------------------------------------------------
-                ! Viscoelastic Biphasic Model 3D (Matrix)
-                ! -------------------------------------------------------------------------------
-                case (ConstitutiveModels % ViscoelasticMatrixBiphasicModel)
-
-                    if ( AnalysisSettings%Hypothesis == HypothesisOfAnalysis%ThreeDimensional ) then
-
-                            allocate( ViscoMatrixBiphasic_3D(nGP) )
-                            GaussPoints => ViscoMatrixBiphasic_3D
-
-                    else
-                            call Error("Error: Viscoelastic Model Biphasic (Matrix) - analysis type not available.")
-
-                    endif
-                ! -------------------------------------------------------------------------------
+                ! -------------------------------------------------------------------------------                
 
                 ! -------------------------------------------------------------------------------
                 ! Viscoelastic Model 3D (Matrix and Fiber)
@@ -601,21 +422,6 @@ module ModConstitutiveModelLibrary
                     endif
                 ! -------------------------------------------------------------------------------
                     
-                ! -------------------------------------------------------------------------------
-                ! Viscoelastic Biphasic Transversaly Isotropic Model 3D (Matrix and Fiber)
-                ! -------------------------------------------------------------------------------
-                case (ConstitutiveModels % ViscoelasticMatrixFiberBiphasicTransIsoModel)
-
-                    if ( AnalysisSettings%Hypothesis == HypothesisOfAnalysis%ThreeDimensional ) then
-
-                            allocate( ViscoMatrixFiberBiphasicTransIso_3D(nGP) )
-                            GaussPoints => ViscoMatrixFiberBiphasicTransIso_3D
-
-                    else
-                            call Error("Error: Viscoelastic Model Biphasic Transversaly Isotropic (Matrix and Fiber) - analysis type not available.")
-
-                    endif
-                ! -------------------------------------------------------------------------------
 
                 ! -------------------------------------------------------------------------------
                 ! Modelo Variacional Viscoplastico com Danificacao Plastica e Hidrolitica
@@ -686,13 +492,6 @@ module ModConstitutiveModelLibrary
 
             end select
 
-
-            ! Construct the Constitutive Model
-            ! -----------------------------------------------------------------------------------
-           ! do i=1,nGP
-           !     call GaussPoints(i)%ConstitutiveModelConstructor(AnalysisSettings)
-           ! enddo
-
 		    !************************************************************************************
 
         end subroutine
@@ -728,14 +527,11 @@ module ModConstitutiveModelLibrary
 
             !************************************************************************************
 
-
             !************************************************************************************
             ! DECODE THE STRING SUPPLIED BY GiD
 		    !************************************************************************************
 
             call Comp%Setup()
-
-
 
             if ( Comp%CompareStrings('Generalized_Hookes_Law', model).and. (AnalysisSettings%ElementTech == ElementTechnologies%Full_Integration) ) then
 
@@ -756,10 +552,6 @@ module ModConstitutiveModelLibrary
             elseif ( Comp%CompareStrings('st_venant_kirchhoff', model) .and. (AnalysisSettings%ElementTech == ElementTechnologies%Full_Integration) ) then
 
                 modelID = ConstitutiveModels % StVenantKirchhoffModel
-                
-            elseif ( Comp%CompareStrings('st_venant_kirchhoff_Biphasic', model) .and. (AnalysisSettings%ElementTech == ElementTechnologies%Full_Integration) ) then
-
-                modelID = ConstitutiveModels % StVenantKirchhoffBiphasicModel
 
             elseif ( Comp%CompareStrings('hyperelastic', model) .and. (AnalysisSettings%ElementTech == ElementTechnologies%Mean_Dilatation) ) then
 
@@ -769,15 +561,6 @@ module ModConstitutiveModelLibrary
 
                 modelID = ConstitutiveModels%CompressibleNeoHookeanModel
                 
-            elseif ( Comp%CompareStrings('compressible_neo_hookean_Biphasic', model) .and. (AnalysisSettings%ElementTech == ElementTechnologies%Full_Integration) ) then
-
-                modelID = ConstitutiveModels%CompressibleNeoHookeanBiphasicModel
-                
-            !Thayller - Adicionado modelo Neo Hookean Bifasico Transversalmente Isotrópico                
-            elseif ( Comp%CompareStrings('compressible_neo_hookean_biphasic_trans_iso', model) .and. (AnalysisSettings%ElementTech == ElementTechnologies%Full_Integration) ) then
-
-                modelID = ConstitutiveModels%CompressibleNeoHookeanBiphasicTransIsoModel
-                
             elseif ( Comp%CompareStrings('Hyper_Isotropic_Biphasic_Spilker', model) .and. (AnalysisSettings%ElementTech == ElementTechnologies%Full_Integration) ) then
 
                 modelID = ConstitutiveModels%HyperIsotropicBiphasicSpilkerModel
@@ -785,23 +568,11 @@ module ModConstitutiveModelLibrary
             elseif ( Comp%CompareStrings('neo_hookean_isochoric', model) .and. (AnalysisSettings%ElementTech == ElementTechnologies%Full_Integration) ) then
 
                 modelID = ConstitutiveModels%NeoHookeanIsochoricModel
-                
-            elseif ( Comp%CompareStrings('neo_hookean_isochoric_biphasic', model) .and. (AnalysisSettings%ElementTech == ElementTechnologies%Full_Integration) ) then
-
-                modelID = ConstitutiveModels%NeoHookeanIsochoricBiphasicModel
-                
-            elseif ( Comp%CompareStrings('neo_hookean_isochoric_biphasic_trans_iso', model) .and. (AnalysisSettings%ElementTech == ElementTechnologies%Full_Integration) ) then
-
-                modelID = ConstitutiveModels%NeoHookeanIsochoricBiphasicTransIsoModel
-
+                                
             elseif ( Comp%CompareStrings('hyperelastic_transverse_isotropic', model) .and. (AnalysisSettings%ElementTech == ElementTechnologies%Full_Integration) ) then
 
                 modelID = ConstitutiveModels%HyperelasticTransIsoModel
                 
-            elseif ( Comp%CompareStrings('Hyperelastic_Transverse_Isotropic_Biphasic_Trans_Iso', model) .and. (AnalysisSettings%ElementTech == ElementTechnologies%Full_Integration) ) then
-
-                modelID = ConstitutiveModels%HyperelasticTransIsoModelBiphasicTransIsoModel
-
             elseif ( Comp%CompareStrings('hyperelastic_transverse_isotropic_(compressive_transition)', model) .and. (AnalysisSettings%ElementTech == ElementTechnologies%Full_Integration) ) then
 
                 modelID = ConstitutiveModels%HyperelasticTransIsoCompModel
@@ -814,17 +585,9 @@ module ModConstitutiveModelLibrary
 
                 modelID = ConstitutiveModels%ViscoelasticMatrixModel
                 
-            elseif ( Comp%CompareStrings('Matrix_Viscoelastic_Biphasic', model) .and. (AnalysisSettings%ElementTech == ElementTechnologies%Full_Integration) ) then
-
-                modelID = ConstitutiveModels%ViscoelasticMatrixBiphasicModel
-
-            elseif ( Comp%CompareStrings('Matrix_And_Fiber_Viscoelastic', model) .and. (AnalysisSettings%ElementTech == ElementTechnologies%Full_Integration) ) then
+           elseif ( Comp%CompareStrings('Matrix_And_Fiber_Viscoelastic', model) .and. (AnalysisSettings%ElementTech == ElementTechnologies%Full_Integration) ) then
 
                 modelID = ConstitutiveModels%ViscoelasticMatrixFiberModel
-                
-            elseif ( Comp%CompareStrings('Matrix_And_Fiber_Viscoelastic_Biphasic_Trans_Iso', model) .and. (AnalysisSettings%ElementTech == ElementTechnologies%Full_Integration) ) then
-
-                modelID = ConstitutiveModels%ViscoelasticMatrixFiberBiphasicTransIsoModel
 
             elseif ( Comp%CompareStrings('VarViscoHydrolysisModel', model).and. (AnalysisSettings%ElementTech == ElementTechnologies%Full_Integration) ) then
             
@@ -837,7 +600,6 @@ module ModConstitutiveModelLibrary
             
                 modelID = ConstitutiveModels % Glassy   
                 
-
             ! -----------------------------------------------------------------------------------    
             else
 

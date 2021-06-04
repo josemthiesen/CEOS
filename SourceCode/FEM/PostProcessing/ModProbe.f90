@@ -12,8 +12,10 @@
 !##################################################################################################
 module ModProbe
 
+    use ModParser
     use ModTools
     use ModNodes
+    use ModGlobalFEMBiphasic
     
     implicit none
 
@@ -122,144 +124,140 @@ module ModProbe
 
 
     contains
-!==========================================================================================
-    subroutine ParseComponents( ComponentsString , Components )
-        use ModParser
-        character(len=*) :: ComponentsString
-        integer , allocatable , dimension(:) :: Components
-        type(ClassParser) :: Comp
-        character(len=len(ComponentsString)) , allocatable , dimension(:) :: SubStrings
-        integer::i
+        !==========================================================================================
+        subroutine ParseComponents( ComponentsString , Components )
+            character(len=*) :: ComponentsString
+            integer , allocatable , dimension(:) :: Components
+            type(ClassParser) :: Comp
+            character(len=len(ComponentsString)) , allocatable , dimension(:) :: SubStrings
+            integer::i
 
-        call Comp%Setup()
+            call Comp%Setup()
 
-        if (allocated(Components)) deallocate(Components)
+            if (allocated(Components)) deallocate(Components)
 
-        call Split(ComponentsString, SubStrings,",")
+            call Split(ComponentsString, SubStrings,",")
 
-        if (.not.allocated(SubStrings)) then
-            return
-        endif
-
-        allocate(Components(size(SubStrings)))
-
-        do i=1,size(SubStrings)
-
-            Components(i) = SubStrings(i)
-        enddo
-
-        deallocate(SubStrings)
-    end subroutine
-!==========================================================================================
-    function ParseVariableName(Variable) result(enu)
-        use ModParser
-        character(len=*) :: Variable
-        integer :: enu
-        type(ClassParser)::Comp
-        call Comp%Setup
-        IF ( Comp%CompareStrings( Variable,'Cauchy Stress') ) then
-            enu = VariableNames%CauchyStress
-        ELSEIF ( Comp%CompareStrings( Variable,'Biphasic Total Cauchy Stress') ) then
-            enu = VariableNames%BiphasicTotalCauchyStress
-        ELSEIF ( Comp%CompareStrings( Variable,'Deformation Gradient') ) then
-            enu = VariableNames%DeformationGradient
-        ELSEIF ( Comp%CompareStrings( Variable,'Displacements') ) then
-            enu = VariableNames%Displacements
-        ELSEIF ( Comp%CompareStrings( Variable,'Logarithmic Strain') ) then
-            enu = VariableNames%LogarithmicStrain
-        ELSEIF ( Comp%CompareStrings( Variable,'Temperature') ) then
-            enu = VariableNames%Temperature
-        ELSEIF ( Comp%CompareStrings( Variable,'Pressure') ) then
-            enu = VariableNames%Pressure
-        ELSEIF ( Comp%CompareStrings( Variable,'Gradient Pressure') ) then
-            enu = VariableNames%GradientPressure
-        ELSEIF ( Comp%CompareStrings( Variable,'First Piola Stress') ) then
-            enu = VariableNames%FirstPiolaStress
-        ELSEIF ( Comp%CompareStrings( Variable,'Relative Velocity') ) then
-            enu = VariableNames%RelativeVelocity
-        ELSEIF ( Comp%CompareStrings( Variable,'Total Volume') ) then
-            enu = VariableNames%Total_Volume
-        ELSE
-            enu = VariableNames%UserDefined
-        ENDIF
-    end function
-    !==========================================================================================
-
-
-    !==========================================================================================
-    subroutine InitializeFile(this)
-
-            !************************************************************************************
-            ! DECLARATIONS OF VARIABLES
-            !************************************************************************************
-            ! Modules and implicit declarations
-            ! -----------------------------------------------------------------------------------
-            implicit none
-
-            ! Object
-            ! -----------------------------------------------------------------------------------
-            class(ClassProbe) :: this
-
-            ! Internal variables
-            ! -----------------------------------------------------------------------------------
-            logical :: FileExists
-
-            !************************************************************************************
-
-            inquire(file=this%FileName,exist=FileExists)
-
-            if ( FileExists ) then
-                open (1234, file=this%FileName, status='unknown')
-                close(1234, status='delete')
+            if (.not.allocated(SubStrings)) then
+                return
             endif
 
-            ! Writing a header
-            open (1234, file=this%FileName, status='unknown')
-            write(1234,*) ' Time                    Value'
-            close(1234)
+            allocate(Components(size(SubStrings)))
+
+            do i=1,size(SubStrings)
+
+                Components(i) = SubStrings(i)
+            enddo
+
+            deallocate(SubStrings)
+        end subroutine
+        !==========================================================================================
+        function ParseVariableName(Variable) result(enu)
+            character(len=*) :: Variable
+            integer :: enu
+            type(ClassParser)::Comp
+            call Comp%Setup
+            IF ( Comp%CompareStrings( Variable,'Cauchy Stress') ) then
+                enu = VariableNames%CauchyStress
+            ELSEIF ( Comp%CompareStrings( Variable,'Biphasic Total Cauchy Stress') ) then
+                enu = VariableNames%BiphasicTotalCauchyStress
+            ELSEIF ( Comp%CompareStrings( Variable,'Deformation Gradient') ) then
+                enu = VariableNames%DeformationGradient
+            ELSEIF ( Comp%CompareStrings( Variable,'Displacements') ) then
+                enu = VariableNames%Displacements
+            ELSEIF ( Comp%CompareStrings( Variable,'Logarithmic Strain') ) then
+                enu = VariableNames%LogarithmicStrain
+            ELSEIF ( Comp%CompareStrings( Variable,'Temperature') ) then
+                enu = VariableNames%Temperature
+            ELSEIF ( Comp%CompareStrings( Variable,'Pressure') ) then
+                enu = VariableNames%Pressure
+            ELSEIF ( Comp%CompareStrings( Variable,'Gradient Pressure') ) then
+                enu = VariableNames%GradientPressure
+            ELSEIF ( Comp%CompareStrings( Variable,'First Piola Stress') ) then
+                enu = VariableNames%FirstPiolaStress
+            ELSEIF ( Comp%CompareStrings( Variable,'Relative Velocity') ) then
+                enu = VariableNames%RelativeVelocity
+            ELSEIF ( Comp%CompareStrings( Variable,'Total Volume') ) then
+                enu = VariableNames%Total_Volume
+            ELSE
+                enu = VariableNames%UserDefined
+            ENDIF
+        end function
+        !==========================================================================================
+
+        !==========================================================================================
+        subroutine InitializeFile(this)
+
+                !************************************************************************************
+                ! DECLARATIONS OF VARIABLES
+                !************************************************************************************
+                ! Modules and implicit declarations
+                ! -----------------------------------------------------------------------------------
+                implicit none
+
+                ! Object
+                ! -----------------------------------------------------------------------------------
+                class(ClassProbe) :: this
+
+                ! Internal variables
+                ! -----------------------------------------------------------------------------------
+                logical :: FileExists
+
+                !************************************************************************************
+
+                inquire(file=this%FileName,exist=FileExists)
+
+                if ( FileExists ) then
+                    open (1234, file=this%FileName, status='unknown')
+                    close(1234, status='delete')
+                endif
+
+                ! Writing a header
+                open (1234, file=this%FileName, status='unknown')
+                write(1234,*) ' Time                    Value'
+                close(1234)
 
 
-    end subroutine
-    !==========================================================================================
+        end subroutine
+        !==========================================================================================
 
-    !==========================================================================================
-    subroutine WriteOnFile_Char(this , string )
-            class(ClassProbe) :: this
-            character(len=*) :: string
-            integer::FileNumber
-            FileNumber = 33
-            open( FileNumber, file=this%FileName, Access='append', status='unknown')
-                write(FileNumber , '(A)') string
-            close(FileNumber)
-    end subroutine
-    !==========================================================================================
+        !==========================================================================================
+        subroutine WriteOnFile_Char(this , string )
+                class(ClassProbe) :: this
+                character(len=*) :: string
+                integer::FileNumber
+                FileNumber = 33
+                open( FileNumber, file=this%FileName, Access='append', status='unknown')
+                    write(FileNumber , '(A)') string
+                close(FileNumber)
+        end subroutine
+        !==========================================================================================
     
-    !==========================================================================================
-    subroutine WriteOnFile_Value(this , Time , Values )
-            class(ClassProbe) :: this
-            real(8)::Time
-            real(8) , dimension(:) :: Values
-            character(len=20) :: CharFormat
-            integer::FileNumber , i
-            CharFormat=''
-            write(CharFormat , '(A,I2,A)') '(' , size(Values) + 1 , '(E23.15,1x))'
-            FileNumber = 33
-            open( FileNumber, file=this%FileName, Access='append', status='unknown') !Create the string format
-                write(FileNumber , CharFormat) Time , (Values(i),i=1,size(Values))   !Export the result
-            close(FileNumber)
-    end subroutine
-    !==========================================================================================
+        !==========================================================================================
+        subroutine WriteOnFile_Value(this , Time , Values )
+                class(ClassProbe) :: this
+                real(8)::Time
+                real(8) , dimension(:) :: Values
+                character(len=20) :: CharFormat
+                integer::FileNumber , i
+                CharFormat=''
+                write(CharFormat , '(A,I2,A)') '(' , size(Values) + 1 , '(E23.15,1x))'
+                FileNumber = 33
+                open( FileNumber, file=this%FileName, Access='append', status='unknown') !Create the string format
+                    write(FileNumber , CharFormat) Time , (Values(i),i=1,size(Values))   !Export the result
+                close(FileNumber)
+        end subroutine
+        !==========================================================================================
 
-    !==========================================================================================
-    subroutine NodeProbeConstructor(Probe, FileName, VariableName, Node, ComponentsString)
-
+        !==========================================================================================
+        subroutine NodeProbeConstructor(Probe, FileName, VariableName, Node, ComponentsString)
 
             !************************************************************************************
             ! DECLARATIONS OF VARIABLES
             !************************************************************************************
             ! Modules and implicit declarations
             ! -----------------------------------------------------------------------------------
-            use ModParser
+            
             implicit none
 
             ! Object
@@ -275,12 +273,8 @@ module ModProbe
             ! Internal variables
             ! -----------------------------------------------------------------------------------
             type(ClassNodeProbe), pointer :: NodeProbe
-
             !************************************************************************************
-
-
             call Comp%Setup()
-
 
             allocate(NodeProbe)
 
@@ -298,12 +292,11 @@ module ModProbe
 
             Probe => NodeProbe
 
-    end subroutine
-    !==========================================================================================
+        end subroutine
+        !==========================================================================================
 
-    !==========================================================================================
-    subroutine WriteProbeResult_Node(this,FEA)
-
+        !==========================================================================================
+        subroutine WriteProbeResult_Node(this,FEA)
 
             !************************************************************************************
             ! DECLARATIONS OF VARIABLES
@@ -326,14 +319,12 @@ module ModProbe
             real(8), dimension(size(this%Components)) :: Uprobe
             !************************************************************************************
 
-
             ! teste se probe esta ativo
             if (.not. this%Active) then
                 return
             endif
 
             ! Teste de inteligência do usuário
-
             if ( this%Node >  size(FEA%GlobalNodesList) ) then
                 call this%WriteOnFile('ERROR - Node Number is greater than the Max Number of Nodes in the Mesh')
                 this%Active = .false.
@@ -388,15 +379,13 @@ module ModProbe
 
             end select
 
-    end subroutine
-    !==========================================================================================
+        end subroutine
+        !==========================================================================================
 
-
-    !==========================================================================================
-    subroutine GaussPointProbeConstructor (Probe, Variable, Element, FileName,  GaussPoint, ComponentsString)
+        !==========================================================================================
+        subroutine GaussPointProbeConstructor (Probe, Variable, Element, FileName,  GaussPoint, ComponentsString)
             ! Modules and implicit declarations
             ! -----------------------------------------------------------------------------------
-            use ModParser
             implicit none
 
             ! Object
@@ -433,19 +422,17 @@ module ModProbe
                 Call ParseComponents( ComponentsString , GaussPointProbe%Components )
             endif
 
-
             Probe => GaussPointProbe
 
-    end subroutine
-    !==========================================================================================
+        end subroutine
+        !==========================================================================================
 
-    !==========================================================================================
-    subroutine WriteProbeResult_GaussPoint(this,FEA)
+        !==========================================================================================
+        subroutine WriteProbeResult_GaussPoint(this,FEA)
             ! Modules and implicit declarations
             ! -----------------------------------------------------------------------------------
             use ModFEMAnalysis
             use ModMathRoutines
-            use ModParser
             use ModContinuumMechanics
 
             implicit none
@@ -542,7 +529,6 @@ module ModProbe
 
                     endif
 
-
                 ! Writing Deformation Gradient
                 case (VariableNames%DeformationGradient)
 
@@ -616,16 +602,14 @@ module ModProbe
 
             end select
 
-    end subroutine
-    !==========================================================================================
+        end subroutine
+        !==========================================================================================
 
-
-    !==========================================================================================
-    subroutine MicroStructureProbeConstructor (Probe, Variable, FileName, ComponentsString)
+        !==========================================================================================
+        subroutine MicroStructureProbeConstructor (Probe, Variable, FileName, ComponentsString)
 
             ! Modules and implicit declarations
             ! -----------------------------------------------------------------------------------
-            use ModParser
             implicit none
 
             ! Object
@@ -662,15 +646,14 @@ module ModProbe
 
             Probe => MicroStructureProbe
 
-    end subroutine
-    !==========================================================================================
+        end subroutine
+        !==========================================================================================
     
-    !==========================================================================================
-    subroutine MicroStructureBiphasicProbeConstructor (Probe, Variable, FileName, ComponentsString)
+        !==========================================================================================
+        subroutine MicroStructureBiphasicProbeConstructor (Probe, Variable, FileName, ComponentsString)
 
             ! Modules and implicit declarations
             ! -----------------------------------------------------------------------------------
-            use ModParser
             implicit none
 
             ! Object
@@ -704,18 +687,16 @@ module ModProbe
                 Call ParseComponents( ComponentsString , MicroStructureBiphasicProbe%Components )
             endif
 
-
             Probe => MicroStructureBiphasicProbe
 
-    end subroutine
-    !==========================================================================================
+        end subroutine
+        !==========================================================================================
     
-    !==========================================================================================
-    subroutine MacroStructureProbeConstructor (Probe, Variable, FileName, ComponentsString)
+        !==========================================================================================
+        subroutine MacroStructureProbeConstructor (Probe, Variable, FileName, ComponentsString)
 
             ! Modules and implicit declarations
             ! -----------------------------------------------------------------------------------
-            use ModParser
             implicit none
 
             ! Object
@@ -749,22 +730,19 @@ module ModProbe
                 Call ParseComponents( ComponentsString , MacroStructureProbe%Components )
             endif
 
-
             Probe => MacroStructureProbe
 
-    end subroutine
-    !==========================================================================================
+        end subroutine
+        !==========================================================================================
 
-    !==========================================================================================
-    subroutine NodalForceProbeConstructor(Probe, ProbeHyperMeshFile, FileName, ProbeLoadCollector, ComponentsString)
-
+        !==========================================================================================
+        subroutine NodalForceProbeConstructor(Probe, ProbeHyperMeshFile, FileName, ProbeLoadCollector, ComponentsString)
 
             !************************************************************************************
             ! DECLARATIONS OF VARIABLES
             !************************************************************************************
             ! Modules and implicit declarations
             ! -----------------------------------------------------------------------------------
-            use ModParser
             implicit none
 
             ! Object
@@ -859,18 +837,17 @@ module ModProbe
 
             close(FileNumber)
 
-    end subroutine
-    !==========================================================================================
+        end subroutine
+        !==========================================================================================
     
-    subroutine NodalFluxProbeConstructor(Probe, ProbeHyperMeshFile, FileName, ProbeLoadCollector, ComponentsString)
-
+        !==========================================================================================
+        subroutine NodalFluxProbeConstructor(Probe, ProbeHyperMeshFile, FileName, ProbeLoadCollector, ComponentsString)
 
             !************************************************************************************
             ! DECLARATIONS OF VARIABLES
             !************************************************************************************
             ! Modules and implicit declarations
             ! -----------------------------------------------------------------------------------
-            use ModParser
             implicit none
 
             ! Object
@@ -967,11 +944,11 @@ module ModProbe
 
             close(FileNumber)
 
-    end subroutine
-
-    !==========================================================================================
-    subroutine WriteProbeResult_NodalForce(this,FEA)
-
+        end subroutine
+        !==========================================================================================
+    
+        !==========================================================================================
+        subroutine WriteProbeResult_NodalForce(this,FEA)
 
             !************************************************************************************
             ! DECLARATIONS OF VARIABLES
@@ -979,8 +956,6 @@ module ModProbe
             ! Modules and implicit declarations
             ! -----------------------------------------------------------------------------------
             use ModFEMAnalysis
-            use ModInterfaces
-            use ModAnalysis
             implicit none
 
             ! Object
@@ -1011,12 +986,10 @@ module ModProbe
             endif
 
             allocate( Fint , mold = FEA%U )
-            Fint = 0.0d0
-                 
-            
+            Fint = 0.0d0         
             
             ! Option Problem Type 
-             select case ( FEA%AnalysisSettings%ProblemType )
+                select case ( FEA%AnalysisSettings%ProblemType )
 
                 case ( ProblemTypes%Mechanical )
                                
@@ -1040,9 +1013,7 @@ module ModProbe
                              
                 case default
                     stop "Problem Type not identified in WriteProbeResult_NodalForce"
-            end select
-
-            
+            end select         
 
             allocate(TotalForce( FEA%AnalysisSettings%NDOFnode )  )
             do DOF=1,FEA%AnalysisSettings%NDOFnode
@@ -1051,11 +1022,11 @@ module ModProbe
 
             call this%WriteOnFile( FEA%Time , TotalForce )
 
-    end subroutine
-    !==========================================================================================
+        end subroutine
+        !==========================================================================================
 
-     !==========================================================================================
-    subroutine WriteProbeResult_NodalFlux(this,FEA)
+        !==========================================================================================
+        subroutine WriteProbeResult_NodalFlux(this,FEA)
 
             !************************************************************************************
             ! DECLARATIONS OF VARIABLES
@@ -1063,8 +1034,6 @@ module ModProbe
             ! Modules and implicit declarations
             ! -----------------------------------------------------------------------------------
             use ModFEMAnalysis
-            use ModInterfaces
-            use ModAnalysis
             implicit none
 
             ! Object
@@ -1098,7 +1067,7 @@ module ModProbe
             Fint = 0.0d0
             
             ! Option Problem Type 
-             select case ( FEA%AnalysisSettings%ProblemType )
+                select case ( FEA%AnalysisSettings%ProblemType )
 
                 case ( ProblemTypes%Mechanical )
                                
@@ -1127,16 +1096,16 @@ module ModProbe
                         
             call this%WriteOnFile( FEA%Time , TotalFlux )
 
-    end subroutine
-    
-    !==========================================================================================
-    subroutine WriteProbeResult_MicroStructure(this,FEA)
+         end subroutine
+        !==========================================================================================
+     
+        !==========================================================================================
+        subroutine WriteProbeResult_MicroStructure(this,FEA)
 
             ! Modules and implicit declarations
             ! -----------------------------------------------------------------------------------
             use ModFEMAnalysis
             use ModMathRoutines
-            use ModParser
             use ModContinuumMechanics
             use ModMultiscaleFEMAnalysis
             use ModVoigtNotation
@@ -1269,18 +1238,16 @@ module ModProbe
 
             end select
 
-    end subroutine
-    !==========================================================================================
+        end subroutine
+        !==========================================================================================
 
-    !==========================================================================================
-    subroutine WriteProbeResult_MicroStructureBiphasic(this,FEA)
+        !==========================================================================================
+        subroutine WriteProbeResult_MicroStructureBiphasic(this,FEA)
 
             ! Modules and implicit declarations
             ! -----------------------------------------------------------------------------------
-            use ModFEMAnalysis
             use ModFEMAnalysisBiphasic
             use ModMathRoutines
-            use ModParser
             use ModContinuumMechanics
             use ModMultiscaleFEMAnalysis
             use ModMultiscaleFEMAnalysisBiphasic
@@ -1446,19 +1413,17 @@ module ModProbe
                     this%Active = .false.
             end select    
 
-    end subroutine
-    !==========================================================================================
+        end subroutine
+        !==========================================================================================
     
-    !==========================================================================================
-    subroutine WriteProbeResult_MacroStructure(this,FEA)
+        !==========================================================================================
+        subroutine WriteProbeResult_MacroStructure(this,FEA)
 
             ! Modules and implicit declarations
             ! -----------------------------------------------------------------------------------
             use ModFEMAnalysis
             use ModMathRoutines
-            use ModParser
             use ModContinuumMechanics
-  
 
             implicit none
 
@@ -1509,10 +1474,8 @@ module ModProbe
             end select
    
 
-    end subroutine
-    !==========================================================================================
-
-
+        end subroutine
+        !==========================================================================================
 
 end module
 

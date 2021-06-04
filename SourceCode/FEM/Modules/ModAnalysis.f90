@@ -11,13 +11,11 @@
 ! Date: 2019/05 (Biphasic Analysis)         Author: Bruno Klahr - Thiago A. Carniel
 !##################################################################################################
 module ModAnalysis
-
 	!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 	! DECLARATIONS OF VARIABLES
 	!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     ! IDs of the analysis settings.
     !----------------------------------------------------------------------------------------------
-
 
     ! Enumerators
     !----------------------------------------------------------------------------------------------
@@ -215,6 +213,7 @@ module ModAnalysis
         ! Referential volume
         real(8) :: TotalVolX = 0
         
+        ! Multiscale Minimal Model Parameter
         real(8) :: MultiscaleEpsilonParameter      
         
         ! Staggered Parameter
@@ -241,8 +240,6 @@ module ModAnalysis
         ! Date:         Author:
         !==========================================================================================
         subroutine  ClassAnalysisConstructor(this,FlagAnalysisSettings)
-
-
 		    !************************************************************************************
             ! DECLARATIONS OF VARIABLES
 		    !************************************************************************************
@@ -317,7 +314,6 @@ module ModAnalysis
             end select
 
 		    !************************************************************************************
-
         end subroutine
         !==========================================================================================
 
@@ -328,8 +324,6 @@ module ModAnalysis
         ! Date:         Author:
         !==========================================================================================
         subroutine  GetTotalNumberOfDOF(this, GlobalNodesList, TotalnDOF)
-
-
 		    !************************************************************************************
             ! DECLARATIONS OF VARIABLES
 		    !************************************************************************************
@@ -366,8 +360,6 @@ module ModAnalysis
 
         !==========================================================================================
         subroutine  GetTotalNumberOfDOF_fluid(this, GlobalNodesList, TotalnDOF_fluid)
-
-
 		    !************************************************************************************
             ! DECLARATIONS OF VARIABLES
 		    !************************************************************************************
@@ -408,8 +400,6 @@ module ModAnalysis
 
         end subroutine
         !==========================================================================================
-
-
 
 end module
 

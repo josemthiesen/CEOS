@@ -18,7 +18,7 @@ module ModElementHexaU20P8
 	!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 	! Modules and implicit declarations
 	! ---------------------------------------------------------------------------------------------
-    use ModElement
+    use ModElementBiphasic
 
 	! Global variables within the module
 	! -------------------------------------------------------------------------------------------
@@ -39,21 +39,21 @@ module ModElementHexaU20P8
         contains
             ! Class Methods
             !--------------------------------------------------------------------------------------
-            procedure :: GetProfile          => GetProfile_Hexa20
-            procedure :: GetGaussPoints      => GetGaussPoints_Hexa20
-            procedure :: GetNumberOfNodes    => GetNumberOfNodes_Hexa20
-            procedure :: GetShapeFunctions   => GetShapeFunctions_Hexa20
-            procedure :: GetDifShapeFunctions=> GetDifShapeFunctions_Hexa20
-            procedure :: AllocateGaussPoints => AllocateGaussPointsParameters_Hexa20
-            procedure :: GetNodalNaturalCoord  => GetNodalNaturalCoord_Hexa20
+            procedure :: GetProfile             => GetProfile_Hexa20
+            procedure :: GetGaussPoints         => GetGaussPoints_Hexa20
+            procedure :: GetNumberOfNodes       => GetNumberOfNodes_Hexa20
+            procedure :: GetShapeFunctions      => GetShapeFunctions_Hexa20
+            procedure :: GetDifShapeFunctions   => GetDifShapeFunctions_Hexa20
+            procedure :: AllocateGaussPoints    => AllocateGaussPointsParameters_Hexa20
+            procedure :: GetNodalNaturalCoord   => GetNodalNaturalCoord_Hexa20
             
-            ! Parte do Fluido
+            ! Fluid Methods
             procedure :: GetProfile_fluid           => GetProfile_Hexa8
-            procedure :: GetGaussPoints_fluid       => GetGaussPoints_Hexa8
+            procedure :: GetGaussPoints_fluid       => GetGaussPoints_Hexa20
             procedure :: GetNumberOfNodes_fluid     => GetNumberOfNodes_Hexa8
             procedure :: GetShapeFunctions_fluid    => GetShapeFunctions_Hexa8
             procedure :: GetDifShapeFunctions_fluid => GetDifShapeFunctions_Hexa8
-            procedure :: AllocateGaussPoints_fluid  => AllocateGaussPointsParameters_Hexa8
+            procedure :: AllocateGaussPoints_fluid  => AllocateGaussPointsParameters_Hexa20 ! Fluid Gauss Point is the same as solid
 
     end type
 	!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -68,6 +68,7 @@ module ModElementHexaU20P8
         !==========================================================================================
         
         ! Solid
+        !==========================================================================================
         subroutine GetProfile_Hexa20(this,Profile)
         
             class(ClassElementHexaU20P8)::this
@@ -82,8 +83,9 @@ module ModElementHexaU20P8
             ElementDimension = 3 )
 
         end subroutine
-        
+        !========================================================================================== 
         ! Fluid
+        !==========================================================================================
         subroutine GetProfile_Hexa8(this,Profile)
         
             class(ClassElementHexaU20P8)::this
@@ -98,18 +100,14 @@ module ModElementHexaU20P8
             ElementDimension = 3 )
 
         end subroutine
-        
         !==========================================================================================
-        ! Method GetGaussPoints:  This method points to the natural coordinates and weights
+        
+        ! Solid
+        !==========================================================================================
+        ! Method GetGaussPoints_Hexa20:  This method points to the natural coordinates and weights
         ! used in the Gaussian Quadrature.
-        !------------------------------------------------------------------------------------------
-        ! Modifications:
-        ! Date:         Author:
-        !==========================================================================================
-        
-        !Solid
+        !==========================================================================================       
         subroutine GetGaussPoints_Hexa20(this, NaturalCoord, Weight)
-
 		    !************************************************************************************
             ! DECLARATIONS OF VARIABLES
 		    !************************************************************************************
@@ -125,24 +123,23 @@ module ModElementHexaU20P8
             ! -----------------------------------------------------------------------------------
             real(8) , pointer, dimension(:,:)  :: NaturalCoord
             real(8) , pointer, dimension(:)    :: Weight
-
 		    !************************************************************************************
 
 		    !************************************************************************************
             ! POINT TO HEXA20 METHODS
 		    !************************************************************************************
-
             NaturalCoord => NaturalCoordHexa20
             Weight       => WeightHexa20
-
 		    !************************************************************************************
-
         end subroutine
-        
+        !==========================================================================================
        
-        ! Method GetGaussPoints_Hexa8 (Fluid):  This method points to the natural coordinates and weights
+        ! Fluid
+        !==========================================================================================
+        ! Method GetGaussPoints_Hexa8:  This method points to the natural coordinates and weights
+        ! used in the Gaussian Quadrature.
+        !========================================================================================== 
         subroutine GetGaussPoints_Hexa8(this, NaturalCoord, Weight)
-
 		    !************************************************************************************
             ! DECLARATIONS OF VARIABLES
 		    !************************************************************************************
@@ -158,30 +155,21 @@ module ModElementHexaU20P8
             ! -----------------------------------------------------------------------------------
             real(8) , pointer, dimension(:,:)  :: NaturalCoord
             real(8) , pointer, dimension(:)    :: Weight
-
 		    !************************************************************************************
 
 		    !************************************************************************************
             ! POINT TO HEXA8 METHODS
 		    !************************************************************************************
-
             NaturalCoord => NaturalCoordHexa8
             Weight       => WeightHexa8
-
 		    !************************************************************************************
-
-        end subroutine
-        
+        end subroutine      
         !==========================================================================================
 
         !==========================================================================================
-        ! Method GetNumberOfNodes:  This method returns the number of nodes of the element
-        !------------------------------------------------------------------------------------------
-        ! Modifications:
-        ! Date:         Author:
+        ! Method GetNumberOfNodes_Hexa20:  This method returns the number of nodes of the element
         !==========================================================================================
         function GetNumberOfNodes_Hexa20(this) result(nNodes)
-
 		    !************************************************************************************
             ! DECLARATIONS OF VARIABLES
 		    !************************************************************************************
@@ -196,23 +184,20 @@ module ModElementHexaU20P8
             ! Output variables
             ! -----------------------------------------------------------------------------------
             integer  :: nNodes
-
 		    !************************************************************************************
 
 		    !************************************************************************************
             ! NUMBER OF NODES - HEXA20
 		    !************************************************************************************
-
             nNodes=20
-
 		    !************************************************************************************
-
         end function
         !==========================================================================================
         
                 
-        ! Method GetNumberOfNodes_Hexa8 (Fluid)
-
+        !==========================================================================================
+        ! Method GetNumberOfNodes_Hexa8:  This method returns the number of nodes of the element
+        !==========================================================================================
         function GetNumberOfNodes_Hexa8(this) result(nNodes)
 
 		    !************************************************************************************
@@ -229,17 +214,13 @@ module ModElementHexaU20P8
             ! Output variables
             ! -----------------------------------------------------------------------------------
             integer  :: nNodes
-
 		    !************************************************************************************
 
 		    !************************************************************************************
             ! NUMBER OF NODES - HEXA8
 		    !************************************************************************************
-
             nNodes=8
-
 		    !************************************************************************************
-
         end function
 
         !==========================================================================================
@@ -249,7 +230,6 @@ module ModElementHexaU20P8
         ! Date:         Author:
         !==========================================================================================
         subroutine GetShapeFunctions_Hexa20(this , NaturalCoord , ShapeFunctions )
-
             !************************************************************************************
             ! DECLARATIONS OF VARIABLES
 		    !************************************************************************************
@@ -274,7 +254,6 @@ module ModElementHexaU20P8
             integer             :: i, j
             real(8)             :: xi , eta , zeta , id(20,3)
             real(8) , parameter :: R2 = 2.0d0, R1=1.0d0, R0 = 0.0d0
-
 		    !************************************************************************************--
 
             !************************************************************************************
@@ -320,15 +299,12 @@ module ModElementHexaU20P8
                 ShapeFunctions(i) = ShapeFunctions(i)/4.0d0    
             enddo
             
-
       	    !************************************************************************************
-
         end subroutine
         !==========================================================================================
 
         !==========================================================================================
         subroutine GetShapeFunctions_Hexa8(this , NaturalCoord , ShapeFunctions )
-
             !************************************************************************************
             ! DECLARATIONS OF VARIABLES
 		    !************************************************************************************
@@ -353,7 +329,6 @@ module ModElementHexaU20P8
             integer             :: i
             real(8)             :: xi , eta , zeta , id(8,3)
             real(8) , parameter :: R1=1.0d0
-
 		    !************************************************************************************--
 
             !************************************************************************************
@@ -376,7 +351,6 @@ module ModElementHexaU20P8
             enddo
 
       	    !************************************************************************************
-
         end subroutine
         !==========================================================================================
 
@@ -388,7 +362,6 @@ module ModElementHexaU20P8
         ! Date:         Author:
         !==========================================================================================
         subroutine GetDifShapeFunctions_Hexa20(this , NaturalCoord , DifShapeFunctions )
-
   			!************************************************************************************
             ! DECLARATIONS OF VARIABLES
 		    !************************************************************************************
@@ -413,7 +386,6 @@ module ModElementHexaU20P8
             integer             :: i, j
             real(8)             :: xi , eta , zeta , id(20,3)
             real(8) , parameter :: R2 = 2.0d0, R1=1.0d0 , R0=0.0d0
-
 		    !************************************************************************************
 
       	    !************************************************************************************
@@ -441,7 +413,7 @@ module ModElementHexaU20P8
             id(17,:)=[ -R1 , -R1 ,  R0 ]
             id(18,:)=[  R1 , -R1 ,  R0 ]
             id(19,:)=[  R1 ,  R1 ,  R0 ]
-            id(20,:)=[ -R1 ,  R1 ,  R0 ] !ate aqui ok
+            id(20,:)=[ -R1 ,  R1 ,  R0 ] 
 
             do i=1,8
                 DifShapeFunctions(i,1) = id(i,1)*(R1 + id(i,2)*eta)*(R1 + id(i,3)*zeta)*(id(i,1)*xi + &
@@ -478,13 +450,11 @@ module ModElementHexaU20P8
             enddo
             
       	    !************************************************************************************
-
         end subroutine
         !==========================================================================================
         
         !==========================================================================================
         subroutine GetDifShapeFunctions_Hexa8(this , NaturalCoord , DifShapeFunctions )
-
   			!************************************************************************************
             ! DECLARATIONS OF VARIABLES
 		    !************************************************************************************
@@ -509,7 +479,6 @@ module ModElementHexaU20P8
             integer             :: i
             real(8)             :: xi , eta , zeta , id(8,3)
             real(8) , parameter :: R1=1.0d0 , R0=0.0d0
-
 		    !************************************************************************************
 
       	    !************************************************************************************
@@ -538,16 +507,12 @@ module ModElementHexaU20P8
             enddo
 
       	    !************************************************************************************
-
         end subroutine
         !==========================================================================================
 
         !==========================================================================================
         ! Method AllocateGaussPointsParameters: This method returns the natural coordinates
         ! and weights used in the Gaussian Quadrature.
-        !------------------------------------------------------------------------------------------
-        ! Modifications:
-        ! Date:         Author:
         !==========================================================================================
         subroutine AllocateGaussPointsParameters_Hexa20(this,nGP)
 
@@ -570,7 +535,6 @@ module ModElementHexaU20P8
             ! -----------------------------------------------------------------------------------
             real(8) :: x , c1, c2, id(27,3)
             real(8),parameter::R1=1.0d0, R0=0.0d0, R05 = 0.5d0
-
 		    !************************************************************************************
 
 		    !************************************************************************************
@@ -625,13 +589,11 @@ module ModElementHexaU20P8
             NaturalCoordHexa20=id*x
 
 		    !************************************************************************************
-
             end subroutine
         !==========================================================================================
         
         !==========================================================================================
         subroutine AllocateGaussPointsParameters_Hexa8(this,nGP)
-
 		    !************************************************************************************
             ! DECLARATIONS OF VARIABLES
 		    !************************************************************************************
@@ -651,7 +613,6 @@ module ModElementHexaU20P8
             ! -----------------------------------------------------------------------------------
             real(8) :: x , id(8,3)
             real(8),parameter::R1=1.0d0
-
 		    !************************************************************************************
 
 		    !************************************************************************************
@@ -680,12 +641,11 @@ module ModElementHexaU20P8
             WeightHexa8=1.0d0
 
 		    !************************************************************************************
-
         end subroutine
         !==========================================================================================
         
-         subroutine GetNodalNaturalCoord_Hexa20(this, NodalNaturalCoord)
-
+        !==========================================================================================
+        subroutine GetNodalNaturalCoord_Hexa20(this, NodalNaturalCoord)
 		    !************************************************************************************
             ! DECLARATIONS OF VARIABLES
 		    !************************************************************************************
@@ -728,12 +688,9 @@ module ModElementHexaU20P8
             NodalNaturalCoord(:,18)=[  R1 , -R1 ,  R0 ]
             NodalNaturalCoord(:,19)=[  R1 ,  R1 ,  R0 ]
             NodalNaturalCoord(:,20)=[ -R1 ,  R1 ,  R0 ]
-
-
 		    !************************************************************************************
-            !==========================================================================================
-
         end subroutine
+        !==========================================================================================
 
 
 end module

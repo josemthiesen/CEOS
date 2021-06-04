@@ -18,6 +18,7 @@ module ModFEMSystemOfEquationsFluid
     use ModBoundaryConditions
     use ModElementLibrary
     use ModGlobalSparseMatrix
+    use ModGlobalFEMBiphasic
 
     implicit none
 
@@ -25,8 +26,9 @@ module ModFEMSystemOfEquationsFluid
 
         real(8),dimension(:),allocatable                       :: Fint , Fext , PBar  !(Pbar ~~ Ubar)
         real(8),dimension(:),allocatable                       :: VSolid              ! Global solid velocity
+        real(8),dimension(:),allocatable                       :: U                   ! Global solid displacement
         real (8)                                               :: Time
-        integer                      , dimension(:) , pointer  :: PresDOF
+        integer, dimension(:) , pointer                        :: PresDOF
 
         integer, dimension(:), allocatable                     :: PrescPresSparseMapZERO
         integer, dimension(:), allocatable                     :: PrescPresSparseMapONE
@@ -40,24 +42,30 @@ module ModFEMSystemOfEquationsFluid
 
     contains
 
-        procedure :: EvaluateSystem => EvaluateR
+        procedure :: EvaluateSystem         => EvaluateR
         procedure :: EvaluateGradientSparse => EvaluateKt
-        procedure :: PostUpdate => FEMUpdateMesh
+        procedure :: PostUpdate             => FEMUpdateMesh
 
     end type
 
     contains
-!--------------------------------------------------------------------------------------------------
+    
+    !=================================================================================================
     subroutine EvaluateR(this,X,R)
 
         use ModInterfaces
         class(ClassFEMSystemOfEquationsFluid) :: this
         real(8),dimension(:) :: X,R
-
-  
-            
-            ! X -> Global pressure of biphasic analysis
         
+        !class(ClassElementBiphasic), pointer  :: ElBiphasic
+  
+            ! X -> Global pressure of biphasic analysis
+            ! Update the deformation gradient and permeability on fluid gauss points
+            call SolvePermeabilityModel( this%ElementList , this%AnalysisSettings , this%U, this%Status)
+
+            !call ConvertElementToElementBiphasic(this%ElementList(1)%El,  ElBiphasic) ! Aponta o objeto ElBiphasic para o ElementList(e)%El mas com o type correto ClassElementBiphasic
+            !call AcessoValores( ElBiphasic)
+            
             ! Internal Force
             call InternalForceFluid(this%ElementList , this%AnalysisSettings , X , this%VSolid , this%Fint , this%Status)
 
@@ -70,20 +78,20 @@ module ModFEMSystemOfEquationsFluid
             R = this%Fint - this%Fext
 
     end subroutine
-
-!--------------------------------------------------------------------------------------------------
-
+    !=================================================================================================
+    
+    !=================================================================================================
     subroutine EvaluateKt(this,X,R,G)
 
         use ModInterfaces
         use ModMathRoutines
         class(ClassFEMSystemOfEquationsFluid)        :: this
-        class (ClassGlobalSparseMatrix), pointer :: G
+        class (ClassGlobalSparseMatrix), pointer     :: G
         real(8),dimension(:) :: X , R
         real(8) :: norma
         
         ! X -> Global pressure of biphasic analysis
-
+        
         call TangentStiffnessMatrixFluid(this%AnalysisSettings , this%ElementList , this%Kg )
 
         ! The dirichelet BC (Fluid -> pressure) are being applied in the system Kx=R and not in Kx = -R
@@ -97,25 +105,18 @@ module ModFEMSystemOfEquationsFluid
         G => this%Kg
 
     end subroutine
+    !=================================================================================================
 
-!--------------------------------------------------------------------------------------------------
-
+    !=================================================================================================
     subroutine FEMUpdateMesh(this,X)
         use ModInterfaces
         class(ClassFEMSystemOfEquationsFluid) :: this
         real(8),dimension(:)::X
 
         ! Fluid do not update the mesh
-        
-        !if (this%AnalysisSettings%NLAnalysis == .true.) then
-        !    call UpdateMeshCoordinates(this%GlobalNodesList,this%AnalysisSettings,X)
-        !endif
-
+   
     end subroutine
-
-
-
-
+    !=================================================================================================
 
 end module
 

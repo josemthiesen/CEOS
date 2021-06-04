@@ -28,8 +28,8 @@ module ModNodes
 
             ! Class Methods
             !---------------------------------------------------------------------------------
-            procedure::NodeConstructor
-            procedure::NodeDestructor
+            procedure :: NodeConstructor
+            procedure :: NodeDestructor
 
     end type
 	!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -68,7 +68,6 @@ module ModNodes
             ! -----------------------------------------------------------------------------------
             integer , intent(in) :: nDOF , ID
             real(8) , dimension(:) , intent(in) :: GlobalCoord
-
 			!************************************************************************************
 
  		    !************************************************************************************
@@ -89,10 +88,8 @@ module ModNodes
             allocate( this%DOF(nDOF) )
 
 		    !************************************************************************************
-
         end subroutine
         !==========================================================================================
-
 
         !==========================================================================================
         ! Method NodeDestructor: Routine that destructs the node
@@ -120,7 +117,6 @@ module ModNodes
             if (allocated(this%Coord)) deallocate(this%Coord)
 
 		    !************************************************************************************
-
         end subroutine
         !==========================================================================================
 

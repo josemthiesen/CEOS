@@ -12,20 +12,18 @@
 module ModMultiscaleHomogenizations
 
     use ModAnalysis
-    use ModElement
+    use ModElementBiphasic
     use ModVoigtNotation
     use ModContinuumMechanics
     use OMP_LIB
-
     
     contains
     
+        
         !=================================================================================================
         subroutine GetHomogenizedStress( AnalysisSettings, ElementList, HomogenizedStress )
             ! NOTE (Thiago#1#): A Homogeneização das tensões e do gradiente de deformação são funcionam para RVEs sem furos. 
             ! Se o RVE tiver furo, discretizar o furo com um material "mole"
-
-
             !************************************************************************************
             ! DECLARATIONS OF VARIABLES
             !************************************************************************************
@@ -45,7 +43,6 @@ module ModMultiscaleHomogenizations
             ! -----------------------------------------------------------------------------------
             real(8) , dimension(:) :: HomogenizedStress
 
-
             ! Internal variables
             ! -----------------------------------------------------------------------------------
             integer							    :: NDOFel , gp, e, nNodes, DimProb,i,j,n
@@ -57,13 +54,12 @@ module ModMultiscaleHomogenizations
             real(8) , dimension(:,:) , pointer :: DifSF
             real(8) , dimension(AnalysisSettings%AnalysisDimension,AnalysisSettings%AnalysisDimension) :: JacobX
             real(8) , dimension(:)   , pointer :: ShapeFunctions
+            integer                              :: NumberOfThreads
             !************************************************************************************
 
             !************************************************************************************
             ! STRESS HOMOGENISATION - FIRST PIOLA
             !************************************************************************************
-
-
             DimProb = AnalysisSettings%AnalysisDimension
 
             TotalVolX = 0.0d0
@@ -74,6 +70,13 @@ module ModMultiscaleHomogenizations
 
             FactorAxiX = 1.0d0
             HomogenizedStress = 0.0d0
+            NumberOfThreads = omp_get_max_threads()
+                
+            call omp_set_num_threads( NumberOfThreads )
+           
+            !$OMP PARALLEL DEFAULT(PRIVATE)                                &
+                  Shared( AnalysisSettings,  ElementList, TotalVolX, HomogenizedStress, DimProb, FactorAxiX)         
+            !$OMP DO
             !Loop over Elements
             do e = 1,size(ElementList)
 
@@ -94,7 +97,6 @@ module ModMultiscaleHomogenizations
 
                 !Loop over gauss points
                 do gp = 1, size(NaturalCoord,dim=1)
-
 
                     call ElementList(e)%El%GetDifShapeFunctions(NaturalCoord(gp,:) , DifSF )
 
@@ -123,20 +125,19 @@ module ModMultiscaleHomogenizations
                     PiolaVoigt = Tensor2ToVoigt(PiolaTensor)
 
                     !Homogenized Stress
+                    !$OMP CRITICAL
                     HomogenizedStress = HomogenizedStress + (PiolaVoigt*Weight(gp)*detJX*FactorAxiX)/TotalVolX
-
-
+                    !$OMP END CRITICAL
                 enddo
-
             enddo
-            !=================================================================================================
-
+            !$OMP END DO
+            !$OMP END PARALLEL
+            !************************************************************************************
         end subroutine
         !=================================================================================================
 
         !=================================================================================================
         subroutine GetHomogenizedDeformationGradient(AnalysisSettings, ElementList , HomogenizedF )
-
             !************************************************************************************
             ! DECLARATIONS OF VARIABLES
             !************************************************************************************
@@ -171,9 +172,8 @@ module ModMultiscaleHomogenizations
             !************************************************************************************
 
             !************************************************************************************
-            ! HOMOGENISATION
+            ! DEFORMATION GRADIENT HOMOGENISATION
             !************************************************************************************
-
             DimProb = AnalysisSettings%AnalysisDimension
 
             TotalVolX = AnalysisSettings%TotalVolX
@@ -240,14 +240,12 @@ module ModMultiscaleHomogenizations
             enddo
             !$OMP END DO
             !$OMP END PARALLEL
-            !************************************************************************************
-        
+            !************************************************************************************      
         end subroutine
         !=================================================================================================
-
+        
         !=================================================================================================
         subroutine GetHomogenizedDisplacement( AnalysisSettings, ElementList, U, HomogenizedU )
-
             !************************************************************************************
             ! DECLARATIONS OF VARIABLES
             !************************************************************************************
@@ -284,9 +282,8 @@ module ModMultiscaleHomogenizations
             !************************************************************************************
 
             !************************************************************************************
-            ! HOMOGENISATION
+            ! DISPLACEMENT HOMOGENISATION
             !************************************************************************************
-
             DimProb = AnalysisSettings%AnalysisDimension
 
             TotalVolX =  AnalysisSettings%TotalVolX
@@ -357,18 +354,17 @@ module ModMultiscaleHomogenizations
             enddo
             !$OMP END DO
             !$OMP END PARALLEL
-
             !************************************************************************************
-
-
         end subroutine
         !=================================================================================================
     
         
         ! Homogenizations subroutines - > Biphasic
         !=================================================================================================
-        subroutine GetHomogenizedPressureBiphasic( AnalysisSettings, ElementList, P, HomogenizedPressure )
+        !=================================================================================================
         
+        !=================================================================================================
+        subroutine GetHomogenizedPressureBiphasic( AnalysisSettings, ElementList, P, HomogenizedPressure )      
             ! NOTE: Pressure homogenization realized on the solid reference configuration.
             !************************************************************************************
             ! DECLARATIONS OF VARIABLES
@@ -489,10 +485,7 @@ module ModMultiscaleHomogenizations
             enddo
             !$OMP END DO
             !$OMP END PARALLEL
-
             !************************************************************************************
-
-
         end subroutine
         !=================================================================================================
     
@@ -522,7 +515,6 @@ module ModMultiscaleHomogenizations
             ! -----------------------------------------------------------------------------------
             real(8), dimension(3)    :: HomogenizedGradientPressure
 
-
             ! Internal variables
             ! -----------------------------------------------------------------------------------
             integer							     :: e, gp, i, j, n, DimProb
@@ -546,9 +538,7 @@ module ModMultiscaleHomogenizations
         
             !************************************************************************************
             ! FLUID PRESSURE GRADIENT HOMOGENISATION - SOLID REFERENCE CONFIGURATION
-            !************************************************************************************
-        
-    
+            !************************************************************************************      
             DimProb = AnalysisSettings%AnalysisDimension
 
             ! Solid reference total volume
@@ -620,17 +610,12 @@ module ModMultiscaleHomogenizations
                    !Homogenized Pressure Gradient
                    !$OMP CRITICAL
                    HomogenizedGradientPressure = HomogenizedGradientPressure + (GradPX*Weight(gp)*detJX*FactorAxiX)/TotalVolX
-                   !$OMP END CRITICAL
-                
+                   !$OMP END CRITICAL          
                 enddo
-
             enddo
             !$OMP END DO
             !$OMP END PARALLEL
-
             !************************************************************************************
-
-
         end subroutine
         !=================================================================================================
     
@@ -647,14 +632,14 @@ module ModMultiscaleHomogenizations
            ! -----------------------------------------------------------------------------------
            implicit none
   
-            ! Object
-            ! -----------------------------------------------------------------------------------
-            type  (ClassAnalysis)                                    :: AnalysisSettings
-            type  (ClassElementsWrapper),     pointer, dimension(:)  :: ElementList
+           ! Object
+           ! -----------------------------------------------------------------------------------
+           type  (ClassAnalysis)                                    :: AnalysisSettings
+           type  (ClassElementsWrapper),     pointer, dimension(:)  :: ElementList
 
-            ! Input variables
-            ! ----------------------------------------------- ------------------------------------
-            real(8), pointer, dimension(:)       :: VSolid   ! Global vector of solid velocity
+           ! Input variables
+           ! ----------------------------------------------- ------------------------------------
+           real(8), pointer, dimension(:)       :: VSolid   ! Global vector of solid velocity
   
            ! Input/Output variables
            ! -----------------------------------------------------------------------------------
@@ -682,6 +667,7 @@ module ModMultiscaleHomogenizations
            real(8)                              :: ContVsolid
            real(8)                              :: GradVs(3,3)
            real(8)                              :: GradVsFinv(3,3)
+           integer                              :: NumberOfThreads
        
            !************************************************************************************
            ! RELATIVE VELOCITY HOMOGENISATION - SOLID REFERENCE CONFIGURATION
@@ -697,7 +683,10 @@ module ModMultiscaleHomogenizations
            TotalVolX = AnalysisSettings%TotalVolX 
   
            HomogenizedwX = 0.0d0
-           !Loop over Elements
+            !$OMP PARALLEL DEFAULT(PRIVATE)                                &
+                    Shared( AnalysisSettings,  ElementList, TotalVolX, HomogenizedwX, DimProb, FactorAxiX)         
+            !$OMP DO
+            !Loop over Elements
            do e = 1,size(ElementList)
            
                ! Aponta o objeto ElBiphasic para o ElementList(e)%El mas com o type correto ClassElementBiphasic
@@ -779,156 +768,163 @@ module ModMultiscaleHomogenizations
                    ContVsolid = Trace(GradVsFinv)
                
                    !Homogenized Relative Velocity
-                   HomogenizedwX = HomogenizedwX + ((wY_micro - ContVsolid*J_micro*Y_PG)*Weight(gp)*detJX*FactorAxiX)/TotalVolX
-                              
+                   !$OMP CRITICAL
+                   HomogenizedwX = HomogenizedwX + ((wY_micro - ContVsolid*J_micro*Y_PG)*Weight(gp)*detJX*FactorAxiX)/TotalVolX           
+                   !$OMP END CRITICAL 
                enddo
-  
            enddo
-  
-           !************************************************************************************
-  
-  
+           !$OMP END DO
+           !$OMP END PARALLEL
+           !************************************************************************************                     
         end subroutine
         !=================================================================================================
    
         !=================================================================================================
-        subroutine GetHomogenizedTotalStressBiphasic( AnalysisSettings, ElementList, P, HomogenizedStress )
-        ! NOTE (Thiago#1#): A Homogeneização das tensões e do gradiente de deformação são funcionam para 
-        ! RVEs sem furos. 
-        ! Se o RVE tiver furo, discretizar o furo com um material "mole"
+        subroutine GetHomogenizedTotalStressBiphasic( AnalysisSettings, ElementList, P, HomogenizedTotalStress )
+            ! NOTE (Thiago#1#): A Homogeneização das tensões e do gradiente de deformação são funcionam para 
+            ! RVEs sem furos. 
+            ! Se o RVE tiver furo, discretizar o furo com um material "mole"
 
+            !************************************************************************************
+            ! DECLARATIONS OF VARIABLES
+            !************************************************************************************
+            ! Modules and implicit declarations
+            ! -----------------------------------------------------------------------------------
+            implicit none
 
-        !************************************************************************************
-        ! DECLARATIONS OF VARIABLES
-        !************************************************************************************
-        ! Modules and implicit declarations
-        ! -----------------------------------------------------------------------------------
-        implicit none
+            ! Object
+            ! -----------------------------------------------------------------------------------
+            type  (ClassAnalysis)                                    :: AnalysisSettings
+            type  (ClassElementsWrapper),     pointer, dimension(:)  :: ElementList
 
-       ! Object
-        ! -----------------------------------------------------------------------------------
-        type  (ClassAnalysis)                                    :: AnalysisSettings
-        type  (ClassElementsWrapper),     pointer, dimension(:)  :: ElementList
+            ! Input variables
+            ! ----------------------------------------------- ------------------------------------
+            real(8), pointer, dimension(:)      :: P   ! Global vector of fluid pressure
 
-        ! Input variables
-        ! ----------------------------------------------- ------------------------------------
-        real(8), pointer, dimension(:)      :: P   ! Global vector of fluid pressure
+            ! Input/Output variables
+            ! -----------------------------------------------------------------------------------
+            real(8) , dimension(:) :: HomogenizedTotalStress
 
-        ! Input/Output variables
-        ! -----------------------------------------------------------------------------------
-        real(8) , dimension(:) :: HomogenizedStress
-
-        ! Internal variables
-        ! -----------------------------------------------------------------------------------
-        integer							    :: NDOFel , gp, e, nNodes, DimProb,i,j,n
-        real(8)							    :: detJX, TotalVolX , rX
-        real(8) , pointer , dimension(:)    :: Weight, Cauchy
-        real(8) , pointer , dimension(:,:)  :: NaturalCoord
-        real(8)                             :: FactorAxiX
-        real(8)                             :: PiolaTensor(3,3), CauchyTensor(3,3), PiolaVoigt(9)
-        real(8) , dimension(:,:) , pointer  :: DifSF
-        real(8) , dimension(AnalysisSettings%AnalysisDimension,AnalysisSettings%AnalysisDimension) :: JacobX
-        real(8) , dimension(:)   , pointer  :: ShapeFunctionsFluid
+            ! Internal variables
+            ! -----------------------------------------------------------------------------------
+            integer							    :: NDOFel , gp, e, nNodes, DimProb,i,j,n
+            real(8)							    :: detJX, TotalVolX , rX
+            real(8) , pointer , dimension(:)    :: Weight, Cauchy
+            real(8) , pointer , dimension(:,:)  :: NaturalCoord
+            real(8)                             :: FactorAxiX
+            real(8)                             :: PiolaTensor(3,3), CauchyTensor(3,3), PiolaVoigt(9)
+            real(8) , dimension(:,:) , pointer  :: DifSF
+            real(8) , dimension(AnalysisSettings%AnalysisDimension,AnalysisSettings%AnalysisDimension) :: JacobX
+            real(8) , dimension(:)   , pointer  :: ShapeFunctionsFluid
         
-        class(ClassElementBiphasic), pointer :: ElBiphasic
-        real(8), pointer, dimension(:)       :: Pe
-        real(8), dimension(3,3)              :: I3
-        integer , pointer , dimension(:)     :: GM_fluid
-        integer                              :: nDOFel_fluid, nNodesFluid
-
+            class(ClassElementBiphasic), pointer :: ElBiphasic
+            real(8), pointer, dimension(:)       :: Pe
+            real(8), dimension(3,3)              :: I3
+            integer , pointer , dimension(:)     :: GM_fluid
+            integer                              :: nDOFel_fluid, nNodesFluid
+            integer                              :: NumberOfThreads
+    
+            !************************************************************************************
+            ! Identity
+            I3 = 0.0d0
+            I3(1,1) = 1.0d0
+            I3(2,2) = 1.0d0
+            I3(3,3) = 1.0d0
         
-        !************************************************************************************
-        ! Identity
-        I3 = 0.0d0
-        I3(1,1) = 1.0d0
-        I3(2,2) = 1.0d0
-        I3(3,3) = 1.0d0
-        
-        !************************************************************************************
-        ! STRESS HOMOGENISATION - FIRST PIOLA
-        !************************************************************************************
+            !************************************************************************************
+            ! TOTAL STRESS HOMOGENISATION - FIRST PIOLA
+            !************************************************************************************
+            DimProb = AnalysisSettings%AnalysisDimension
 
-        DimProb = AnalysisSettings%AnalysisDimension
-
-        TotalVolX = 0.0d0
-        !Loop over Elements
-        do e = 1,size(ElementList)
-            TotalVolX = TotalVolX + ElementList(e)%El%VolumeX
-        enddo
-
-        FactorAxiX = 1.0d0
-        HomogenizedStress = 0.0d0
-        !Loop over Elements
-        do e = 1,size(ElementList)
-            
-            ! Aponta o objeto ElBiphasic para o ElementList(e)%El mas com o type correto ClassElementBiphasic
-            call ConvertElementToElementBiphasic(ElementList(e)%el,  ElBiphasic)
-            ! Number of degrees of freedom of fluid
-            call ElBiphasic%GetElementNumberDOF_fluid(AnalysisSettings, nDOFel_fluid)
-            GM_fluid => GMfluid_Memory(1:nDOFel_fluid)
-            Pe => Pe_Memory(1:nDOFel_fluid)
-            
-            call ElBiphasic%GetGlobalMapping_Fluid(AnalysisSettings,GM_Fluid)
-            Pe = P(GM_fluid)
-            
-            ! Solid number of nodes
-            nNodes = ElBiphasic%GetNumberOfNodes()
-            
-            ! Fluid number of nodes
-            nNodesFluid = ElBiphasic%GetNumberOfNodes_fluid()
-
-            DifSF => DifSF_Memory ( 1:nNodes , 1:DimProb )
-
-            ShapeFunctionsFluid =>  Nf_Memory ( 1:nNodesFluid )
-
-            ! Allocating memory for the Cauchy Stress (Plain States, Axisymmetric or 3D)
-            Cauchy => Stress_Memory( 1:AnalysisSettings%StressSize )
-
-            ! Number of degrees of freedom
-            call ElBiphasic%GetElementNumberDOF(AnalysisSettings,NDOFel)
-
-            ! Retrieving gauss points parameters for numerical integration
-            call ElBiphasic%GetGaussPoints(NaturalCoord,Weight)
-
-            !Loop over gauss points
-            do gp = 1, size(NaturalCoord,dim=1)
-
-                call ElBiphasic%GetDifShapeFunctions(NaturalCoord(gp,:) , DifSF )
-                !Jacobian
-                JacobX=0.0d0
-                do i=1,DimProb
-                    do j=1,DimProb
-                        do n=1,nNodes
-                            JacobX(i,j)=JacobX(i,j) + DifSf(n,i) * ElBiphasic%ElementNodes(n)%Node%CoordX(j)
-                        enddo
-                    enddo
-                enddo
-
-                !Determinant of the Jacobian
-                detJX = det(JacobX)
-
-                !Get Solid Cauchy Stress
-                Cauchy => ElBiphasic%GaussPoints(gp)%Stress
-                
-                CauchyTensor = VoigtSymToTensor2(Cauchy)
-                
-                ! Adding Fluid Stress contribution on the Cauchy Stress
-                ShapeFunctionsFluid=0.0d0
-                call ElBiphasic%GetShapeFunctions_fluid(NaturalCoord(gp,:) , ShapeFunctionsFluid )
-                CauchyTensor = CauchyTensor - (dot_product(ShapeFunctionsFluid,Pe)*I3)
-
-                !Compute First Piola
-                PiolaTensor = StressTransformation(ElBiphasic%GaussPoints(gp)%F,CauchyTensor,StressMeasures%Cauchy,StressMeasures%FirstPiola)
-
-                ! To Voigt
-                PiolaVoigt = Tensor2ToVoigt(PiolaTensor)
-
-                !Homogenized Stress
-                HomogenizedStress = HomogenizedStress + (PiolaVoigt*Weight(gp)*detJX*FactorAxiX)/TotalVolX
-
+            TotalVolX = 0.0d0
+            !Loop over Elements
+            do e = 1,size(ElementList)
+                TotalVolX = TotalVolX + ElementList(e)%El%VolumeX
             enddo
 
-        enddo
+            FactorAxiX = 1.0d0
+            HomogenizedTotalStress = 0.0d0
+            NumberOfThreads = omp_get_max_threads()
+                
+            call omp_set_num_threads( NumberOfThreads )
+           
+            !$OMP PARALLEL DEFAULT(PRIVATE)                                &
+                    Shared( AnalysisSettings,  ElementList, TotalVolX, HomogenizedTotalStress, DimProb, FactorAxiX)         
+            !$OMP DO
+            !Loop over Elements
+            do e = 1,size(ElementList)
+            
+                ! Aponta o objeto ElBiphasic para o ElementList(e)%El mas com o type correto ClassElementBiphasic
+                call ConvertElementToElementBiphasic(ElementList(e)%el,  ElBiphasic)
+                ! Number of degrees of freedom of fluid
+                call ElBiphasic%GetElementNumberDOF_fluid(AnalysisSettings, nDOFel_fluid)
+                GM_fluid => GMfluid_Memory(1:nDOFel_fluid)
+                Pe => Pe_Memory(1:nDOFel_fluid)
+            
+                call ElBiphasic%GetGlobalMapping_Fluid(AnalysisSettings,GM_Fluid)
+                Pe = P(GM_fluid)
+            
+                ! Solid number of nodes
+                nNodes = ElBiphasic%GetNumberOfNodes()
+            
+                ! Fluid number of nodes
+                nNodesFluid = ElBiphasic%GetNumberOfNodes_fluid()
+
+                DifSF => DifSF_Memory ( 1:nNodes , 1:DimProb )
+
+                ShapeFunctionsFluid =>  Nf_Memory ( 1:nNodesFluid )
+
+                ! Allocating memory for the Cauchy Stress (Plain States, Axisymmetric or 3D)
+                Cauchy => Stress_Memory( 1:AnalysisSettings%StressSize )
+
+                ! Number of degrees of freedom
+                call ElBiphasic%GetElementNumberDOF(AnalysisSettings,NDOFel)
+
+                ! Retrieving gauss points parameters for numerical integration
+                call ElBiphasic%GetGaussPoints(NaturalCoord,Weight)
+
+                !Loop over gauss points
+                do gp = 1, size(NaturalCoord,dim=1)
+
+                    call ElBiphasic%GetDifShapeFunctions(NaturalCoord(gp,:) , DifSF )
+                    !Jacobian
+                    JacobX=0.0d0
+                    do i=1,DimProb
+                        do j=1,DimProb
+                            do n=1,nNodes
+                                JacobX(i,j)=JacobX(i,j) + DifSf(n,i) * ElBiphasic%ElementNodes(n)%Node%CoordX(j)
+                            enddo
+                        enddo
+                    enddo
+
+                    !Determinant of the Jacobian
+                    detJX = det(JacobX)
+
+                    !Get Solid Cauchy Stress
+                    Cauchy => ElBiphasic%GaussPoints(gp)%Stress
+                
+                    CauchyTensor = VoigtSymToTensor2(Cauchy)
+                
+                    ! Adding Fluid Stress contribution on the Cauchy Stress
+                    ShapeFunctionsFluid=0.0d0
+                    call ElBiphasic%GetShapeFunctions_fluid(NaturalCoord(gp,:) , ShapeFunctionsFluid )
+                    CauchyTensor = CauchyTensor - (dot_product(ShapeFunctionsFluid,Pe)*I3)
+
+                    !Compute First Piola
+                    PiolaTensor = StressTransformation(ElBiphasic%GaussPoints(gp)%F,CauchyTensor,StressMeasures%Cauchy,StressMeasures%FirstPiola)
+
+                    ! To Voigt
+                    PiolaVoigt = Tensor2ToVoigt(PiolaTensor)
+
+                    !Homogenized Total Stress
+                    !$OMP CRITICAL
+                    HomogenizedTotalStress = HomogenizedTotalStress + (PiolaVoigt*Weight(gp)*detJX*FactorAxiX)/TotalVolX
+                    !$OMP END CRITICAL
+                enddo
+            enddo
+            !$OMP END DO
+            !$OMP END PARALLEL
+            !************************************************************************************
         end subroutine
         !=================================================================================================
 

@@ -50,7 +50,8 @@ module ModElementHexa8
 	!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
     contains
-
+        
+        !==========================================================================================
         subroutine GetProfile_Hexa8(this,Profile)
             class(ClassElementHexa8)::this
             type(ClassElementProfile)::Profile
@@ -64,7 +65,8 @@ module ModElementHexa8
             ElementDimension = 3 )
 
         end subroutine
-
+        !==========================================================================================
+        
         !==========================================================================================
         ! Method GetGaussPoints_Hexa8:  This method points to the natural coordinates and weights
         ! used in the Gaussian Quadrature.

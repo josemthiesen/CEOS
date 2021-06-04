@@ -18,7 +18,7 @@ module ModFEMSystemOfEquationsMonolithicBiphasic
     use ModBoundaryConditions
     use ModElementLibrary
     use ModGlobalSparseMatrix
-    
+    use ModGlobalFEMBiphasic   
 
     implicit none
 
@@ -26,19 +26,19 @@ module ModFEMSystemOfEquationsMonolithicBiphasic
         
         ! Solid-Fluid variables
         real(8), dimension(:), allocatable                     :: Xbar
-        real(8),dimension(:),allocatable                       :: XConverged          ! Global U/P vector
-        integer                      , dimension(:) , pointer  :: DirichletDOF        
+        real(8), dimension(:),allocatable                      :: XConverged          ! Global U/P vector
+        integer, dimension(:) , pointer                        :: DirichletDOF        
         integer, dimension(:), allocatable                     :: PrescDirichletSparseMapONE
         integer, dimension(:), allocatable                     :: PrescDirichletSparseMapZERO
         
         ! Fluid variables
         real(8),dimension(:),allocatable                       :: Fint_fluid , Fext_fluid  !(Pbar ~~ Ubar)
-        integer                      , dimension(:) , pointer  :: PresDOF
+        integer , dimension(:) , pointer                       :: PresDOF
         
         ! Solid variables
         real(8),dimension(:),allocatable                       :: Fint_solid , Fext_solid
         real(8),dimension(:),allocatable                       :: VSolid              ! Global solid velocity
-        integer                      , dimension(:) , pointer  :: DispDOF
+        integer, dimension(:) , pointer                        :: DispDOF
         integer, dimension(:), allocatable                     :: FixedSupportSparseMapZERO
         integer, dimension(:), allocatable                     :: FixedSupportSparseMapONE
         
@@ -55,14 +55,15 @@ module ModFEMSystemOfEquationsMonolithicBiphasic
 
     contains
 
-        procedure :: EvaluateSystem => EvaluateR
+        procedure :: EvaluateSystem         => EvaluateR
         procedure :: EvaluateGradientSparse => EvaluateKt
-        procedure :: PostUpdate => FEMUpdateMesh
+        procedure :: PostUpdate             => FEMUpdateMesh
 
     end type
 
     contains
-!--------------------------------------------------------------------------------------------------
+
+    !=================================================================================================
     subroutine EvaluateR(this,X,R)
 
         use ModInterfaces
@@ -76,8 +77,11 @@ module ModFEMSystemOfEquationsMonolithicBiphasic
             NDOFsolid = this%AnalysisSettings%NDOFsolid
             NDOFfluid = this%AnalysisSettings%NDOFfluid
             
-            ! Update stress and internal variables (Se o modelo constitutivo depende da Pressão, precisa atualizar o SolveConstitutiveModel)
+            ! Update and internal variables (In case that the consitutive model depends of the pore pressure, the SolveConstitutiveModel must be uptaded)
             call SolveConstitutiveModel( this%ElementList , this%AnalysisSettings , this%Time, X(1:NDOFsolid), this%Status)
+
+            ! Update the deformation gradient and permeability on fluid gauss points
+            call SolvePermeabilityModel( this%ElementList , this%AnalysisSettings , X(1:NDOFsolid), this%Status)
 
             ! Constitutive Model Failed. Used for Cut Back Strategy
             if (this%Status%Error ) then
@@ -88,6 +92,7 @@ module ModFEMSystemOfEquationsMonolithicBiphasic
             call InternalForceSolid(this%ElementList , this%AnalysisSettings , X((NDOFsolid+1):(NDOFsolid+NDOFfluid)), &
                                     this%Fint_solid, this%Status)
             
+            ! Updating the solid velocity with a time integration method
             call GetSolidVelocity (this%XConverged(1:NDOFsolid), X(1:NDOFsolid), this%DeltaT, this%VSolid)
             
             ! Internal Force fluid
@@ -100,18 +105,17 @@ module ModFEMSystemOfEquationsMonolithicBiphasic
             endif
 
             ! Residual
-            R(1:NDOFsolid) = this%Fint_solid - this%Fext_solid
-            R((NDOFsolid+1):(NDOFsolid + NDOFfluid)) = (this%Fint_fluid - this%Fext_fluid) ! CHUNCHO
+            R(1:NDOFsolid)                           = this%Fint_solid - this%Fext_solid
+            R((NDOFsolid+1):(NDOFsolid + NDOFfluid)) = this%Fint_fluid - this%Fext_fluid 
 
     end subroutine
-
-!--------------------------------------------------------------------------------------------------
-
+    !=================================================================================================
+    
+    !=================================================================================================
     subroutine EvaluateKt(this,X,R,G)
 
-        use ModInterfaces
         use ModMathRoutines
-        use ModSparseMatrixRoutines !chuncho
+        use ModSparseMatrixRoutines
 
         class(ClassFEMSystemOfEquationsMonolithicBiphasic)        :: this
         class (ClassGlobalSparseMatrix), pointer :: G
@@ -120,23 +124,26 @@ module ModFEMSystemOfEquationsMonolithicBiphasic
         integer :: NDOFsolid
         integer :: NDOFfluid
         
-        ! DFC Variables
-        real(8), dimension(68,68) :: KgDFCFull 
-        real(8), dimension(4624) :: normDFC
-        type (ClassGlobalSparseMatrix), pointer :: KgSparseDFC
-        type (ClassGlobalSparseMatrix), pointer :: KgSparseAnalytic
-        type(SparseMatrix) :: KgSparseDFC_Raw
-        integer :: i ,j, k
-        ! X -> Global Incognite of the biphasic analysis (U / P)
+        ! Difference Centrar Variables - For comparation reasons
+        !real(8), dimension(68,68) :: KgDFCFull 
+        !real(8), dimension(4624) :: normDFC
+        !type (ClassGlobalSparseMatrix), pointer :: KgSparseDFC
+        !type (ClassGlobalSparseMatrix), pointer :: KgSparseAnalytic
+        !type(SparseMatrix) :: KgSparseDFC_Raw
+        !integer :: i ,j, k
         
-        allocate(KgSparseDFC)
+        !allocate(KgSparseDFC)
+        
+        ! X -> Global Incognite of the biphasic analysis (U / P)      
         
         NDOFsolid = this%AnalysisSettings%NDOFsolid
         NDOFfluid = this%AnalysisSettings%NDOFfluid
 
         call TangentStiffnessMatrixMonolithic( this%AnalysisSettings , this%ElementList , this%DeltaT, this%VSolid, &
                                                 X((NDOFsolid+1):(NDOFsolid + NDOFfluid)), this%Kg)
-        !! Rodar com apenas 1 elemento
+       
+        ! ---------------------------------------------------------------------
+        !! Difference Centrar Comparation - Use only 1 element
         !KgSparseAnalytic => this%Kg
         !
         !call TangentStiffnessDFC(this, X, R, KgDFCFull)
@@ -148,6 +155,7 @@ module ModFEMSystemOfEquationsMonolithicBiphasic
         !        write(*,*) i, "," , j, ",", KgDFCFull(i,j), ",", KgSparseAnalytic%Val(k)
         !    end do
         !end do
+        ! ---------------------------------------------------------------------
         
         ! The dirichelet BC (Fluid -> pressure) are being applied in the system Kx=R and not in Kx = -R
         R = -R
@@ -158,11 +166,10 @@ module ModFEMSystemOfEquationsMonolithicBiphasic
         R = -R
 
         G => this%Kg
-
     end subroutine
-
-!--------------------------------------------------------------------------------------------------
-
+    !=================================================================================================
+    
+    !=================================================================================================
     subroutine FEMUpdateMesh(this,X)
         use ModInterfaces
         class(ClassFEMSystemOfEquationsMonolithicBiphasic) :: this
@@ -177,9 +184,9 @@ module ModFEMSystemOfEquationsMonolithicBiphasic
         endif
 
     end subroutine
-
-!--------------------------------------------------------------------------------------------------
+    !=================================================================================================
     
+    !=================================================================================================
     subroutine  TangentStiffnessDFC(this, X, R, KgDFCFull)
         
         ! Input variables
@@ -234,11 +241,10 @@ module ModFEMSystemOfEquationsMonolithicBiphasic
         !    do j = 1, size(X,1)
         !        write(FileID_CompareKgDFC,*) 'K', j,i, '=', KgDFCFull(j,i)        
         !    end do
-        !end do
-        
+        !end do     
         
     end subroutine
-    
+    !=================================================================================================
     
 end module
 
