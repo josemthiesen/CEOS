@@ -38,7 +38,8 @@ module ModFEMSystemOfEquations
         type (ClassAnalysis)                                   :: AnalysisSettings
         class (ClassBoundaryConditions)             , pointer  :: BC
         type (ClassGlobalSparseMatrix)              , pointer  :: Kg
-
+        
+        real(8),dimension(:), allocatable                      :: Fmacro_current
 
     contains
 

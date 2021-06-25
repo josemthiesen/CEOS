@@ -422,7 +422,6 @@ module ModMultiscaleFEMAnalysis
                 class(ClassMultiscaleFEMAnalysis) :: this
 
                 !************************************************************************************
-            
                 select case (this%AnalysisSettings%MultiscaleModel) 
                     case (MultiscaleModels%Taylor)
                         !call AllocateKgSparse(this)
@@ -432,13 +431,13 @@ module ModMultiscaleFEMAnalysis
                         call AllocateKgSparseUpperTriangular(this)
                     case (MultiscaleModels%Minimal)
                         !call AllocateKgSparseMultiscaleMinimalFull(this)
-                        call AllocateKgSparseMultiscaleMinimalUpperTriangular(this)                
+                        call AllocateKgSparseMinimalUpperTriangular(this)                
                     case (MultiscaleModels%MinimalLinearD1)
                             !call AllocateKgSparseMultiscaleMinimalFull(this)
-                        call AllocateKgSparseMultiscaleMinimalUpperTriangular(this)               
+                        call AllocateKgSparseMinimalUpperTriangular(this)               
                     case (MultiscaleModels%MinimalLinearD3)
                         !call AllocateKgSparseMultiscaleMinimalFull(this)
-                        call AllocateKgSparseMultiscaleMinimalUpperTriangular(this)                 
+                        call AllocateKgSparseMinimalUpperTriangular(this)                 
                     case default
                         STOP 'Error: Multiscale Model not found - ModMultiscaleFEMAnalysis.f90'
                 end select
@@ -512,7 +511,7 @@ module ModMultiscaleFEMAnalysis
         !================================================================================================= 
     
         !=================================================================================================               
-        subroutine AllocateKgSparseMultiscaleMinimalUpperTriangular (this)
+        subroutine AllocateKgSparseMinimalUpperTriangular (this)
             !************************************************************************************
             ! DECLARATIONS OF VARIABLES
             !************************************************************************************
@@ -522,7 +521,7 @@ module ModMultiscaleFEMAnalysis
 
             ! Object
             ! -----------------------------------------------------------------------------------
-            class(ClassMultiscaleFEMAnalysis) :: this
+            class(ClassFEMAnalysis) :: this
 
             ! Internal variables
             ! -----------------------------------------------------------------------------------

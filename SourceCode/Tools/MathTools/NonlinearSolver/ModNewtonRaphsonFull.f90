@@ -18,11 +18,13 @@ module ModNewtonRaphsonFull
     type, extends(ClassNonlinearSolver) :: ClassNewtonRaphsonFull
         real(8) :: Tol_Force_Mechanical = 1.0d0
         real(8) :: Tol_Flux_Biphasic = 1.0d0
+        real(8) :: w_atkin = 1.0d0
         integer :: itmax
         integer :: sizeR_solid = 0.0d0
         integer :: sizeR_fluid = 0.0d0
         integer :: NormType = 2 , MatrixType = 2
         logical :: ShowInfo = .true.
+        
 
     contains
         procedure :: Solve => NewtonRaphsonFull_Solve
@@ -45,8 +47,7 @@ module ModNewtonRaphsonFull
         integer :: Full = 1
         integer :: Sparse = 2
     end type
-
-
+    
     type (ClassNewtonRaphsonFullNormTypes)   , parameter :: NewtonRaphsonFull_NormTypes = ClassNewtonRaphsonFullNormTypes()
     type (ClassNewtonRaphsonFullErrors)      , parameter :: NewtonRaphsonFull_Errors = ClassNewtonRaphsonFullErrors()
     type (ClassNewtonRaphsonFullMatrixTypes) , parameter :: NewtonRaphsonFull_MatrixTypes = ClassNewtonRaphsonFullMatrixTypes()
@@ -64,6 +65,8 @@ module ModNewtonRaphsonFull
             class(ClassNewtonRaphsonFull)               :: this
             class(ClassNonLinearSystemOfEquations)      :: SOE
             real(8),dimension(:)                        :: Xguess , X
+            real(8),dimension(size(X))                  :: DX_atkin_previous, X_atkin
+            real(8)                                     :: w_atkin = 1.0d0
 
             integer :: it, i
             real(8) :: normR , normR_solid, normR_fluid, R(size(X)) , DX(size(X)), norma, tol, tol_fluid
@@ -77,9 +80,9 @@ module ModNewtonRaphsonFull
 
             it = 0
             X=Xguess
-        
+                                    
             LOOP: do while (.true.)
-
+                
                 !---------------------------------------------------------------------------------------------------------------
                 ! Evaluating Residual - Nonlinear System of Equations
                 !---------------------------------------------------------------------------------------------------------------
@@ -180,8 +183,19 @@ module ModNewtonRaphsonFull
                         call this%LinearSolver%Solve(GSparse, -R, DX)
                     case default
                 end select
-            
-                          
+                
+                X_atkin = X + DX    
+                
+                if (it == 1) then
+                    w_atkin = this%w_atkin
+                else
+                    !w_atkin = -w_atkin*(dot_product(DX_atkin_previous, DX - DX_atkin_previous)/norm(DX-DX_atkin_previous)**2)    
+                end if
+                                
+                X = (1.0d0 - w_atkin)*X + w_atkin*X_atkin
+                
+                DX_atkin_previous = DX
+                
                 !if (this%LinearSolver%status%error) then
                 !    call this%Status%SetError(NewtonRaphsonFull_Errors%LinearSystemError,'Error Solving Linear System')
                 !    return
@@ -191,13 +205,15 @@ module ModNewtonRaphsonFull
                 !---------------------------------------------------------------------------------------------------------------
                 ! Update Unknown Variable and Additional Variables
                 !---------------------------------------------------------------------------------------------------------------
-                X = X + DX
+                !X = X + DX
 
                 call SOE%PostUpdate(X)
                 !---------------------------------------------------------------------------------------------------------------
 
             end do LOOP
-
+            
+            this%w_atkin = w_atkin
+            
         end subroutine
         !==========================================================================================
 

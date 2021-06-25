@@ -39,6 +39,8 @@ module ModFEMSystemOfEquationsSolid
         type (ClassAnalysis)                                   :: AnalysisSettings
         class (ClassBoundaryConditions)             , pointer  :: BC
         type (ClassGlobalSparseMatrix)              , pointer  :: Kg
+        
+        real(8),dimension(9)                                   :: FMacro_current
 
 
     contains

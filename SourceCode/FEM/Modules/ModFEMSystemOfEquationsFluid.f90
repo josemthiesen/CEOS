@@ -15,7 +15,7 @@ module ModFEMSystemOfEquationsFluid
 
     use ModNonLinearSystemOfEquations
     use ModAnalysis
-    use ModBoundaryConditions
+    use ModBoundaryConditionsFluid
     use ModElementLibrary
     use ModGlobalSparseMatrix
     use ModGlobalFEMBiphasic
@@ -36,8 +36,11 @@ module ModFEMSystemOfEquationsFluid
         type (ClassElementsWrapper)  , dimension(:) , pointer  :: ElementList
         type (ClassNodes)            , dimension(:) , pointer  :: GlobalNodesList
         type (ClassAnalysis)                                   :: AnalysisSettings
-        class (ClassBoundaryConditions)             , pointer  :: BC
+        class (ClassBoundaryConditionsFluid)        , pointer  :: BC
         type (ClassGlobalSparseMatrix)              , pointer  :: Kg
+        
+        real(8),dimension(1)                                   :: PMacro_current
+        real(8),dimension(3)                                   :: GradPMacro_current
 
 
     contains
@@ -98,7 +101,7 @@ module ModFEMSystemOfEquationsFluid
         R = -R
         !****************************************************************************************
         !call this%BC%ApplyBoundaryConditions(  this%Kg , R , this%DispDOF, this%Ubar , X   )
-        call this%BC%ApplyBoundaryConditionsFluid(  this%Kg , R , this%PresDOF, this%Pbar , X, this%PrescPresSparseMapZERO, this%PrescPresSparseMapONE)
+        call this%BC%ApplyBoundaryConditions(  this%Kg , R , this%PresDOF, this%Pbar , X, this%PrescPresSparseMapZERO, this%PrescPresSparseMapONE)
         !****************************************************************************************
         R = -R
 

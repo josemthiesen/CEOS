@@ -1,5 +1,10 @@
- Time step :   2.00000000000000     
- Number of Staggered Iterations :          18
- Number of Solid Newton Iterations :          18
- Number of Fluid Newton Iterations :          17
+ Time step :  0.100000000000000     
+ Number of Staggered Iterations :           2
+ Number of Solid Newton Iterations :           1
+ Number of Fluid Newton Iterations :           2
+ 
+ Time step :  0.200000000000000     
+ Number of Staggered Iterations :           2
+ Number of Solid Newton Iterations :           2
+ Number of Fluid Newton Iterations :           2
  

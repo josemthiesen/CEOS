@@ -353,7 +353,6 @@ module ModHyperelasticTransIso
 
             ! Cauchy Stress  !S = (1.0d0-vf)*Sm + vf*Sf
             
-            
             this%Cauchy_Stress_Fiber = Convert_to_Voigt_3D_Sym( vf*Sf )
             this%Cauchy_Stress_Matrix = Convert_to_Voigt_3D_Sym( (1.0d0-vf)*Sm )
             

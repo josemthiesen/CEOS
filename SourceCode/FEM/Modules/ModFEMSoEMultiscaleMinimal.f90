@@ -20,34 +20,35 @@ module ModFEMSoEMultiscaleMinimal
     use ModElementLibrary
     use ModGlobalSparseMatrix
     use ModGlobalFEMMultiscale
+    use ModFEMSystemOfEquations
     
     implicit none
 
-    type , extends(ClassNonLinearSystemOfEquations) :: ClassMultiscaleMinimalFEMSoE
+    type , extends(ClassFEMSystemOfEquations) :: ClassMultiscaleMinimalFEMSoE
 
-        real(8),dimension(:),allocatable                       :: Fint , Fext , UBar
-        real (8)                                               :: Time
-        integer, dimension(:) , pointer                        :: DispDOF
-
-        integer, dimension(:), allocatable                     :: PrescDispSparseMapZERO
-        integer, dimension(:), allocatable                     :: PrescDispSparseMapONE
-        integer, dimension(:), allocatable                     :: FixedSupportSparseMapZERO
-        integer, dimension(:), allocatable                     :: FixedSupportSparseMapONE
-        
-        type (ClassElementsWrapper)  , dimension(:) , pointer  :: ElementList
-        type (ClassNodes)            , dimension(:) , pointer  :: GlobalNodesList
-        type (ClassAnalysis)                                   :: AnalysisSettings
-        class (ClassBoundaryConditions)             , pointer  :: BC
-        type (ClassGlobalSparseMatrix)              , pointer  :: Kg
-
-        real(8),dimension(:), allocatable                      :: Fmacro_current
+        !real(8),dimension(:),allocatable                       :: Fint , Fext , UBar
+        !real (8)                                               :: Time
+        !integer, dimension(:) , pointer                        :: DispDOF
+        !
+        !integer, dimension(:), allocatable                     :: PrescDispSparseMapZERO
+        !integer, dimension(:), allocatable                     :: PrescDispSparseMapONE
+        !integer, dimension(:), allocatable                     :: FixedSupportSparseMapZERO
+        !integer, dimension(:), allocatable                     :: FixedSupportSparseMapONE
+        !
+        !type (ClassElementsWrapper)  , dimension(:) , pointer  :: ElementList
+        !type (ClassNodes)            , dimension(:) , pointer  :: GlobalNodesList
+        !type (ClassAnalysis)                                   :: AnalysisSettings
+        !class (ClassBoundaryConditions)             , pointer  :: BC
+        !type (ClassGlobalSparseMatrix)              , pointer  :: Kg
+        !
+        !real(8),dimension(:), allocatable                      :: Fmacro_current
 
 
     contains
 
-        procedure :: EvaluateSystem         => EvaluateR
-        procedure :: EvaluateGradientSparse => EvaluateKt
-        procedure :: PostUpdate             => FEMUpdateMesh
+        procedure :: EvaluateSystem         => EvaluateMinimalR
+        procedure :: EvaluateGradientSparse => EvaluateMinimalKt
+        procedure :: PostUpdate             => FEMUpdateMeshMinimal
 
 
     end type
@@ -55,7 +56,7 @@ module ModFEMSoEMultiscaleMinimal
     contains
 
     !=================================================================================================
-    subroutine EvaluateR(this,X,R)
+    subroutine EvaluateMinimalR(this,X,R)
 
         use ModMultiscaleHomogenizations
         
@@ -110,7 +111,7 @@ module ModFEMSoEMultiscaleMinimal
     !=================================================================================================
 
     !=================================================================================================
-    subroutine EvaluateKt(this,X,R,G)
+    subroutine EvaluateMinimalKt(this,X,R,G)
 
         use ModMathRoutines
         class(ClassMultiscaleMinimalFEMSoE)        :: this
@@ -159,7 +160,7 @@ module ModFEMSoEMultiscaleMinimal
     !=================================================================================================
 
     !=================================================================================================
-    subroutine FEMUpdateMesh(this,X)
+    subroutine FEMUpdateMeshMinimal(this,X)
         use ModInterfaces
         class(ClassMultiscaleMinimalFEMSoE) :: this
         real(8),dimension(:)::X

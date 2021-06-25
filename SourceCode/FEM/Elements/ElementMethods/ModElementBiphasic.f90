@@ -53,6 +53,7 @@ module ModElementBiphasic
             procedure :: AllocateGaussPoints_fluid
             procedure :: ElementConstructor => ElementConstructorBiphasic
             procedure :: ElementInterpolation_fluid
+            procedure :: Matrix_Nfe_and_Hfe
             
     endtype    
         
@@ -1387,7 +1388,173 @@ module ModElementBiphasic
 		    !************************************************************************************
         end subroutine
 	    !==========================================================================================
-               
+       
+        !==========================================================================================
+        ! Method  Matrix_Nfe_and_Hfe: Routine that evaluates the matrix Nfe and Hfe
+        ! matrix independently of the element type.
+        !------------------------------------------------------------------------------------------
+        ! Modifications:
+        ! Date:         Author:
+        !==========================================================================================
+        subroutine Matrix_Nfe_and_Hfe(this, AnalysisSettings, Nfe, Hfe)
+		    !************************************************************************************
+            ! DECLARATIONS OF VARIABLES
+		    !************************************************************************************
+            ! Modules and implicit declarations
+            ! -----------------------------------------------------------------------------------
+            implicit none
+
+            ! Object
+            ! -----------------------------------------------------------------------------------
+            class(ClassElementBiphasic) :: this
+
+            ! Input variables
+            ! -----------------------------------------------------------------------------------
+            type(ClassAnalysis) :: AnalysisSettings
+
+            ! Output variables
+            ! -----------------------------------------------------------------------------------
+            real(8), pointer,  dimension(:)   :: Nfe
+            real(8), pointer,  dimension(:,:) :: Hfe
+
+
+            ! Internal variables
+            ! -----------------------------------------------------------------------------------
+            integer							    :: NDOFelfluid , gp
+            real(8)							    :: detJX
+            real(8) , pointer , dimension(:)    :: Weight
+            real(8) , pointer , dimension(:,:)  :: NaturalCoord
+            real(8) , pointer , dimension(:,:)  :: Hfpg 
+            real(8) , pointer , dimension(:)    :: Nfpg 
+		    !************************************************************************************
+
+		    !************************************************************************************
+            ! ELEMENT INTERNAL FORCE CALCULATION
+		    !************************************************************************************
+
+            ! Number of degrees of freedom
+            call this%GetElementNumberDOF_fluid(AnalysisSettings,NDOFelfluid)
+
+            ! Allocating Memory
+            Nfpg => Nfpg_Memory( 1:NDOFelfluid )
+            Hfpg => Gpg_Memory( 1:3 , 1:NDOFelfluid )
+
+            Nfe=0.0d0
+            Hfe=0.0d0
+            Nfpg=0.0d0
+            Hfpg=0.0d0
+
+            ! Retrieving fluid gauss points parameters for numerical integration
+            call this%GetGaussPoints_fluid(NaturalCoord,Weight)
+
+            !Loop over fluid gauss points
+            do gp = 1, size(NaturalCoord,dim=1)
+
+                !Get matrix Nfpg and Hfpg
+                call MatrixNfpgHfpg_ThreeDimensional(this, AnalysisSettings , NaturalCoord(gp,:) , Nfpg , Hfpg , detJX)
+
+                !Quadrature
+                Nfe = Nfe + Nfpg*Weight(gp)*detJX
+                Hfe = Hfe + Hfpg*Weight(gp)*detJX
+
+            enddo
+		    !************************************************************************************
+        end subroutine
+        !==========================================================================================
+
+         !==========================================================================================
+        ! Method MatrixNfpgHfpg_ThreeDimensional: Routine that evaluates the matrix Nfpg e Hfpg in Three-Dimensional
+        ! case.
+        !------------------------------------------------------------------------------------------
+        ! Modifications:
+        ! Date:         Author:
+        !==========================================================================================
+        subroutine MatrixNfpgHfpg_ThreeDimensional(this, AnalysisSettings , NaturalCoord , Nfpg , Hfpg , detJX)
+
+ 		    !************************************************************************************
+            ! DECLARATIONS OF VARIABLES
+		    !************************************************************************************
+            ! Modules and implicit declarations
+            ! -----------------------------------------------------------------------------------
+            implicit none
+
+            ! Object
+            ! -----------------------------------------------------------------------------------
+            class(ClassElementBiphasic) :: this
+
+            ! Input variables
+            ! -----------------------------------------------------------------------------------
+            real(8) , dimension(:) :: NaturalCoord
+
+            ! Output variables
+            ! -----------------------------------------------------------------------------------
+            type(ClassAnalysis)     :: AnalysisSettings
+            real(8) , intent(out)   :: detJX
+            real(8) , dimension(:)  :: Nfpg 
+            real(8) , dimension(:,:):: Hfpg
+
+            ! Internal variables
+            ! -----------------------------------------------------------------------------------
+            integer :: i , j , n , nNodes , DimProb , nDOFel
+            real(8) , dimension(:,:) , pointer :: DifSF
+            real(8) , dimension(:) , pointer :: SF
+            real(8) , dimension(AnalysisSettings%AnalysisDimension,AnalysisSettings%AnalysisDimension) :: JacobX
+
+ 		    !************************************************************************************
+
+		    !************************************************************************************
+            ! EVALUATE THE LINEAR MATRIX H AND N IN THREE-DIMENSIONAL CASE
+		    !************************************************************************************
+
+            nNodes = this%GetNumberOfNodes_fluid()
+
+            DimProb = AnalysisSettings%AnalysisDimension
+
+            SF => SF_Memory ( 1:nNodes )
+
+            DifSF => DifSF_Memory ( 1:nNodes , 1:DimProb )
+
+            call this%GetDifShapeFunctions_fluid(NaturalCoord , DifSF )
+
+            call this%GetShapeFunctions_fluid(NaturalCoord , SF )
+
+            !Jacobian
+            JacobX=0.0d0
+            do i=1,DimProb
+                do j=1,DimProb
+                    do n=1,nNodes
+                        JacobX(i,j)=JacobX(i,j) + DifSf(n,i) * this%ElementNodes_fluid(n)%Node%CoordX(j)
+                    enddo
+                enddo
+            enddo
+
+            !Determinant of the Jacobian
+            detJX = det(JacobX)
+
+            !Inverse of the Jacobian
+            JacobX = inverse(JacobX)
+
+            !Convert the derivatives in the natural coordinates to global coordinates.
+            do i=1,size(DifSF,dim=1)
+                DifSF(i,:) = matmul( JacobX , DifSF(i,:) )
+            enddo
+
+            call this%GetElementNumberDOF_fluid(AnalysisSettings,nDOFel)
+            
+            !Assemble Matrix Nfpg
+            Nfpg    = 0.0d0
+            Nfpg(:) = SF(:)    ! P
+            
+            !Assemble Matrix Hfpg
+            Hfpg = 0.0d0
+            Hfpg(1,[(i,i=1,nDOFel,1)])=DifSF(:,1) !d_Pressure/d_x1
+            Hfpg(2,[(i,i=1,nDOFel,1)])=DifSF(:,2) !d_Pressure/d_x2
+            Hfpg(3,[(i,i=1,nDOFel,1)])=DifSF(:,3) !d_Pressure/d_x3
+
+		    !************************************************************************************
+
+        end subroutine
+        !==========================================================================================
         
         
         

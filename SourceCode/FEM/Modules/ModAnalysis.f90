@@ -122,6 +122,9 @@ module ModAnalysis
     real(8) , target , dimension( 3 , MaxElementNumberDOF)                      :: Ne_Memory
     real(8) , target , dimension( 9 , MaxElementNumberDOF)                      :: Gpg_Memory
     real(8) , target , dimension( 3 , MaxElementNumberDOF)                      :: Npg_Memory
+    real(8) , target , dimension( MaxElementNumberDOF)                          :: Nfpg_Memory
+    real(8) , target , dimension( 3 , MaxElementNumberDOF)                      :: Hfe_Memory
+    real(8) , target , dimension( MaxElementNumberDOF)                          :: Nfe_Memory
     
     
     real(8) , target , dimension( MaxElementNumberDOF , MaxElementNumberDOF)    :: KeF_Memory       ! Memory for Ke Fluid
@@ -163,7 +166,9 @@ module ModAnalysis
     !$OMP THREADPRIVATE(Ne_Memory)
     !$OMP THREADPRIVATE(Gpg_Memory)
     !$OMP THREADPRIVATE(Npg_Memory)
-        
+    !$OMP THREADPRIVATE(Nfpg_Memory)  
+    !$OMP THREADPRIVATE(Hfe_Memory)
+    !$OMP THREADPRIVATE(Nfe_Memory)
     
     !$OMP THREADPRIVATE(KeF_Memory)
     !$OMP THREADPRIVATE(Nf_Memory)
@@ -192,7 +197,6 @@ module ModAnalysis
         integer ::  ElementTech
         integer ::  MultiscaleModel
         integer ::  MultiscaleModelFluid
-        integer ::  MultiscaleModelSolid
         integer ::  SplittingScheme
         integer ::  SolutionScheme
         logical ::  NLAnalysis

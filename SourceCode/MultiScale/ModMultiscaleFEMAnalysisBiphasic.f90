@@ -11,6 +11,7 @@
 module ModMultiscaleFEMAnalysisBiphasic
 
     use ModFEMAnalysisBiphasic
+    use ModMultiscaleFEMAnalysis
     use ModContinuumMechanics
     use ModVoigtNotation
     use OMP_LIB
@@ -40,18 +41,110 @@ module ModMultiscaleFEMAnalysisBiphasic
                 ! -----------------------------------------------------------------------------------
                 class(ClassMultiscaleFEMAnalysisBiphasic) :: this
 
-                !select case (this%AnalysisSettings%BiphasicSolver)
-                !    case(BiphasicSolver%Staggered)
-                        call AllocateKgSparseUpperTriangularBiphasicStaggered(this)
-                !    case(BiphasicSolver%Monolithic)
-                !        call AllocateKgSparseFullBiphasicMonolithic(this)
-                !    case default
-                !       stop 'Error: Biphasic solver not found - ModFEMAnalysisBiphasic.f90'
-                !end select
+                select case (this%AnalysisSettings%SolutionScheme)
+                    case(SolutionScheme%Sequential)
+                        ! Allocating Fluid Kg
+                        select case (this%AnalysisSettings%MultiscaleModelFluid) 
+                            case (MultiscaleModels%Taylor)
+                                call AllocateKgSparseUpperTriangularFluid(this)
+                            case (MultiscaleModels%Linear)
+                                call AllocateKgSparseUpperTriangularFluid(this)   
+                            case (MultiscaleModels%Minimal)
+                                call AllocateKgSparseMinimalUpperTriangularFluid(this) 
+                            case default
+                                STOP 'Error: Multiscale Model of Fluid not found - ModMultiscaleFEMAnalysisBiphasic.f90'
+                        end select
+                        ! Allocating Solid Kg        
+                        select case (this%AnalysisSettings%MultiscaleModel) 
+                            case (MultiscaleModels%Taylor)
+                                call AllocateKgSparseUpperTriangular(this)
+                            case (MultiscaleModels%Linear)
+                                call AllocateKgSparseUpperTriangular(this)
+                            case (MultiscaleModels%Minimal)
+                                call AllocateKgSparseMinimalUpperTriangular(this)                
+                            case (MultiscaleModels%MinimalLinearD1)  
+                                call AllocateKgSparseMinimalUpperTriangular(this)               
+                            case (MultiscaleModels%MinimalLinearD3)
+                                call AllocateKgSparseMinimalUpperTriangular(this)                 
+                            case default
+                                STOP 'Error: Multiscale Model of Solid not found - ModMultiscaleFEMAnalysisBiphasic.f90'
+                        end select
+                            
+                    case(SolutionScheme%Monolithic)
+                        !call AllocateKgSparseFullBiphasicMonolithic(this)
+                        stop 'Error: Biphasic Multiscale monolithic not defined'
+                    case default
+                       stop 'Error: Biphasic solver not found - ModFEMAnalysisBiphasic.f90'
+                end select
     
         end subroutine
         !=================================================================================================
     
+         subroutine AllocateKgSparseMinimalUpperTriangularFluid (this)
+
+            !************************************************************************************
+            ! DECLARATIONS OF VARIABLES
+            !************************************************************************************
+            ! Modules and implicit declarations
+            ! -----------------------------------------------------------------------------------
+            
+            implicit none
+
+            ! Object
+            ! -----------------------------------------------------------------------------------
+            class(ClassFEMAnalysisBiphasic) :: this
+
+            ! Internal variables
+            ! -----------------------------------------------------------------------------------
+            type(SparseMatrix) :: KgSparseFluid
+            class(ClassElementBiphasic), pointer :: ElBiphasic
+            real(8) , pointer , dimension(:,:)   :: KeFluid
+            integer , pointer , dimension(:)     :: GMFluid
+            integer ::  e
+            integer ::  nDOFel_fluid, nDOF_fluid
+
+            !************************************************************************************
+            ! PRE-ALLOCATING THE GLOBAL STIFFNESS MATRIX
+            !************************************************************************************
+
+            !Allocating memory for the sparse matrix (pre-assembling)
+            !************************************************************************************
+            call this%AnalysisSettings%GetTotalNumberOfDOF_fluid (this%GlobalNodesList, nDOF_fluid)
+
+            !Element stiffness matrix used to allocate memory (module Analysis)
+            KeF_Memory = 1.0d0   ! Fluid Element stiffness matrix
+
+            !Initializing the sparse global stiffness matrix
+            call SparseMatrixInit( KgSparseFluid , nDOF_fluid + 4)
+
+            !Loop over elements to mapping the local-global positions in the sparse stiffness matrix
+            do e=1,size( this%ElementList )
+                ! Pointing ElBiphasic to the ElementList(e)%El but with the correcly type
+                call ConvertElementToElementBiphasic(this%ElementList(e)%el,  ElBiphasic) 
+                call ElBiphasic%GetElementNumberDOF_fluid(this%AnalysisSettings , nDOFel_fluid)
+
+                KeFluid => KeF_Memory( 1:(nDOFel_fluid+4) , 1:(nDOFel_fluid+4))
+                GMFluid => GMfluid_Memory( 1:(nDOFel_fluid+4))
+
+                call ElBiphasic%GetGlobalMapping_fluid( this%AnalysisSettings, GMFluid )
+                
+                 GMFluid(nDOFel_fluid+1 : nDOFel_fluid+1+4) = nDOF_fluid + [1:4]
+
+                call SparseMatrixSetArray( GMFluid, GMFluid, KeFluid, KgSparseFluid, OPT_SET )
+                
+            enddo
+
+            !Converting the sparse matrix to coordinate format (used by Pardiso Sparse Solver)
+             call ConvertToCoordinateFormatUpperTriangular( KgSparseFluid , this%KgFluid%Row , this%KgFluid%Col , this%KgFluid%Val , this%KgFluid%RowMap) ! this%KgFluid -> Matriz de rigidez do Fluid
+
+            !Releasing memory
+            call SparseMatrixKill(KgSparseFluid)
+
+            !************************************************************************************
+        end subroutine
+        !==========================================================================================
+                
+        
         !=================================================================================================
         subroutine TranslateCentroidToOriginBiphasic(this)
             !************************************************************************************
@@ -153,13 +246,16 @@ module ModMultiscaleFEMAnalysisBiphasic
             class(ClassMultiscaleFEMAnalysisBiphasic) :: this
 
             ! Input variables
+            integer :: MultiscaleModel
+            integer :: MultiscaleModelFluid
             ! -----------------------------------------------------------------------------------
 
             ! Calling the quasi-static analysis routine
             !************************************************************************************     
             call TranslateCentroidToOrigin(this%ElementList, this%AnalysisSettings, this%GlobalNodesList )
-            call SolveFEMAnalysisBiphasic(this) ! MUDAR ISSO!!!!!!!!!!!!
+            call SolveFEMAnalysisBiphasic(this) 
             !************************************************************************************
+            
         end subroutine
         !=================================================================================================
 

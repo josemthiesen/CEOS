@@ -380,7 +380,7 @@ module ModMultiscaleHomogenizations
 
             ! Input variables
             ! ----------------------------------------------- ------------------------------------
-            real(8), pointer, dimension(:)       :: P   ! Global vector of fluid pressure
+            real(8),  dimension(:)       :: P   ! Global vector of fluid pressure
 
             ! Input/Output variables
             ! -----------------------------------------------------------------------------------
@@ -422,7 +422,7 @@ module ModMultiscaleHomogenizations
             call omp_set_num_threads( NumberOfThreads )
            
             !$OMP PARALLEL DEFAULT(PRIVATE)                                &
-                           Shared(P, TotalVolX, FactorAxiX, HomogenizedPressure, DimProb)         
+                           Shared( AnalysisSettings,  ElementList, P, TotalVolX, FactorAxiX, HomogenizedPressure, DimProb)         
             !$OMP DO
             !Loop over Elements
             do e = 1,size(ElementList)
@@ -509,11 +509,11 @@ module ModMultiscaleHomogenizations
 
             ! Input variables
             ! ----------------------------------------------- ------------------------------------
-            real(8), pointer, dimension(:)       :: P   ! Global vector of fluid pressure
+            real(8), dimension(:)       :: P   ! Global vector of fluid pressure
 
             ! Input/Output variables
             ! -----------------------------------------------------------------------------------
-            real(8), dimension(3)    :: HomogenizedGradientPressure
+            real(8), dimension(3)       :: HomogenizedGradientPressure
 
             ! Internal variables
             ! -----------------------------------------------------------------------------------
@@ -549,7 +549,7 @@ module ModMultiscaleHomogenizations
             NumberOfThreads = omp_get_max_threads()
             call omp_set_num_threads( NumberOfThreads )
             !$OMP PARALLEL DEFAULT(PRIVATE)                                &
-                           Shared(P, TotalVolX, FactorAxiX, HomogenizedGradientPressure, DimProb)         
+                           Shared( AnalysisSettings,  ElementList, P, TotalVolX, FactorAxiX, HomogenizedGradientPressure, DimProb)         
             !$OMP DO
             !Loop over Elements
             do e = 1,size(ElementList)
@@ -639,7 +639,7 @@ module ModMultiscaleHomogenizations
 
            ! Input variables
            ! ----------------------------------------------- ------------------------------------
-           real(8), pointer, dimension(:)       :: VSolid   ! Global vector of solid velocity
+           real(8),  dimension(:)   :: VSolid   ! Global vector of solid velocity
   
            ! Input/Output variables
            ! -----------------------------------------------------------------------------------
@@ -649,15 +649,15 @@ module ModMultiscaleHomogenizations
            ! Internal variables
            ! -----------------------------------------------------------------------------------
            integer							    :: e, gp, i, j, n, DimProb
-           real(8)							    :: TotalVolX, rX, detJX
-           real(8) , pointer , dimension(:)    :: Weight
-           real(8) , pointer , dimension(:,:)  :: NaturalCoord
-           real(8)                             :: FactorAxiX
+           real(8)                              :: TotalVolX, rX, detJX
+           real(8) , pointer , dimension(:)     :: Weight
+           real(8) , pointer , dimension(:,:)   :: NaturalCoord
+           real(8)                              :: FactorAxiX
            real(8) , dimension(AnalysisSettings%AnalysisDimension,AnalysisSettings%AnalysisDimension) :: JacobX
-           real(8) , dimension(:)   , pointer  :: ShapeFunctionsFluid
-           real(8) , dimension(:,:) , pointer  :: DifSF
+           real(8) , dimension(:)   , pointer   :: ShapeFunctionsFluid
+           real(8) , dimension(:,:) , pointer   :: DifSF
        
-           real(8)                             :: w_micro(3), wY_micro(3)
+           real(8)                              :: w_micro(3), wY_micro(3)
        
            class(ClassElementBiphasic), pointer :: ElBiphasic
            integer , pointer , dimension(:)     :: GM_solid
@@ -781,10 +781,7 @@ module ModMultiscaleHomogenizations
    
         !=================================================================================================
         subroutine GetHomogenizedTotalStressBiphasic( AnalysisSettings, ElementList, P, HomogenizedTotalStress )
-            ! NOTE (Thiago#1#): A Homogeneização das tensões e do gradiente de deformação são funcionam para 
-            ! RVEs sem furos. 
-            ! Se o RVE tiver furo, discretizar o furo com um material "mole"
-
+ 
             !************************************************************************************
             ! DECLARATIONS OF VARIABLES
             !************************************************************************************
@@ -799,7 +796,7 @@ module ModMultiscaleHomogenizations
 
             ! Input variables
             ! ----------------------------------------------- ------------------------------------
-            real(8), pointer, dimension(:)      :: P   ! Global vector of fluid pressure
+            real(8),  dimension(:)      :: P   ! Global vector of fluid pressure
 
             ! Input/Output variables
             ! -----------------------------------------------------------------------------------

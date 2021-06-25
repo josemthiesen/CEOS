@@ -445,17 +445,17 @@ module ModExportResultFile
         ! -----------------------------------------------------------------------------------
         type (ClassProbeWrapper), pointer, dimension(:) :: ProbeList
         class (ClassPostProcessor), pointer             :: PostProcessor
-        class (ClassFEMAnalysis)                        :: FEA
+        class (ClassFEMAnalysisBiphasic)                :: FEA
 
         ! Internal variables
         ! -----------------------------------------------------------------------------------
-        class (ClassProbe), pointer                :: Probe
-        type(ClassParser)                         :: ResultFileSolid
-        type(ClassParser)                         :: ResultFileFluid
-        type(ClassStatus)                         :: Status
+        class (ClassProbe), pointer                 :: Probe
+        type(ClassParser)                           :: ResultFileSolid
+        type(ClassParser)                           :: ResultFileFluid
+        type(ClassStatus)                           :: Status
         integer :: TotalNDOF_Solid, LoadCase, Step, CutBack, SubStep, el, gp, i, j, k, cont, conta_flux
         integer :: TotalNDOF_Fluid, FileNumberFluid, FileNumberSolid
-        integer , allocatable , dimension(:)      :: Nodesflux
+        integer , allocatable , dimension(:)        :: Nodesflux
         real(8) :: Time, OldTime, DeltaTime
         real(8) , allocatable, target, dimension(:) :: U , P, Psolid
         real(8) , allocatable, target, dimension(:) :: OldU , OldVSolid, VSolid, OldASolid, ASolid

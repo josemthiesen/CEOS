@@ -16,6 +16,7 @@ module ModFEMSystemOfEquationsMonolithicBiphasic
     use ModNonLinearSystemOfEquations
     use ModAnalysis
     use ModBoundaryConditions
+    use ModBoundaryConditionsFluid
     use ModElementLibrary
     use ModGlobalSparseMatrix
     use ModGlobalFEMBiphasic   
@@ -46,7 +47,8 @@ module ModFEMSystemOfEquationsMonolithicBiphasic
         type (ClassElementsWrapper)  , dimension(:) , pointer  :: ElementList
         type (ClassNodes)            , dimension(:) , pointer  :: GlobalNodesList
         type (ClassAnalysis)                                   :: AnalysisSettings
-        class (ClassBoundaryConditions)             , pointer  :: BC
+        class (ClassBoundaryConditions)             , pointer  :: BCSolid
+        class (ClassBoundaryConditionsFluid)        , pointer  :: BCFluid
         type (ClassGlobalSparseMatrix)              , pointer  :: Kg
         
         ! Time discretization variables
@@ -160,7 +162,7 @@ module ModFEMSystemOfEquationsMonolithicBiphasic
         ! The dirichelet BC (Fluid -> pressure) are being applied in the system Kx=R and not in Kx = -R
         R = -R
         !****************************************************************************************
-        call this%BC%ApplyBoundaryConditionsNEW(  this%Kg , R , this%DirichletDOF, this%Xbar , X, this%PrescDirichletSparseMapZERO, &
+        call this%BCSolid%ApplyBoundaryConditionsNEW(  this%Kg , R , this%DirichletDOF, this%Xbar , X, this%PrescDirichletSparseMapZERO, &
                                                     this%PrescDirichletSparseMapONE, this%FixedSupportSparseMapZERO, this%FixedSupportSparseMapONE )
         !****************************************************************************************
         R = -R

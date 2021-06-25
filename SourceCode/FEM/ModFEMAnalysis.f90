@@ -42,14 +42,12 @@ module ModFEMAnalysis
         type  (ClassGlobalSparseMatrix) , pointer                    :: Kg
         
         !----------------------------------------------------------------------------------------
-        type  (ClassGlobalSparseMatrix) , pointer                    :: KgFluid
-        !----------------------------------------------------------------------------------------
         
         class (ClassNonLinearSolver)    , pointer                    :: NLSolver
 
-        ! For PostProcessing reasons...
+        ! For PostProcessing reasons only...
         real(8), pointer, dimension(:) :: U => null()
-        real(8), pointer, dimension(:) :: P => null()
+        real(8), pointer, dimension(:) :: P => null()           ! COLOCAR NA CLASS FEMANALYSISBIPHASIC
         real(8), pointer, dimension(:) :: Psolid => null()
         real(8), pointer, dimension(:) :: Vsolid => null()
         real (8)                       :: Time
@@ -59,7 +57,7 @@ module ModFEMAnalysis
 
             ! Class Methods
             !----------------------------------------------------------------------------------
-            procedure :: ReadInputData
+            !procedure :: ReadInputData
             procedure :: Solve => SolveFEMAnalysis
             procedure :: AdditionalMaterialModelRoutine
             procedure :: AllocateKgSparse => AllocateKgSparseUpperTriangular  
@@ -93,42 +91,42 @@ module ModFEMAnalysis
     !----------------------------------------------------------------------------------
         
     contains
-        !==========================================================================================
-        ! subroutine  ReadInputData
-        !------------------------------------------------------------------------------------------
-        !==========================================================================================
-        subroutine  ReadInputData(this,FileName)
-		    !************************************************************************************
-            ! DECLARATIONS OF VARIABLES
-		    !************************************************************************************
-            ! Modules and implicit declarations
-            ! -----------------------------------------------------------------------------------
-            use ModReadInputFile , only : readinputfile
-
-            implicit none
-
-            ! Object
-            ! -----------------------------------------------------------------------------------
-            class(ClassFEMAnalysis) :: this
-
-            ! Input variables
-            ! -----------------------------------------------------------------------------------
-            character (len=*) :: FileName
-		    !************************************************************************************
-
- 		    !************************************************************************************
-            ! SELECT PARAMETERS OF THE ANALYSIS TYPE
-		    !************************************************************************************
-            allocate(this%BC)
-            allocate(this%Kg)
-            ! Reading the input files
-            !************************************************************************************
-            call ReadInputFile( FileName, this%AnalysisSettings , this%GlobalNodesList , this%ElementList , &
-                                this%BC , this%NLSolver )
-		    !************************************************************************************                     
-
-        end subroutine
-        !==========================================================================================
+      !  !==========================================================================================
+      !  ! subroutine  ReadInputData
+      !  !------------------------------------------------------------------------------------------
+      !  !==========================================================================================
+      !  subroutine  ReadInputData(this,FileName)
+		    !!************************************************************************************
+      !      ! DECLARATIONS OF VARIABLES
+		    !!************************************************************************************
+      !      ! Modules and implicit declarations
+      !      ! -----------------------------------------------------------------------------------
+      !      use ModReadInputFile , only : readinputfile
+      !
+      !      implicit none
+      !
+      !      ! Object
+      !      ! -----------------------------------------------------------------------------------
+      !      class(ClassFEMAnalysis) :: this
+      !
+      !      ! Input variables
+      !      ! -----------------------------------------------------------------------------------
+      !      character (len=*) :: FileName
+		    !!************************************************************************************
+      !
+ 		   ! !************************************************************************************
+      !      ! SELECT PARAMETERS OF THE ANALYSIS TYPE
+		    !!************************************************************************************
+      !      allocate(this%BC)
+      !      allocate(this%Kg)
+      !      ! Reading the input files
+      !      !************************************************************************************
+      !      call ReadInputFile( FileName, this%AnalysisSettings , this%GlobalNodesList , this%ElementList , &
+      !                          this%BC , this%NLSolver )
+		    !!************************************************************************************                     
+      !
+      !  end subroutine
+      !  !==========================================================================================
 
 
         !##################################################################################################

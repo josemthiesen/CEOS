@@ -299,6 +299,8 @@ module ModSpatialIsoExpPermeabilityModel
             
             Ivoigt = 0.0d0
             Ivoigt(1:3) = 1.0d0
+            ! Considering k(J) = Exponential; 
+            J = det(this%FSolid)
             
             k = this%Properties%k0*exp(this%Properties%M*((J-1)/(J-this%Properties%Phi0)))
             

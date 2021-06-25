@@ -17,6 +17,7 @@ module ModFEMAnalysisBiphasic
     use ModNodes
     use ModAnalysis
     use ModBoundaryConditions
+    use ModBoundaryConditionsFluid
     use ModGlobalSparseMatrix
     use ModNonlinearSolver
     use ModNonlinearSolverLibrary
@@ -33,7 +34,14 @@ module ModFEMAnalysisBiphasic
     type, extends (ClassFEMAnalysis) :: ClassFEMAnalysisBiphasic
 
 		! Class Attributes
-		!----------------------------------------------------------------------------------------    
+		!----------------------------------------------------------------------------------------  
+        type  (ClassGlobalSparseMatrix)     , pointer               :: KgFluid
+        class (ClassBoundaryConditionsFluid), pointer               :: BCFluid
+        
+        ! For PostProcessing reasons only...
+        !real(8), pointer, dimension(:) :: P => null()           ! Ajeitar ModHyperView e ModProbe
+        !real(8), pointer, dimension(:) :: Psolid => null()
+        !real(8), pointer, dimension(:) :: Vsolid => null()
 
         contains
 
@@ -60,7 +68,9 @@ module ModFEMAnalysisBiphasic
 
             select case (this%AnalysisSettings%SolutionScheme)
                 case(SolutionScheme%Sequential)
-                   call AllocateKgSparseUpperTriangularBiphasicStaggered(this)
+                   !call AllocateKgSparseUpperTriangularBiphasicStaggered(this)
+                   call AllocateKgSparseUpperTriangular(this)
+                   call AllocateKgSparseUpperTriangularFluid(this)
                 case(SolutionScheme%Monolithic)
                     call AllocateKgSparseFullBiphasicMonolithic(this)
                 case default
@@ -70,6 +80,8 @@ module ModFEMAnalysisBiphasic
         end subroutine
         !==========================================================================================
 
+        
+        
         !##################################################################################################
         ! This routine pre-allocates the size of the global stiffness matrix in the sparse format.
         !--------------------------------------------------------------------------------------------------
@@ -83,7 +95,7 @@ module ModFEMAnalysisBiphasic
         ! Modifications:
         ! Date:         Author:
         !==========================================================================================
-        subroutine AllocateKgSparseUpperTriangularBiphasicStaggered (this)
+        subroutine AllocateKgSparseUpperTriangularFluid (this)
 
             !************************************************************************************
             ! DECLARATIONS OF VARIABLES
@@ -99,12 +111,11 @@ module ModFEMAnalysisBiphasic
 
             ! Internal variables
             ! -----------------------------------------------------------------------------------
-            type(SparseMatrix) :: KgSparseSolid
             type(SparseMatrix) :: KgSparseFluid
             class(ClassElementBiphasic), pointer :: ElBiphasic
-            real(8) , pointer , dimension(:,:)  :: KeSolid, KeFluid
-            integer , pointer , dimension(:)    :: GMSolid, GMFluid
-            integer ::  e, nDOFel_solid, nDOF_solid
+            real(8) , pointer , dimension(:,:)   :: KeFluid
+            integer , pointer , dimension(:)     :: GMFluid
+            integer ::  e
             integer ::  nDOFel_fluid, nDOF_fluid
 
             !************************************************************************************
@@ -113,48 +124,39 @@ module ModFEMAnalysisBiphasic
 
             !Allocating memory for the sparse matrix (pre-assembling)
             !************************************************************************************
-            call this%AnalysisSettings%GetTotalNumberOfDOF (this%GlobalNodesList, nDOF_solid)
             call this%AnalysisSettings%GetTotalNumberOfDOF_fluid (this%GlobalNodesList, nDOF_fluid)
 
             !Element stiffness matrix used to allocate memory (module Analysis)
-            Ke_Memory = 1.0d0    ! Solid Element stiffness matrix
             KeF_Memory = 1.0d0   ! Fluid Element stiffness matrix
 
             !Initializing the sparse global stiffness matrix
-            call SparseMatrixInit( KgSparseSolid , nDOF_solid )
             call SparseMatrixInit( KgSparseFluid , nDOF_fluid )
 
             !Loop over elements to mapping the local-global positions in the sparse stiffness matrix
             do e=1,size( this%ElementList )
-                call ConvertElementToElementBiphasic(this%ElementList(e)%el,  ElBiphasic) ! Aponta o objeto ElBiphasic para o ElementList(e)%El mas com o type correto ClassElementBiphasic
-                call ElBiphasic%GetElementNumberDOF(this%AnalysisSettings , nDOFel_solid)
+                ! Pointing ElBiphasic to the ElementList(e)%El but with the correcly type
+                call ConvertElementToElementBiphasic(this%ElementList(e)%el,  ElBiphasic) 
                 call ElBiphasic%GetElementNumberDOF_fluid(this%AnalysisSettings , nDOFel_fluid)
 
-
-                KeSolid => Ke_Memory( 1:nDOFel_solid , 1:nDOFel_solid )
-                GMSolid => GM_Memory( 1:nDOFel_solid )
                 KeFluid => KeF_Memory( 1:nDOFel_fluid , 1:nDOFel_fluid)
                 GMFluid => GMfluid_Memory( 1:nDOFel_fluid)
 
-                call ElBiphasic%GetGlobalMapping( this%AnalysisSettings, GMSolid )
                 call ElBiphasic%GetGlobalMapping_fluid( this%AnalysisSettings, GMFluid )
 
-                call SparseMatrixSetArray( GMSolid, GMSolid, KeSolid, KgSparseSolid, OPT_SET )
                 call SparseMatrixSetArray( GMFluid, GMFluid, KeFluid, KgSparseFluid, OPT_SET )
                 
             enddo
 
             !Converting the sparse matrix to coordinate format (used by Pardiso Sparse Solver)
-            call ConvertToCoordinateFormatUpperTriangular( KgSparseSolid , this%Kg%Row , this%Kg%Col , this%Kg%Val , this%Kg%RowMap) ! this%Kg -> Matriz de rigidez do Solid
-            call ConvertToCoordinateFormatUpperTriangular( KgSparseFluid , this%KgFluid%Row , this%KgFluid%Col , this%KgFluid%Val , this%KgFluid%RowMap) ! this%KgFluid -> Matriz de rigidez do Fluid
+             call ConvertToCoordinateFormatUpperTriangular( KgSparseFluid , this%KgFluid%Row , this%KgFluid%Col , this%KgFluid%Val , this%KgFluid%RowMap) ! this%KgFluid -> Matriz de rigidez do Fluid
 
             !Releasing memory
-            call SparseMatrixKill(KgSparseSolid)
             call SparseMatrixKill(KgSparseFluid)
 
             !************************************************************************************
         end subroutine
         !==========================================================================================
+        
         
         !==========================================================================================
         subroutine AllocateKgSparseFullBiphasicMonolithic (this)
@@ -268,28 +270,28 @@ module ModFEMAnalysisBiphasic
                                 case (SplittingScheme%Drained)
 
                                     call QuasiStaticAnalysisFEM_biphasic_SolidFluid( this%ElementList, this%AnalysisSettings, this%GlobalNodesList , &
-                                                          this%BC, this%Kg, this%KgFluid, this%NLSolver )
+                                                          this%BC, this%BCFluid, this%Kg, this%KgFluid, this%NLSolver )
                                 case (SplittingScheme%Undrained)
                             
                                     call QuasiStaticAnalysisFEM_biphasic_SolidFluid( this%ElementList, this%AnalysisSettings, this%GlobalNodesList , &
-                                                          this%BC, this%Kg, this%KgFluid, this%NLSolver )
+                                                          this%BC, this%BCFluid, this%Kg, this%KgFluid, this%NLSolver )
                             
                                 case(SplittingScheme%FixedStress)
                             
                                     call QuasiStaticAnalysisFEM_biphasic_FluidSolid( this%ElementList, this%AnalysisSettings, this%GlobalNodesList , &
-                                                          this%BC, this%Kg, this%KgFluid, this%NLSolver )
+                                                          this%BC, this%BCFluid, this%Kg, this%KgFluid, this%NLSolver )
                             
                                 case(SplittingScheme%FixedStrain)
                             
                                     call QuasiStaticAnalysisFEM_biphasic_FluidSolid( this%ElementList, this%AnalysisSettings, this%GlobalNodesList , &
-                                                          this%BC, this%Kg, this%KgFluid, this%NLSolver )
+                                                          this%BC, this%BCFluid, this%Kg, this%KgFluid, this%NLSolver )
                             
                                 case default    
                                     stop "Error in SplittingScheme - ModFEMAnalysisBiphasic"
                             end select
                         case (SolutionScheme%Monolithic)
                             call QuasiStaticAnalysisFEM_biphasic_Monolithic( this%ElementList, this%AnalysisSettings, this%GlobalNodesList , &
-                                                                          this%BC, this%Kg, this%NLSolver )
+                                                                          this%BC, this%BCFluid, this%Kg, this%NLSolver )
                         case default
                             stop "Error in SolutionScheme - ModFEMAnalysisBiphasic"
                     end select
@@ -367,8 +369,8 @@ module ModFEMAnalysisBiphasic
         ! This routine contains the procedures to solve a quasi-static analysis based in a incremental-
         ! iterative approach - Biphasic Analysis - Monolithic Solution.
         !==========================================================================================
-        subroutine QuasiStaticAnalysisFEM_biphasic_Monolithic( ElementList , AnalysisSettings , GlobalNodesList , BC  , &
-                                           Kg , NLSolver )
+        subroutine QuasiStaticAnalysisFEM_biphasic_Monolithic( ElementList , AnalysisSettings , GlobalNodesList , BCSolid  , &
+                                           BCFluid,  Kg , NLSolver )
             !************************************************************************************
             ! DECLARATIONS OF VARIABLES
             !************************************************************************************
@@ -383,7 +385,8 @@ module ModFEMAnalysisBiphasic
             type (ClassAnalysis)                                    :: AnalysisSettings
             type (ClassElementsWrapper),     pointer, dimension(:)  :: ElementList
             type (ClassNodes),               pointer, dimension(:)  :: GlobalNodesList
-            class (ClassBoundaryConditions),  pointer               :: BC
+            class (ClassBoundaryConditions),  pointer               :: BCSolid
+            class (ClassBoundaryConditionsFluid),  pointer          :: BCFluid
             type (ClassGlobalSparseMatrix),  pointer                :: Kg
             class(ClassNonLinearSolver),     pointer                :: NLSolver
 
@@ -409,7 +412,7 @@ module ModFEMAnalysisBiphasic
             integer :: contZEROFluid, contONEFluid
             integer :: Phase ! Indicates the material phase (1 = Solid; 2 = Fluid),
             
-            real(8) , dimension(3)   :: PGradMacro , DeltaPGradMacro ! Used only in multiscale analysis
+            real(8) , dimension(3)   :: GradPMacro , DeltaGradPMacro ! Used only in multiscale analysis
             real(8)                  :: PMacro , DeltaPMacro         ! Used only in multiscale analysis
             
             type(ClassFEMSystemOfEquationsMonolithicBiphasic) :: FEMSoE
@@ -443,7 +446,8 @@ module ModFEMAnalysisBiphasic
             FEMSoE % ElementList => ElementList
             FEMSoE % AnalysisSettings = AnalysisSettings
             FEMSoE % GlobalNodesList => GlobalNodesList
-            FEMSoE % BC => BC
+            FEMSoE % BCSolid => BCSolid
+            FEMSoE % BCFluid => BCFluid
             FEMSoE % Kg => Kg
             
             ! Allocate FEMSoE object atributes
@@ -466,7 +470,7 @@ module ModFEMAnalysisBiphasic
             Ubar_alpha0 = 0.0d0
             Pbar_alpha0 = 0.0d0
 
-            nLoadCases = BC%GetNumberOfLoadCases()
+            nLoadCases = BCSolid%GetNumberOfLoadCases()
 
             Flag_EndStep = 1
             
@@ -488,7 +492,7 @@ module ModFEMAnalysisBiphasic
                 write(*,'(a,i3)')'Load Case: ',LC
                 write(*,*)''
 
-                nSteps = BC%GetNumberOfSteps(LC)
+                nSteps = BCSolid%GetNumberOfSteps(LC)
 
                !LOOP - STEPS
                 STEPS:  do ST = 1 , nSteps
@@ -497,10 +501,10 @@ module ModFEMAnalysisBiphasic
                     write(*,*)''
                     
                     ! Get boundary conditions for both displacement and pressure fields
-                    call BC%GetBoundaryConditions(AnalysisSettings, GlobalNodesList,  LC, ST, Fext_solid_alpha0, DeltaFext_solid,FEMSoE%DispDOF, &
+                    call BCSolid%GetBoundaryConditions(AnalysisSettings, GlobalNodesList,  LC, ST, Fext_solid_alpha0, DeltaFext_solid,FEMSoE%DispDOF, &
                                                     X(1:nDOFSolid), DeltaUPresc)
-                    call BC%GetBoundaryConditionsFluid(AnalysisSettings, GlobalNodesList,  LC, ST, Fext_fluid_alpha0, DeltaFext_fluid,FEMSoE%PresDOF, &
-                                                    X((nDOFSolid+1):nDOF), DeltaPPresc, PMacro , DeltaPMacro, PGradMacro , DeltaPGradMacro)
+                    call BCFluid%GetBoundaryConditions(AnalysisSettings, GlobalNodesList,  LC, ST, Fext_fluid_alpha0, DeltaFext_fluid,FEMSoE%PresDOF, &
+                                                    X((nDOFSolid+1):nDOF), DeltaPPresc, PMacro , DeltaPMacro, GradPMacro , DeltaGradPMacro)
                     
                     ! Shift on fluid prescribed degrees of freedom - PresDOF - (Monolithic)
                     FEMSoE%PresDOF = FEMSoE%PresDOF + nDOFSolid
@@ -525,8 +529,8 @@ module ModFEMAnalysisBiphasic
                         
                         ! Gets  KgSolidValZERO and KgSolidValONE
                         ! Maps the degrees of freedom from KgSolidValZERO and KgSolidValONE to FEMSoE objects
-                        call BC%AllocatePrescDispSparseMapping(FEMSoE%Kg, FEMSoE%DispDOF, KgSolidValZERO, KgSolidValONE, contZEROSolid, contONESolid)
-                        call BC%AllocatePrescPresSparseMapping(FEMSoE%Kg, FEMSoE%PresDOF, KgFluidValZERO, KgFluidValONE, contZEROFluid, contONEFluid)
+                        call BCSolid%AllocatePrescDispSparseMapping(FEMSoE%Kg, FEMSoE%DispDOF, KgSolidValZERO, KgSolidValONE, contZEROSolid, contONESolid)
+                        call BCFluid%AllocatePrescPresSparseMapping(FEMSoE%Kg, FEMSoE%PresDOF, KgFluidValZERO, KgFluidValONE, contZEROFluid, contONEFluid)
 
                         allocate( FEMSoE%PrescDirichletSparseMapZERO(contZEROSolid + contZEROFluid))
                         allocate( FEMSoE%PrescDirichletSparseMapONE(contONESolid + contONEFluid))
@@ -536,7 +540,7 @@ module ModFEMAnalysisBiphasic
                         FEMSoE%PrescDirichletSparseMapONE(1:contONESolid)                                   = KgSolidValONE(1:contONESolid)
                         FEMSoE%PrescDirichletSparseMapONE(1+contONESolid: contONESolid + contONEfluid)      = KgFluidValONE(1:contONEFluid)
 
-                        call BC%AllocateFixedSupportSparseMapping(FEMSoE%Kg, KgSolidValZERO, KgSolidValONE, contZEROSolid, contONESolid)
+                        call BCSolid%AllocateFixedSupportSparseMapping(FEMSoE%Kg, KgSolidValZERO, KgSolidValONE, contZEROSolid, contONESolid)
 
                         allocate( FEMSoE%FixedSupportSparseMapZERO(contZEROSolid), FEMSoE%FixedSupportSparseMapONE(contONESolid) )
 
@@ -549,7 +553,7 @@ module ModFEMAnalysisBiphasic
                     end if
                     
                     !-----------------------------------------------------------------------------------
-                    call BC%GetTimeInformation(LC,ST,Time_alpha0,DeltaTime)
+                    call BCSolid%GetTimeInformation(LC,ST,Time_alpha0,DeltaTime)
                     
                     FEMSoE%DeltaT = DeltaTime
 
@@ -672,15 +676,16 @@ module ModFEMAnalysisBiphasic
         ! This routine contains the procedures to solve a quasi-static analysis based in a incremental-
         ! iterative approach for the biphasic model. Biphasic Analysis - Sequential Solution Solid -Fluid
         !==========================================================================================
-        subroutine QuasiStaticAnalysisFEM_biphasic_SolidFluid( ElementList , AnalysisSettings , GlobalNodesList , BC  , &
-                                            KgSolid , KgFluid, NLSolver )
+        subroutine QuasiStaticAnalysisFEM_biphasic_SolidFluid( ElementList , AnalysisSettings , GlobalNodesList , BCSolid  , &
+                                            BCFluid, KgSolid , KgFluid, NLSolver )
             !************************************************************************************
             ! DECLARATIONS OF VARIABLES
             !************************************************************************************
             ! Modules and implicit declarations
             ! -----------------------------------------------------------------------------------
-            use ModFEMSystemOfEquationsSolid
-            use ModFEMSystemOfEquationsFluid
+
+            use ModFEMSystemOfEquationsSolidMinimal
+            use ModFEMSystemOfEquationsFluidMinimal
 
             implicit none
 
@@ -689,7 +694,8 @@ module ModFEMAnalysisBiphasic
             type (ClassAnalysis)                                    :: AnalysisSettings
             type (ClassElementsWrapper),     pointer, dimension(:)  :: ElementList
             type (ClassNodes),               pointer, dimension(:)  :: GlobalNodesList
-            class (ClassBoundaryConditions), pointer                :: BC
+            class (ClassBoundaryConditions), pointer                :: BCSolid
+            class (ClassBoundaryConditionsFluid), pointer           :: BCFluid
             class(ClassNonLinearSolver),     pointer                :: NLSolver
             
             !************************************************************************************
@@ -721,15 +727,48 @@ module ModFEMAnalysisBiphasic
             integer :: SubstepsMAX, nDOFel
             integer :: Phase ! Indicates the material phase (1 = Solid; 2 = Fluid)
             
-            real(8) , dimension(3)   :: PGradMacro , DeltaPGradMacro ! Used only in multiscale analysis
+            real(8) , dimension(3)   :: GradPMacro , DeltaGradPMacro ! Used only in multiscale analysis
             real(8)                  :: PMacro , DeltaPMacro         ! Used only in multiscale analysis
             
             integer :: NumberOfSolidNewtonIterations = 0
             integer :: NumberOfFluidNewtonIterations = 0
             integer :: FileID_NumberOfIterations
+            integer :: MultiscaleModel, MultiscaleModelFluid
             
-            type(ClassFEMSystemOfEquationsSolid) :: FEMSoESolid
-            type(ClassFEMSystemOfEquationsFluid) :: FEMSoEFluid
+            integer :: AdditionalMinimalDoFFluid = 0 
+            integer :: AdditionalMinimalDoFSolid = 0
+            
+            ! Declaration of the possibles FEMSoE
+            class(ClassFEMSystemOfEquationsSolid),  pointer         :: FEMSoESolid
+            class(ClassFEMSystemOfEquationsFluid),  pointer         :: FEMSoEFluid
+
+            
+            MultiscaleModel = AnalysisSettings%MultiscaleModel
+            MultiscaleModelFluid = AnalysisSettings%MultiscaleModelFluid
+        
+            if (MultiscaleModel == MultiscaleModels%Minimal .or. &
+                MultiscaleModel == MultiscaleModels%MinimalLinearD1 .or. &
+                MultiscaleModel == MultiscaleModels%MinimalLinearD3) then
+                allocate( ClassFEMSystemOfEquationsSolidMinimal :: FEMSoESolid)
+                select type(FEMSoESolid)
+                    class is(ClassFEMSystemOfEquationsSolidMinimal)
+                        AdditionalMinimalDoFSolid = size(FEMSoESolid%FMacro_current) 
+                endselect
+            else
+                allocate( ClassFEMSystemOfEquationsSolid :: FEMSoESolid)
+            endif
+                    
+            if (MultiscaleModelFluid == MultiscaleModels%Minimal .or. &
+                MultiscaleModelFluid == MultiscaleModels%MinimalLinearD1 .or. &
+                MultiscaleModelFluid == MultiscaleModels%MinimalLinearD3) then
+                allocate( ClassFEMSystemOfEquationsFluidMinimal :: FEMSoEFluid)
+                select type(FEMSoEFluid)
+                    class is(ClassFEMSystemOfEquationsFluidMinimal)
+                        AdditionalMinimalDoFFluid = size(FEMSoEFluid%PMacro_current) + size(FEMSoEFluid%GradPMacro_current) 
+                endselect
+            else
+                allocate( ClassFEMSystemOfEquationsFluid :: FEMSoEFluid)     
+            endif           
 
             FileID_FEMAnalysisResultsSolid = 42
             open (FileID_FEMAnalysisResultsSolid,file='FEMAnalysisSolid.result',status='unknown')
@@ -747,8 +786,8 @@ module ModFEMAnalysisBiphasic
 
             select type (NLSolver)
                 class is (ClassNewtonRaphsonFull)
-                        NLSolver%SizeR_solid = nDOFSolid
-                        NLSolver%SizeR_fluid = nDOFFluid
+                        NLSolver%SizeR_solid = nDOFSolid + AdditionalMinimalDoFSolid
+                        NLSolver%SizeR_fluid = nDOFFluid + AdditionalMinimalDoFFluid
                 class default
                     stop 'Error: Non linear solver is not defined'
             end select
@@ -760,35 +799,36 @@ module ModFEMAnalysisBiphasic
             FEMSoESolid % ElementList => ElementList
             FEMSoESolid % AnalysisSettings = AnalysisSettings
             FEMSoESolid % GlobalNodesList => GlobalNodesList
-            FEMSoESolid % BC => BC
+            FEMSoESolid % BC => BCSolid
             FEMSoESolid % Kg => KgSolid
             
             ! Definitions of FEMSoEFluid
             FEMSoEFluid % ElementList => ElementList
             FEMSoEFluid % AnalysisSettings = AnalysisSettings
             FEMSoEFluid % GlobalNodesList => GlobalNodesList
-            FEMSoEFluid % BC => BC
+            FEMSoEFluid % BC => BCFluid
             FEMSoEFluid % Kg => KgFluid
             
             ! Allocate the FEMSoESolid
             allocate( FEMSoESolid% Fint(nDOFSolid) , FEMSoESolid% Fext(nDOFSolid) , FEMSoESolid% Ubar(nDOFSolid), &
-                      FEMSoESolid% Pfluid(nDOFFluid) )
+                      FEMSoESolid% Pfluid(nDOFFluid))
             ! Allocate the FEMSoEFluid
             allocate( FEMSoEFluid% Fint(nDOFFluid) ,  FEMSoEFluid% Fext(nDOFFluid) , FEMSoEFluid% Pbar(nDOFFluid), &
                       FEMSoEFluid% VSolid(nDOFSolid), FEMSoEFluid% U(nDOFSolid))
 
 
             ! Allocating Solid arrays 
-            allocate(RSolid(nDOFSolid) , DeltaFext(nDOFSolid), Fext_alpha0(nDOFSolid))
-            allocate( U(nDOFSolid)  , DeltaUPresc(nDOFSolid), Ubar_alpha0(nDOFSolid), Uconverged(nDOFSolid)  )
+            allocate(DeltaFext(nDOFSolid), Fext_alpha0(nDOFSolid))
+            allocate( U(nDOFSolid+AdditionalMinimalDoFSolid)  , DeltaUPresc(nDOFSolid), Ubar_alpha0(nDOFSolid), Uconverged(nDOFSolid+AdditionalMinimalDoFSolid)  )
             allocate( VSolid(nDOFSolid),  VSolidconverged(nDOFSolid), ASolidconverged(nDOFSolid), ASolid(nDOFSolid) )
             ! Allocating Fluid arrays
-            allocate(RFluid(nDOFFluid) , DeltaFluxExt(nDOFFluid), FluxExt_alpha0(nDOFFluid))
-            allocate( P(nDOFFluid)  , DeltaPPresc(nDOFFluid), Pbar_alpha0(nDOFFluid), Pconverged(nDOFFluid)  )
+            allocate(DeltaFluxExt(nDOFFluid), FluxExt_alpha0(nDOFFluid))
+            allocate( P(nDOFFluid++AdditionalMinimalDoFFluid)  , DeltaPPresc(nDOFFluid), Pbar_alpha0(nDOFFluid), Pconverged(nDOFFluid++AdditionalMinimalDoFFluid)  )
             ! Allocating staggered variables
-            allocate( Ustaggered(nDOFSolid) , Pstaggered(nDOFFluid)   )
+            allocate( Ustaggered(nDOFSolid+AdditionalMinimalDoFSolid) , Pstaggered(nDOFFluid+AdditionalMinimalDoFFluid)   )
+            
             allocate(P_Int_Staggered(size(elementlist)*size(elementlist(1)%el%GaussPoints))) ! trial
-            allocate(P_Int(size(elementlist)*size(elementlist(1)%el%GaussPoints)))  ! trial
+            allocate(P_Int(size(elementlist)*size(elementlist(1)%el%GaussPoints)))           ! trial
 
             SubstepsMAX = 1000
             U = 0.0d0
@@ -805,12 +845,12 @@ module ModFEMAnalysisBiphasic
             TolSTFluid          = AnalysisSettings%StaggeredParameters%FluidStaggTol
             InitialNormStagMin  = 1.0d-12
             
-            nLoadCases = BC%GetNumberOfLoadCases() !Verificar
+            nLoadCases = BCSolid%GetNumberOfLoadCases() 
 
             ! Escrevendo os resultados para o tempo zero
             ! NOTE (Thiago#1#11/19/15): OBS.: As condições de contorno iniciais devem sair do tempo zero.
     
-            call WriteFEMResultsBiphasic( U, 0.0d0,  P, 0.0d0, 1, 1, 0,FileID_FEMAnalysisResultsSolid,FileID_FEMAnalysisResultsFluid, 0)
+            call WriteFEMResultsBiphasic( U(1:nDOFSolid), 0.0d0,  P(1:nDOFFluid), 0.0d0, 1, 1, 0,FileID_FEMAnalysisResultsSolid,FileID_FEMAnalysisResultsFluid, 0)
 
             !LOOP - LOAD CASES
             LOAD_CASE:  do LC = 1 , nLoadCases
@@ -818,7 +858,7 @@ module ModFEMAnalysisBiphasic
                 write(*,'(a,i3)')'Load Case: ',LC
                 write(*,*)''
 
-                nSteps = BC%GetNumberOfSteps(LC)
+                nSteps = BCSolid%GetNumberOfSteps(LC)
 
                ! LOOP - STEPS
                 STEPS:  do ST = 1 , nSteps
@@ -826,9 +866,9 @@ module ModFEMAnalysisBiphasic
                     write(*,'(4x,a,i3,a,i3,a)')'Step: ',ST,' (LC: ',LC,')'
                     write(*,*)''
 
-                    call BC%GetBoundaryConditions(AnalysisSettings, GlobalNodesList,  LC, ST, Fext_alpha0, DeltaFext,FEMSoESolid%DispDOF, U, DeltaUPresc)
-                    call BC%GetBoundaryConditionsFluid(AnalysisSettings, GlobalNodesList,  LC, ST, FluxExt_alpha0, DeltaFluxExt,FEMSoEFluid%PresDOF, P, DeltaPPresc, &
-                                                        PMacro , DeltaPMacro, PGradMacro , DeltaPGradMacro )
+                    call BCSolid%GetBoundaryConditions(AnalysisSettings, GlobalNodesList,  LC, ST, Fext_alpha0, DeltaFext,FEMSoESolid%DispDOF, U, DeltaUPresc)
+                    call BCFluid%GetBoundaryConditions(AnalysisSettings, GlobalNodesList,  LC, ST, FluxExt_alpha0, DeltaFluxExt,FEMSoEFluid%PresDOF, P, DeltaPPresc, &
+                                                        PMacro , DeltaPMacro, GradPMacro , DeltaGradPMacro )
 
                     !-----------------------------------------------------------------------------------
                     ! Mapeando os graus de liberdade da matrix esparsa para a aplicação das CC de Dirichlet
@@ -838,14 +878,14 @@ module ModFEMAnalysisBiphasic
                         ! Condição de contorno de deslocamento prescrito
                         allocate( KgSolidValZERO(size(FEMSoESolid%Kg%Val)), KgSolidValONE(size(FEMSoESolid%Kg%Val)) )
 
-                        call BC%AllocatePrescDispSparseMapping(FEMSoESolid%Kg, FEMSoESolid%DispDOF, KgSolidValZERO, KgSolidValONE, contZEROSolid, contONESolid)
+                        call BCSolid%AllocatePrescDispSparseMapping(FEMSoESolid%Kg, FEMSoESolid%DispDOF, KgSolidValZERO, KgSolidValONE, contZEROSolid, contONESolid)
 
                         allocate( FEMSoESolid%PrescDispSparseMapZERO(contZEROSolid), FEMSoESolid%PrescDispSparseMapONE(contONESolid) )
 
                         FEMSoESolid%PrescDispSparseMapZERO(:) = KgSolidValZERO(1:contZEROSolid)
                         FEMSoESolid%PrescDispSparseMapONE(:)  = KgSolidValONE(1:contONESolid)
 
-                        call BC%AllocateFixedSupportSparseMapping(FEMSoESolid%Kg, KgSolidValZERO, KgSolidValONE, contZEROSolid, contONESolid)
+                        call BCSolid%AllocateFixedSupportSparseMapping(FEMSoESolid%Kg, KgSolidValZERO, KgSolidValONE, contZEROSolid, contONESolid)
 
                         allocate( FEMSoESolid%FixedSupportSparseMapZERO(contZEROSolid), FEMSoESolid%FixedSupportSparseMapONE(contONESolid) )
 
@@ -858,7 +898,7 @@ module ModFEMAnalysisBiphasic
                         ! Condição de contorno de pressão prescrita
                         allocate( KgFluidValZERO(size(FEMSoEFluid%Kg%Val)), KgFluidValONE(size(FEMSoEFluid%Kg%Val)) )
                         
-                        call BC%AllocatePrescPresSparseMapping(FEMSoEFluid%Kg, FEMSoEFluid%PresDOF, KgFluidValZERO, KgFluidValONE, contZEROFluid, contONEFluid)
+                        call BCFluid%AllocatePrescPresSparseMapping(FEMSoEFluid%Kg, FEMSoEFluid%PresDOF, KgFluidValZERO, KgFluidValONE, contZEROFluid, contONEFluid)
                         
                         allocate( FEMSoEFluid%PrescPresSparseMapZERO(contZEROFluid), FEMSoEFluid%PrescPresSparseMapONE(contONEFluid) )
                         
@@ -871,12 +911,12 @@ module ModFEMAnalysisBiphasic
                     end if
                     !-----------------------------------------------------------------------------------
                     
-                    call BC%GetTimeInformation(LC,ST,Time_alpha0,DeltaTime)                   
+                    call BCSolid%GetTimeInformation(LC,ST,Time_alpha0,DeltaTime)                   
                     
                     ! Prescribed Incremental Displacement
-                    Ubar_alpha0 = U
+                    Ubar_alpha0 = U(1:nDOFSolid)
                     ! Prescribed Incremental Pressure
-                    Pbar_alpha0 = P
+                    Pbar_alpha0 = P(1:nDOFFluid)
                     ! Switch Displacement Converged
                     Uconverged = U
                     VSolidconverged = VSolid
@@ -919,10 +959,11 @@ module ModFEMAnalysisBiphasic
 
                         ! -----------------------------------------------------------------------------------
                         ! Solve the Solid System of Equations
-                        FEMSoESolid % Time = Time_alpha0 + alpha*DeltaTime
-                        FEMSoESolid % Fext = Fext_alpha0 + alpha*DeltaFext
-                        FEMSoESolid % Ubar = Ubar_alpha0 + alpha*DeltaUPresc
-                        FEMSoESolid % Pfluid = Pstaggered    !Pconverged
+                        FEMSoESolid % Time   = Time_alpha0 + alpha*DeltaTime
+                        FEMSoESolid % Fext   = Fext_alpha0 + alpha*DeltaFext
+                        FEMSoESolid % Ubar   = Ubar_alpha0 + alpha*DeltaUPresc
+                        FEMSoESolid % Pfluid = Pstaggered(1:nDOFFluid)   !Pconverged
+                        FEMSoESolid % Fmacro_current = Fext_alpha0(1:9) + alpha*DeltaFext(1:9)
                         
                         write(*,'(12x,a)') 'Solve the Solid system of equations '
                         call NLSolver%Solve( FEMSoESolid , XGuess = Ustaggered , X = U, Phase = 1 )
@@ -938,7 +979,7 @@ module ModFEMAnalysisBiphasic
                            
                         ! -----------------------------------------------------------------------------------
                         ! Update the Solid Velocity via finite differences
-                        call ComputeVelocity(DeltaTime, Uconverged, U, VSolidconverged, VSolid, ASolidconverged, ASolid)
+                        call ComputeVelocity(DeltaTime, Uconverged(1:nDOFSolid), U(1:nDOFSolid), VSolidconverged, VSolid, ASolidconverged, ASolid)
                          
                         ! -----------------------------------------------------------------------------------
                         ! Solve the Fluid System of Equations
@@ -946,7 +987,9 @@ module ModFEMAnalysisBiphasic
                         FEMSoEFluid % Fext = FluxExt_alpha0 + alpha*DeltaFluxExt
                         FEMSoEFluid % Pbar = Pbar_alpha0 + alpha*DeltaPPresc
                         FEMSoEFluid % VSolid = VSolid
-                        FEMSoEFluid % U = U
+                        FEMSoEFluid % U = U(1:nDOFSolid)
+                        FEMSoEFluid % PMacro_current     = PMacro + alpha*DeltaPMacro
+                        FEMSoEFluid % GradPMacro_current = GradPMacro + alpha*DeltaGradPMacro
                         
                         write(*,'(12x,a)') 'Solve the Fluid system of equations '
                         call NLSolver%Solve( FEMSoEFluid , XGuess = Pstaggered , X = P, Phase = 2 )
@@ -1041,7 +1084,7 @@ module ModFEMAnalysisBiphasic
 
                     ! -----------------------------------------------------------------------------------
                     ! Write the results
-                    call WriteFEMResultsBiphasic( U, FEMSoESolid%Time,  P, FEMSoEFluid%Time, LC, ST, SubStep,FileID_FEMAnalysisResultsSolid, &
+                    call WriteFEMResultsBiphasic( U(1:nDOFSolid), FEMSoESolid%Time,  P(1:nDOFFluid), FEMSoEFluid%Time, LC, ST, SubStep,FileID_FEMAnalysisResultsSolid, &
                                                   FileID_FEMAnalysisResultsFluid, Substep)
                     
                     write(FileID_NumberOfIterations,*) 'Time step :', FEMSoEFluid%Time
@@ -1075,22 +1118,22 @@ module ModFEMAnalysisBiphasic
             close (FileID_FEMAnalysisResultsFluid)
             close (FileID_NumberOfIterations)
             !************************************************************************************
-                                            end subroutine
+        end subroutine
         !==========================================================================================                                                 
         
         !==========================================================================================
         ! This routine contains the procedures to solve a quasi-static analysis based in a incremental-
         ! iterative approach - Biphasic Analysis - Sequential Solution Fluid - Solid.
         !==========================================================================================
-        subroutine QuasiStaticAnalysisFEM_biphasic_FluidSolid( ElementList , AnalysisSettings , GlobalNodesList , BC  , &
-                                                                    KgSolid , KgFluid, NLSolver )
+        subroutine QuasiStaticAnalysisFEM_biphasic_FluidSolid( ElementList , AnalysisSettings , GlobalNodesList , BCSolid  , &
+                                                                    BCFluid, KgSolid , KgFluid, NLSolver )
             !************************************************************************************
             ! DECLARATIONS OF VARIABLES
             !************************************************************************************
             ! Modules and implicit declarations
             ! -----------------------------------------------------------------------------------
-            use ModFEMSystemOfEquationsSolid
-            use ModFEMSystemOfEquationsFluid
+            use ModFEMSystemOfEquationsSolidMinimal
+            use ModFEMSystemOfEquationsFluidMinimal
 
             implicit none
 
@@ -1099,7 +1142,8 @@ module ModFEMAnalysisBiphasic
             type (ClassAnalysis)                                    :: AnalysisSettings
             type (ClassElementsWrapper),     pointer, dimension(:)  :: ElementList
             type (ClassNodes),               pointer, dimension(:)  :: GlobalNodesList
-            class (ClassBoundaryConditions), pointer                :: BC
+            class (ClassBoundaryConditions), pointer                :: BCSolid
+            class (ClassBoundaryConditionsFluid), pointer           :: BCFluid
             class(ClassNonLinearSolver),     pointer                :: NLSolver
             
             !************************************************************************************
@@ -1134,15 +1178,48 @@ module ModFEMAnalysisBiphasic
             integer :: SubstepsMAX
             integer :: Phase ! Indicates the material phase (1 = Solid; 2 = Fluid)
             
-            real(8) , dimension(3)   :: PGradMacro , DeltaPGradMacro ! Used only in multiscale analysis
-            real(8)                  :: PMacro , DeltaPMacro         ! Used only in multiscale analysis
+            real(8) , dimension(3)   :: GradPMacro , DeltaGradPMacro     ! Used only in multiscale analysis
+            real(8)                  :: PMacro     , DeltaPMacro         ! Used only in multiscale analysis
             
             integer :: NumberOfSolidNewtonIterations = 0
             integer :: NumberOfFluidNewtonIterations = 0
             integer :: FileID_NumberOfIterations
+            integer :: MultiscaleModel, MultiscaleModelFluid
+            
+            integer :: AdditionalMinimalDoFFluid = 0 
+            integer :: AdditionalMinimalDoFSolid = 0
+            
+            ! Declaration of the possibles FEMSoE
+            class(ClassFEMSystemOfEquationsSolid),  pointer         :: FEMSoESolid
+            class(ClassFEMSystemOfEquationsFluid),  pointer         :: FEMSoEFluid
 
-            type(ClassFEMSystemOfEquationsSolid) :: FEMSoESolid 
-            type(ClassFEMSystemOfEquationsFluid) :: FEMSoEFluid
+            
+            MultiscaleModel = AnalysisSettings%MultiscaleModel
+            MultiscaleModelFluid = AnalysisSettings%MultiscaleModelFluid
+        
+            if (MultiscaleModel == MultiscaleModels%Minimal .or. &
+                MultiscaleModel == MultiscaleModels%MinimalLinearD1 .or. &
+                MultiscaleModel == MultiscaleModels%MinimalLinearD3) then
+                allocate( ClassFEMSystemOfEquationsSolidMinimal :: FEMSoESolid)
+                select type(FEMSoESolid)
+                    class is(ClassFEMSystemOfEquationsSolidMinimal)
+                        AdditionalMinimalDoFSolid = size(FEMSoESolid%FMacro_current) 
+                endselect
+            else
+                allocate( ClassFEMSystemOfEquationsSolid :: FEMSoESolid)
+            endif
+                    
+            if (MultiscaleModelFluid == MultiscaleModels%Minimal .or. &
+                MultiscaleModelFluid == MultiscaleModels%MinimalLinearD1 .or. &
+                MultiscaleModelFluid == MultiscaleModels%MinimalLinearD3) then
+                allocate( ClassFEMSystemOfEquationsFluidMinimal :: FEMSoEFluid)
+                select type(FEMSoEFluid)
+                    class is(ClassFEMSystemOfEquationsFluidMinimal)
+                        AdditionalMinimalDoFFluid = size(FEMSoEFluid%PMacro_current) + size(FEMSoEFluid%GradPMacro_current) 
+                endselect
+            else
+                allocate( ClassFEMSystemOfEquationsFluid :: FEMSoEFluid)     
+            endif 
 
             FileID_FEMAnalysisResultsSolid = 42
             open (FileID_FEMAnalysisResultsSolid,file='FEMAnalysisSolid.result',status='unknown')
@@ -1160,8 +1237,8 @@ module ModFEMAnalysisBiphasic
             
             select type (NLSolver)
                 class is (ClassNewtonRaphsonFull)
-                        NLSolver%SizeR_solid = nDOFSolid
-                        NLSolver%SizeR_fluid = nDOFFluid
+                        NLSolver%SizeR_solid = nDOFSolid + AdditionalMinimalDoFSolid
+                        NLSolver%SizeR_fluid = nDOFFluid + AdditionalMinimalDoFFluid
                 class default
                     stop 'Error: Non linear solver is not defined'
             end select
@@ -1173,14 +1250,14 @@ module ModFEMAnalysisBiphasic
             FEMSoESolid % ElementList => ElementList
             FEMSoESolid % AnalysisSettings = AnalysisSettings
             FEMSoESolid % GlobalNodesList => GlobalNodesList
-            FEMSoESolid % BC => BC
+            FEMSoESolid % BC => BCSolid
             FEMSoESolid % Kg => KgSolid
             
             ! Definitions of FEMSoEFluid
             FEMSoEFluid % ElementList => ElementList
             FEMSoEFluid % AnalysisSettings = AnalysisSettings
             FEMSoEFluid % GlobalNodesList => GlobalNodesList
-            FEMSoEFluid % BC => BC
+            FEMSoEFluid % BC => BCFluid
             FEMSoEFluid % Kg => KgFluid
             
             ! Allocate the FEMSoESolid
@@ -1192,17 +1269,15 @@ module ModFEMAnalysisBiphasic
 
 
             ! Allocating Solid arrays 
-            allocate(RSolid(nDOFSolid) , DeltaFext(nDOFSolid), Fext_alpha0(nDOFSolid))
-            allocate( U(nDOFSolid)  , DeltaUPresc(nDOFSolid), Ubar_alpha0(nDOFSolid), Uconverged(nDOFSolid)  )
+            allocate(DeltaFext(nDOFSolid), Fext_alpha0(nDOFSolid))
+            allocate( U(nDOFSolid+AdditionalMinimalDoFSolid)  , DeltaUPresc(nDOFSolid), Ubar_alpha0(nDOFSolid), Uconverged(nDOFSolid+ AdditionalMinimalDoFSolid)  )
             allocate( VSolid(nDOFSolid),  VSolidconverged(nDOFSolid), ASolidconverged(nDOFSolid), ASolid(nDOFSolid) )
             ! Allocating Fluid arrays
-            allocate(RFluid(nDOFFluid) , DeltaFluxExt(nDOFFluid), FluxExt_alpha0(nDOFFluid))
-            allocate( P(nDOFFluid)  , DeltaPPresc(nDOFFluid), Pbar_alpha0(nDOFFluid), Pconverged(nDOFFluid)  )
+            allocate( DeltaFluxExt(nDOFFluid), FluxExt_alpha0(nDOFFluid))
+            allocate( P(nDOFFluid+AdditionalMinimalDoFFluid)  , DeltaPPresc(nDOFFluid), Pbar_alpha0(nDOFFluid), Pconverged(nDOFFluid+AdditionalMinimalDoFFluid)  )
             ! Allocating staggered variables
-            allocate( Ustaggered(nDOFSolid) , Pstaggered(nDOFFluid)   )
-            
-            !allocate(DivV_Staggered(size(elementlist)*size(elementlist(1)%el%GaussPoints))) ! trial
-            !allocate(DivV(size(elementlist)*size(elementlist(1)%el%GaussPoints)))  ! trial
+            allocate( Ustaggered(nDOFSolid+AdditionalMinimalDoFSolid) , Pstaggered(nDOFFluid+AdditionalMinimalDoFFluid)   )
+
 
             SubstepsMAX = 1000
             U = 0.0d0
@@ -1219,16 +1294,16 @@ module ModFEMAnalysisBiphasic
             TolSTFluid          = AnalysisSettings%StaggeredParameters%FluidStaggTol
             InitialNormStagMin  = 1.0d-12
             
-            nLoadCases = BC%GetNumberOfLoadCases() !Verificar
+            nLoadCases = BCSolid%GetNumberOfLoadCases() !Verificar
 
             ! Escrevendo os resultados para o tempo zero
             ! NOTE (Thiago#1#11/19/15): OBS.: As condições de contorno iniciais devem sair do tempo zero.
     
-            call WriteFEMResultsBiphasic( U, 0.0d0,  P, 0.0d0, 1, 1, 0,FileID_FEMAnalysisResultsSolid,FileID_FEMAnalysisResultsFluid, 0)
+            call WriteFEMResultsBiphasic( U(1:nDOFSolid), 0.0d0,  P(1:nDOFFluid), 0.0d0, 1, 1, 0,FileID_FEMAnalysisResultsSolid,FileID_FEMAnalysisResultsFluid, 0)
 
             ! Set Kd using the initial linearlized elasticity matrix (F = Id(3,3))
             
-            call BC%GetTimeInformation(1,1,Time_alpha0,DeltaTime) !Verificar
+            call BCSolid%GetTimeInformation(1,1,Time_alpha0,DeltaTime) !Verificar
             
             do e=1,size(elementlist)
                 do gp=1,size(elementlist(e)%el%GaussPoints)
@@ -1244,7 +1319,7 @@ module ModFEMAnalysisBiphasic
                 write(*,'(a,i3)')'Load Case: ',LC
                 write(*,*)''
 
-                nSteps = BC%GetNumberOfSteps(LC)
+                nSteps = BCSolid%GetNumberOfSteps(LC)
 
                ! LOOP - STEPS
                 STEPS:  do ST = 1 , nSteps
@@ -1252,9 +1327,9 @@ module ModFEMAnalysisBiphasic
                     write(*,'(4x,a,i3,a,i3,a)')'Step: ',ST,' (LC: ',LC,')'
                     write(*,*)''
 
-                    call BC%GetBoundaryConditions(AnalysisSettings, GlobalNodesList,  LC, ST, Fext_alpha0, DeltaFext,FEMSoESolid%DispDOF, U, DeltaUPresc)
-                    call BC%GetBoundaryConditionsFluid(AnalysisSettings, GlobalNodesList,  LC, ST, FluxExt_alpha0, DeltaFluxExt,FEMSoEFluid%PresDOF, P, DeltaPPresc, &
-                                                        PMacro , DeltaPMacro, PGradMacro , DeltaPGradMacro)
+                    call BCSolid%GetBoundaryConditions(AnalysisSettings, GlobalNodesList,  LC, ST, Fext_alpha0, DeltaFext,FEMSoESolid%DispDOF, U, DeltaUPresc)
+                    call BCFluid%GetBoundaryConditions(AnalysisSettings, GlobalNodesList,  LC, ST, FluxExt_alpha0, DeltaFluxExt,FEMSoEFluid%PresDOF, P, DeltaPPresc, &
+                                                        PMacro , DeltaPMacro, GradPMacro , DeltaGradPMacro)
 
                     !-----------------------------------------------------------------------------------
                     ! Mapeando os graus de liberdade da matrix esparsa para a aplicação das CC de Dirichlet
@@ -1264,14 +1339,14 @@ module ModFEMAnalysisBiphasic
                         ! Condição de contorno de deslocamento prescrito
                         allocate( KgSolidValZERO(size(FEMSoESolid%Kg%Val)), KgSolidValONE(size(FEMSoESolid%Kg%Val)) )
 
-                        call BC%AllocatePrescDispSparseMapping(FEMSoESolid%Kg, FEMSoESolid%DispDOF, KgSolidValZERO, KgSolidValONE, contZEROSolid, contONESolid)
+                        call BCSolid%AllocatePrescDispSparseMapping(FEMSoESolid%Kg, FEMSoESolid%DispDOF, KgSolidValZERO, KgSolidValONE, contZEROSolid, contONESolid)
 
                         allocate( FEMSoESolid%PrescDispSparseMapZERO(contZEROSolid), FEMSoESolid%PrescDispSparseMapONE(contONESolid) )
 
                         FEMSoESolid%PrescDispSparseMapZERO(:) = KgSolidValZERO(1:contZEROSolid)
                         FEMSoESolid%PrescDispSparseMapONE(:)  = KgSolidValONE(1:contONESolid)
 
-                        call BC%AllocateFixedSupportSparseMapping(FEMSoESolid%Kg, KgSolidValZERO, KgSolidValONE, contZEROSolid, contONESolid)
+                        call BCSolid%AllocateFixedSupportSparseMapping(FEMSoESolid%Kg, KgSolidValZERO, KgSolidValONE, contZEROSolid, contONESolid)
 
                         allocate( FEMSoESolid%FixedSupportSparseMapZERO(contZEROSolid), FEMSoESolid%FixedSupportSparseMapONE(contONESolid) )
 
@@ -1284,7 +1359,7 @@ module ModFEMAnalysisBiphasic
                         ! Condição de contorno de pressão prescrita
                         allocate( KgFluidValZERO(size(FEMSoEFluid%Kg%Val)), KgFluidValONE(size(FEMSoEFluid%Kg%Val)) )
                         
-                        call BC%AllocatePrescPresSparseMapping(FEMSoEFluid%Kg, FEMSoEFluid%PresDOF, KgFluidValZERO, KgFluidValONE, contZEROFluid, contONEFluid)
+                        call BCFluid%AllocatePrescPresSparseMapping(FEMSoEFluid%Kg, FEMSoEFluid%PresDOF, KgFluidValZERO, KgFluidValONE, contZEROFluid, contONEFluid)
                         
                         allocate( FEMSoEFluid%PrescPresSparseMapZERO(contZEROFluid), FEMSoEFluid%PrescPresSparseMapONE(contONEFluid) )
                         
@@ -1297,12 +1372,12 @@ module ModFEMAnalysisBiphasic
                     !-----------------------------------------------------------------------------------
 
                     
-                    call BC%GetTimeInformation(LC,ST,Time_alpha0,DeltaTime) !Verificar
+                    call BCSolid%GetTimeInformation(LC,ST,Time_alpha0,DeltaTime) !Verificar
                     
                     ! Prescribed Incremental Displacement
-                    Ubar_alpha0 = U
+                    Ubar_alpha0 = U(1:nDOFSolid)
                     ! Prescribed Incremental Pressure
-                    Pbar_alpha0 = P
+                    Pbar_alpha0 = P(1:nDOFFluid)
                     ! Switch Displacement Converged
                     Uconverged = U
                     VSolidconverged = VSolid
@@ -1339,7 +1414,7 @@ module ModFEMAnalysisBiphasic
                     SUBSTEPS: do while(.true.)   !Staggered procedure
 
                         ! Update staggered variables : StateVariable_i := StateVariable_i+1
-                        call UpdateStaggeredVariables_ComputeKd( ElementList, P, Pconverged, AnalysisSettings, DeltaTime)
+                        call UpdateStaggeredVariables_ComputeKd( ElementList, P(1:nDOFFluid), Pconverged(1:nDOFFluid), AnalysisSettings, DeltaTime)
                         
                         ! Update the staggerd variables
                         Ustaggered = U
@@ -1351,7 +1426,7 @@ module ModFEMAnalysisBiphasic
                         
                         ! -----------------------------------------------------------------------------------
                         ! Update the Solid Velocity via finite differences
-                        call ComputeVelocity(DeltaTime, Uconverged, U, VSolidconverged, VSolid, ASolidconverged, ASolid)
+                        call ComputeVelocity(DeltaTime, Uconverged(1:nDOFSolid), U(1:nDOFSolid), VSolidconverged, VSolid, ASolidconverged, ASolid)
                         
                         ! -----------------------------------------------------------------------------------
                         ! Solve the Fluid System of Equations
@@ -1359,8 +1434,9 @@ module ModFEMAnalysisBiphasic
                         FEMSoEFluid % Fext = FluxExt_alpha0 + alpha*DeltaFluxExt
                         FEMSoEFluid % Pbar = Pbar_alpha0 + alpha*DeltaPPresc
                         FEMSoEFluid % VSolid = VSolid
-                        FEMSoEFluid % U = U
-                        
+                        FEMSoEFluid % U = U(1:nDOFSolid)
+                        FEMSoEFluid % PMacro_current     = PMacro + alpha*DeltaPMacro
+                        FEMSoEFluid % GradPMacro_current = GradPMacro + alpha*DeltaGradPMacro
                         
                         write(*,'(12x,a)') 'Solve the Fluid system of equations '
                         call NLSolver%Solve( FEMSoEFluid , XGuess = Pstaggered , X = P, Phase = 2 )
@@ -1379,7 +1455,8 @@ module ModFEMAnalysisBiphasic
                         FEMSoESolid % Time = Time_alpha0 + alpha*DeltaTime
                         FEMSoESolid % Fext = Fext_alpha0 + alpha*DeltaFext
                         FEMSoESolid % Ubar = Ubar_alpha0 + alpha*DeltaUPresc
-                        FEMSoESolid % Pfluid = P           !FEMSoESolid % Pfluid = Pstaggered
+                        FEMSoESolid % Pfluid = P(1:nDOFFluid)
+                        FEMSoESolid % Fmacro_current = Fext_alpha0(1:9) + alpha*DeltaFext(1:9)
                         
                         write(*,'(12x,a)') 'Solve the Solid system of equations '
                         call NLSolver%Solve( FEMSoESolid , XGuess = Ustaggered , X = U, Phase = 1 )
@@ -1469,7 +1546,7 @@ module ModFEMAnalysisBiphasic
 
                     ! -----------------------------------------------------------------------------------
                     ! Write the results
-                    call WriteFEMResultsBiphasic( U, FEMSoESolid%Time,  P, FEMSoEFluid%Time, LC, ST, SubStep,FileID_FEMAnalysisResultsSolid, &
+                    call WriteFEMResultsBiphasic( U(1:nDOFSolid), FEMSoESolid%Time,  P(1:nDOFFluid), FEMSoEFluid%Time, LC, ST, SubStep,FileID_FEMAnalysisResultsSolid, &
                                                   FileID_FEMAnalysisResultsFluid, Substep)
 
                     write(FileID_NumberOfIterations,*) 'Time step :', FEMSoEFluid%Time

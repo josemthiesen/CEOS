@@ -163,19 +163,14 @@ program MAIN
 
         ! Post Processing Results
         ! ---------------------------------------------------------------------------------------------
-        select case (Analysis%AnalysisSettings%ProblemType)
-       
-            case (ProblemTypes%Mechanical)
+        select type (Analysis)  ! -> ProblemTypes%Mechanical
+            class is (ClassFEMAnalysis)
                 call PostProcessingResults(ProbeList,PostProcessor,Analysis)
-                
-            case (ProblemTypes%Thermal)
-                stop ('ERROR: Thermal analysis not implemented')
-                
-            case (ProblemTypes%Biphasic)
+            class is (ClassFEMAnalysisBiphasic) ! -> (ProblemTypes%Biphasic)
                 call PostProcessingResultsBiphasic(ProbeList,PostProcessor,Analysis)
-        
-        end select
-                             
+            class default
+                    stop 'Error: Analysis Type not identified in Main'
+        end select            
 
         call AnalysisTime%Stop
         write(*,*) ''

@@ -989,7 +989,7 @@ module ModProbe
             Fint = 0.0d0         
             
             ! Option Problem Type 
-                select case ( FEA%AnalysisSettings%ProblemType )
+            select case ( FEA%AnalysisSettings%ProblemType )
 
                 case ( ProblemTypes%Mechanical )
                                

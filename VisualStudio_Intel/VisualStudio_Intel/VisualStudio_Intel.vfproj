@@ -81,7 +81,7 @@
 		<Filter Name="FEM">
 		<Filter Name="BoundaryConditions">
 		<File RelativePath="..\..\SourceCode\FEM\BoundaryConditions\ModBoundaryConditions.f90"/>
-		<File RelativePath="..\..\SourceCode\FEM\BoundaryConditions\ModBoundaryConditionsBiphasic.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\BoundaryConditions\ModBoundaryConditionsFluid.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\BoundaryConditions\ModLoadHistoryData.f90"/></Filter>
 		<Filter Name="Elements">
 		<Filter Name="ElementLibrary">
@@ -106,8 +106,10 @@
 		<File RelativePath="..\..\SourceCode\FEM\Modules\ModFEMSoEMultiscaleMinimal.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Modules\ModFEMSystemOfEquations.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Modules\ModFEMSystemOfEquationsFluid.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\Modules\ModFEMSystemOfEquationsFluidMinimal.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Modules\ModFEMSystemOfEquationsMonolithicBiphasic.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Modules\ModFEMSystemOfEquationsSolid.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\Modules\ModFEMSystemOfEquationsSolidMinimal.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Modules\ModGlobalFEM.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Modules\ModGlobalFEMBiphasic.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Modules\ModInterfaces.f90"/>
@@ -116,8 +118,9 @@
 		<File RelativePath="..\..\SourceCode\FEM\ModFEMAnalysisBiphasic.f90"/></Filter>
 		<Filter Name="Multiscale">
 		<File RelativePath="..\..\SourceCode\MultiScale\ModGlobalFEMMultiscale.f90"/>
+		<File RelativePath="..\..\SourceCode\MultiScale\ModGlobalFEMMultiscaleBiphasic.f90"/>
 		<File RelativePath="..\..\SourceCode\MultiScale\ModMultiscaleBoundaryConditions.f90"/>
-		<File RelativePath="..\..\SourceCode\MultiScale\ModMultiscaleBoundaryConditionsBiphasic.f90"/>
+		<File RelativePath="..\..\SourceCode\MultiScale\ModMultiscaleBoundaryConditionsFluid.f90"/>
 		<File RelativePath="..\..\SourceCode\MultiScale\ModMultiscaleFEMAnalysis.f90"/>
 		<File RelativePath="..\..\SourceCode\MultiScale\ModMultiscaleFEMAnalysisBiphasic.f90"/>
 		<File RelativePath="..\..\SourceCode\MultiScale\ModMultiscaleHomogenizations.f90"/></Filter>
