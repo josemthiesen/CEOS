@@ -1437,7 +1437,7 @@ module ModElementBiphasic
 
             ! Allocating Memory
             Nfpg => Nfpg_Memory( 1:NDOFelfluid )
-            Hfpg => Gpg_Memory( 1:3 , 1:NDOFelfluid )
+            Hfpg => Hfpg_Memory( 1:3 , 1:NDOFelfluid )
 
             Nfe=0.0d0
             Hfe=0.0d0

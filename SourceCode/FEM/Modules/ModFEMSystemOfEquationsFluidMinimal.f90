@@ -64,8 +64,8 @@ module ModFEMSystemOfEquationsFluidMinimal
                 return
             endif
 
-            call ExternalFluxMultiscaleMinimal( this%ElementList, this%AnalysisSettings, X((nDOFFluid+1)),  X((nDOFFluid+2):(nDOFFluid+4)), this%Fext )
-           
+            call ExternalFluxMultiscaleMinimal( this%ElementList, this%AnalysisSettings, X((nDOFFluid+4)),  X((nDOFFluid+1):(nDOFFluid+3)), this%Fext )
+            
             call GetHomogenizedPressureBiphasic(this%AnalysisSettings, this%ElementList, X(1:nDOFFluid), HomogenizedPressure)
             call GetHomogenizedPressureGradientBiphasic( this%AnalysisSettings, this%ElementList, X(1:nDOFFluid), HomogenizedGradientPressure )                
             

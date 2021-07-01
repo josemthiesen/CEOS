@@ -245,6 +245,115 @@ module ModMultiscaleHomogenizations
         !=================================================================================================
         
         !=================================================================================================
+        subroutine GetHomogenizedJacobian(AnalysisSettings, ElementList , HomogenizedJ )
+            !************************************************************************************
+            ! DECLARATIONS OF VARIABLES
+            !************************************************************************************
+            ! Modules and implicit declarations
+            ! -----------------------------------------------------------------------------------
+            implicit none
+
+            ! Object
+            ! -----------------------------------------------------------------------------------
+            type  (ClassAnalysis)                                    :: AnalysisSettings
+            type  (ClassElementsWrapper),     pointer, dimension(:)  :: ElementList
+
+            ! Input variables
+            ! -----------------------------------------------------------------------------------
+
+            ! Input/Output variables
+            ! -----------------------------------------------------------------------------------
+            real(8) :: HomogenizedJ
+
+            ! Internal variables
+            ! -----------------------------------------------------------------------------------
+            integer							    :: NDOFel , gp, e, nNodes, DimProb,i,j,n
+            real(8)							    :: detJX, TotalVolX , rX
+            real(8) , pointer , dimension(:)    :: Weight
+            real(8) , pointer , dimension(:,:)  :: NaturalCoord
+            real(8)                             :: FactorAxiX
+            real(8)                             :: F(3,3)
+            real(8) , dimension(:,:) , pointer  :: DifSF
+            real(8) , dimension(AnalysisSettings%AnalysisDimension,AnalysisSettings%AnalysisDimension) :: JacobX
+            real(8) , dimension(:)   , pointer  :: ShapeFunctions
+            integer                             :: NumberOfThreads
+            real(8)                             :: Jacobian
+            !************************************************************************************
+
+            !************************************************************************************
+            ! DEFORMATION GRADIENT HOMOGENISATION
+            !************************************************************************************
+            DimProb = AnalysisSettings%AnalysisDimension
+
+            TotalVolX = AnalysisSettings%TotalVolX
+
+            FactorAxiX = 1.0d0 ! 3D Analysis
+        
+            HomogenizedJ = 0.0d0
+        
+            NumberOfThreads = omp_get_max_threads()
+                
+            call omp_set_num_threads( NumberOfThreads )
+           
+            !$OMP PARALLEL DEFAULT(PRIVATE)                                &
+                            Shared( AnalysisSettings,  ElementList, TotalVolX, HomogenizedJ, DimProb, FactorAxiX)         
+            !$OMP DO
+            !Loop over Elements
+            do e = 1,size(ElementList)
+
+                nNodes = ElementList(e)%El%GetNumberOfNodes()
+
+                DifSF => DifSF_Memory ( 1:nNodes , 1:DimProb )
+
+                ShapeFunctions => SF_Memory( 1:nNodes )
+
+                ! Number of degrees of freedom
+                call ElementList(e)%El%GetElementNumberDOF(AnalysisSettings,NDOFel)
+
+                ! Retrieving gauss points parameters for numerical integration
+                call ElementList(e)%El%GetGaussPoints(NaturalCoord,Weight)
+
+                !Loop over gauss points
+                do gp = 1, size(NaturalCoord,dim=1)
+
+                    call ElementList(e)%El%GetDifShapeFunctions(NaturalCoord(gp,:) , DifSF )
+
+                    !Jacobian
+                    JacobX=0.0d0
+                    do i=1,DimProb
+                        do j=1,DimProb
+                            do n=1,nNodes
+                                JacobX(i,j)=JacobX(i,j) + DifSf(n,i) * ElementList(e)%El%ElementNodes(n)%Node%CoordX(j)
+                            enddo
+                        enddo
+                    enddo
+
+                    !Determinant of the Jacobian
+                    detJX = det(JacobX)
+
+                    !Get F
+                    F = ElementList(e)%El%GaussPoints(gp)%F
+                    Jacobian = det(F)
+               
+                    if ( AnalysisSettings%Hypothesis == HypothesisOfAnalysis%Axisymmetric ) then
+                        call ElementList(e)%El%GetShapeFunctions(NaturalCoord(gp,:),ShapeFunctions)
+                        !Radius
+                        rX = dot_product( ShapeFunctions , [( ElementList(e)%El%ElementNodes(n)%Node%CoordX(1),n=1,nNodes )] )
+                        FactorAxiX = 2.0d0*Pi*rX
+                    endif
+                    !Homogenized J
+                    !$OMP CRITICAL
+                    HomogenizedJ = HomogenizedJ + (Jacobian*Weight(gp)*detJX*FactorAxiX)/TotalVolX
+                    !$OMP END CRITICAL
+                enddo
+            enddo
+            !$OMP END DO
+            !$OMP END PARALLEL
+            !************************************************************************************      
+        end subroutine
+        !=================================================================================================
+        
+        !=================================================================================================
         subroutine GetHomogenizedDisplacement( AnalysisSettings, ElementList, U, HomogenizedU )
             !************************************************************************************
             ! DECLARATIONS OF VARIABLES
@@ -622,160 +731,311 @@ module ModMultiscaleHomogenizations
         !=================================================================================================
         subroutine GetHomogenizedRelativeVelocitywXBiphasic( AnalysisSettings, ElementList, VSolid, HomogenizedwX )
        
-           ! NOTE: Relative velocity homogenization realized on the solid reference configuration.
-           use ModMathRoutines
+            ! NOTE: Relative velocity homogenization realized on the solid reference configuration.
+            use ModMathRoutines
   
-           !************************************************************************************
-           ! DECLARATIONS OF VARIABLES
-           !************************************************************************************
-           ! Modules and implicit declarations
-           ! -----------------------------------------------------------------------------------
-           implicit none
+            !************************************************************************************
+            ! DECLARATIONS OF VARIABLES
+            !************************************************************************************
+            ! Modules and implicit declarations
+            ! -----------------------------------------------------------------------------------
+            implicit none
   
-           ! Object
-           ! -----------------------------------------------------------------------------------
-           type  (ClassAnalysis)                                    :: AnalysisSettings
-           type  (ClassElementsWrapper),     pointer, dimension(:)  :: ElementList
+            ! Object
+            ! -----------------------------------------------------------------------------------
+            type  (ClassAnalysis)                                    :: AnalysisSettings
+            type  (ClassElementsWrapper),     pointer, dimension(:)  :: ElementList
 
-           ! Input variables
-           ! ----------------------------------------------- ------------------------------------
-           real(8),  dimension(:)   :: VSolid   ! Global vector of solid velocity
+            ! Input variables
+            ! ----------------------------------------------- ------------------------------------
+            real(8),  dimension(:)   :: VSolid   ! Global vector of solid velocity
   
-           ! Input/Output variables
-           ! -----------------------------------------------------------------------------------
-           real(8), dimension(3)    :: HomogenizedwX
+            ! Input/Output variables
+            ! -----------------------------------------------------------------------------------
+            real(8), dimension(3)    :: HomogenizedwX
   
   
-           ! Internal variables
-           ! -----------------------------------------------------------------------------------
-           integer							    :: e, gp, i, j, n, DimProb
-           real(8)                              :: TotalVolX, rX, detJX
-           real(8) , pointer , dimension(:)     :: Weight
-           real(8) , pointer , dimension(:,:)   :: NaturalCoord
-           real(8)                              :: FactorAxiX
-           real(8) , dimension(AnalysisSettings%AnalysisDimension,AnalysisSettings%AnalysisDimension) :: JacobX
-           real(8) , dimension(:)   , pointer   :: ShapeFunctionsFluid
-           real(8) , dimension(:,:) , pointer   :: DifSF
+            ! Internal variables
+            ! -----------------------------------------------------------------------------------
+            integer							    :: e, gp, i, j, n, DimProb
+            real(8)                              :: TotalVolX, rX, detJX
+            real(8) , pointer , dimension(:)     :: Weight
+            real(8) , pointer , dimension(:,:)   :: NaturalCoord
+            real(8)                              :: FactorAxiX
+            real(8) , dimension(AnalysisSettings%AnalysisDimension,AnalysisSettings%AnalysisDimension) :: JacobX
+            real(8) , dimension(:)   , pointer   :: ShapeFunctionsFluid
+            real(8) , dimension(:,:) , pointer   :: DifSF
        
-           real(8)                              :: w_micro(3), wY_micro(3)
+            real(8)                              :: w_micro(3), wY_micro(3)
        
-           class(ClassElementBiphasic), pointer :: ElBiphasic
-           integer , pointer , dimension(:)     :: GM_solid
-           integer                              :: nDOFel_fluid, nDOFel_solid, nNodesFluid, nNodesSolid
-           real(8)                              :: F_micro(3,3), J_micro, Y_PG(3)  
-           real(8), pointer, dimension(:)       :: VSe
-           real(8)                              :: ContVsolid
-           real(8)                              :: GradVs(3,3)
-           real(8)                              :: GradVsFinv(3,3)
-           integer                              :: NumberOfThreads
+            class(ClassElementBiphasic), pointer :: ElBiphasic
+            integer , pointer , dimension(:)     :: GM_solid
+            integer                              :: nDOFel_fluid, nDOFel_solid, nNodesFluid, nNodesSolid
+            real(8)                              :: F_micro(3,3), J_micro, Y_PG(3)  
+            real(8), pointer, dimension(:)       :: VSe
+            real(8)                              :: ContVsolid
+            real(8)                              :: GradVs(3,3)
+            real(8)                              :: GradVsFinv(3,3)
+            integer                              :: NumberOfThreads
        
-           !************************************************************************************
-           ! RELATIVE VELOCITY HOMOGENISATION - SOLID REFERENCE CONFIGURATION
-           !************************************************************************************
+            !************************************************************************************
+            ! RELATIVE VELOCITY HOMOGENISATION - SOLID REFERENCE CONFIGURATION
+            !************************************************************************************
        
-           !-------------------------------
-           FactorAxiX = 1.0d0  ! Análise 3D
-           !-------------------------------
+            !-------------------------------
+            FactorAxiX = 1.0d0  ! Análise 3D
+            !-------------------------------
              
-           DimProb = AnalysisSettings%AnalysisDimension
+            DimProb = AnalysisSettings%AnalysisDimension
+            VSe_Memory = 0.0d0
+            ! Solid reference total volume
+            TotalVolX = AnalysisSettings%TotalVolX 
   
-           ! Solid reference total volume
-           TotalVolX = AnalysisSettings%TotalVolX 
-  
-           HomogenizedwX = 0.0d0
+            HomogenizedwX = 0.0d0
             !$OMP PARALLEL DEFAULT(PRIVATE)                                &
-                    Shared( AnalysisSettings,  ElementList, TotalVolX, HomogenizedwX, DimProb, FactorAxiX)         
+                    Shared( AnalysisSettings,  ElementList, VSolid, TotalVolX, HomogenizedwX, DimProb, FactorAxiX)         
             !$OMP DO
             !Loop over Elements
-           do e = 1,size(ElementList)
+            do e = 1,size(ElementList)
            
-               ! Aponta o objeto ElBiphasic para o ElementList(e)%El mas com o type correto ClassElementBiphasic
-               call ConvertElementToElementBiphasic(ElementList(e)%el,  ElBiphasic)
-               ! Number of degrees of freedom of fluid
-               call ElBiphasic%GetElementNumberDOF_fluid(AnalysisSettings, nDOFel_fluid)
-               ! Number of degrees of freedom of solid
-               call ElBiphasic%GetElementNumberDOF(AnalysisSettings, nDOFel_solid)
+                ! Aponta o objeto ElBiphasic para o ElementList(e)%El mas com o type correto ClassElementBiphasic
+                call ConvertElementToElementBiphasic(ElementList(e)%el,  ElBiphasic)
+                ! Number of degrees of freedom of fluid
+                call ElBiphasic%GetElementNumberDOF_fluid(AnalysisSettings, nDOFel_fluid)
+                ! Number of degrees of freedom of solid
+                call ElBiphasic%GetElementNumberDOF(AnalysisSettings, nDOFel_solid)
            
-               Vse => VSe_Memory(1:nDOFel_solid)
-               GM_solid => GM_Memory(1:nDOFel_solid)
-               call ElBiphasic%GetGlobalMapping(AnalysisSettings, GM_solid)
-               Vse = VSolid (GM_solid)  
+                Vse => VSe_Memory(1:nDOFel_solid)
+                GM_solid => GM_Memory(1:nDOFel_solid)
+                call ElBiphasic%GetGlobalMapping(AnalysisSettings, GM_solid)
+                Vse = VSolid (GM_solid)  
            
-               nNodesSolid = ElementList(e)%El%GetNumberOfNodes()
-               DifSF => DifSF_Memory ( 1:nNodesSolid , 1:DimProb  )
+                nNodesSolid = ElementList(e)%El%GetNumberOfNodes()
+                DifSF => DifSF_Memory ( 1:nNodesSolid , 1:DimProb  )
            
-               ! Fluid number of nodes
-               nNodesFluid = ElBiphasic%GetNumberOfNodes_fluid()
-               ShapeFunctionsFluid =>  Nf_Memory ( 1:nNodesFluid )
+                ! Fluid number of nodes
+                nNodesFluid = ElBiphasic%GetNumberOfNodes_fluid()
+                ShapeFunctionsFluid =>  Nf_Memory ( 1:nNodesFluid )
   
-               ! Retrieving fluid gauss points parameters for numerical integration
-               call ElBiphasic%GetGaussPoints_fluid(NaturalCoord,Weight)
+                ! Retrieving fluid gauss points parameters for numerical integration
+                call ElBiphasic%GetGaussPoints_fluid(NaturalCoord,Weight)
   
-               !Loop over gauss points
-               do gp = 1, size(NaturalCoord,dim=1)
+                !Loop over gauss points
+                do gp = 1, size(NaturalCoord,dim=1)
   
-                   w_micro =  ElBiphasic%GaussPoints(gp)%AdditionalVariables%w
-                   F_micro =  ElBiphasic%GaussPoints(gp)%F
-                   J_micro =  det(F_micro)
-                   wY_micro = 0.0d0
-                   ! wY_micro = J_micro * F^-1 * w_micro
-                   call MatrixVectorMultiply ( 'N', inverse(F_micro),  w_micro, wY_micro, J_micro, 0.0d0 ) !  y := alpha*op(A)*x + beta*y
+                    w_micro =  ElBiphasic%GaussPoints(gp)%AdditionalVariables%w
+                    F_micro =  ElBiphasic%GaussPoints(gp)%F
+                    J_micro =  det(F_micro)
+                    wY_micro = 0.0d0
+                    ! wY_micro = J_micro * F^-1 * w_micro
+                    call MatrixVectorMultiply ( 'N', inverse(F_micro),  w_micro, wY_micro, J_micro, 0.0d0 ) !  y := alpha*op(A)*x + beta*y
                
-                   ! Obtaining the ShapeFunctionsFluid on gauss point location
-                   ShapeFunctionsFluid=0.0d0
-                   call ElBiphasic%GetShapeFunctions_fluid(NaturalCoord(gp,:) , ShapeFunctionsFluid )
+                    ! Obtaining the ShapeFunctionsFluid on gauss point location
+                    ShapeFunctionsFluid=0.0d0
+                    call ElBiphasic%GetShapeFunctions_fluid(NaturalCoord(gp,:) , ShapeFunctionsFluid )
                
-                   ! Gauss points coordinates
-                   Y_PG = 0.0d0
-                   do n=1, nNodesFluid              
-                       Y_PG = Y_PG + ShapeFunctionsFluid(n)*ElBiphasic%ElementNodes(n)%Node%CoordX
-                   enddo
+                    ! Gauss points coordinates
+                    Y_PG = 0.0d0
+                    do n=1, nNodesFluid              
+                        Y_PG = Y_PG + ShapeFunctionsFluid(n)*ElBiphasic%ElementNodes_fluid(n)%Node%CoordX
+                    enddo
                
-                   call ElBiphasic%GetDifShapeFunctions(NaturalCoord(gp,:) , DifSF )
+                    call ElBiphasic%GetDifShapeFunctions(NaturalCoord(gp,:) , DifSF )
 
-                   !Jacobian
-                   JacobX=0.0d0
-                   do i=1,DimProb
-                       do j=1,DimProb
-                           do n=1,nNodesSolid
-                               JacobX(i,j)=JacobX(i,j) + DifSf(n,i) * ElBiphasic%ElementNodes(n)%Node%CoordX(j)
-                           enddo
-                       enddo
-                   enddo
+                    !Jacobian
+                    JacobX=0.0d0
+                    do i=1,DimProb
+                        do j=1,DimProb
+                            do n=1,nNodesSolid
+                                JacobX(i,j)=JacobX(i,j) + DifSf(n,i) * ElBiphasic%ElementNodes(n)%Node%CoordX(j)
+                            enddo
+                        enddo
+                    enddo
                
-                   !Determinant of the Jacobian
-                   detJX = det(JacobX)
+                    !Determinant of the Jacobian
+                    detJX = det(JacobX)
                              
-                   !Inverse of the Jacobian
-                   JacobX = inverse(JacobX)
+                    !Inverse of the Jacobian
+                    JacobX = inverse(JacobX)
                
-                   !Convert the derivatives in the natural coordinates to global coordinates.
-                   do i=1,size(DifSf,dim=1)
+                    !Convert the derivatives in the natural coordinates to global coordinates.
+                    do i=1,size(DifSf,dim=1)
                         DifSf(i,:) = matmul( JacobX , DifSf(i,:) )
-                   enddo
+                    enddo
                
-                   GradVs=0.0d0
-                   do i=1,DimProb
-                       do j=1,DimProb
-                           GradVs(i,j) = GradVs(i,j) + dot_product( DifSf(:,j) ,  Vse([(n , n=i,size(Vse),DimProb)] ) )
-                       enddo
-                   enddo
+                    GradVs=0.0d0
+                    do i=1,DimProb
+                        do j=1,DimProb
+                            GradVs(i,j) = GradVs(i,j) + dot_product( DifSf(:,j) ,  Vse([(n , n=i,size(Vse),DimProb)] ) )
+                        enddo
+                    enddo
                
-                   ! Get Matrix Grad Vs * F^-1
-                   GradVsFinv = 0.0d0
-                   call MatrixMatrixMultiply ( GradVs, inverse(F_micro), GradVsFinv, 1.0d0, 0.0d0 )  ! C := alpha*op(A)*op(B) + beta*C,
+                    ! Get Matrix Grad Vs * F^-1
+                    GradVsFinv = 0.0d0
+                    call MatrixMatrixMultiply ( GradVs, inverse(F_micro), GradVsFinv, 1.0d0, 0.0d0 )  ! C := alpha*op(A)*op(B) + beta*C,
               
-                   ContVsolid = Trace(GradVsFinv)
+                    ContVsolid = Trace(GradVsFinv)
                
-                   !Homogenized Relative Velocity
-                   !$OMP CRITICAL
-                   HomogenizedwX = HomogenizedwX + ((wY_micro - ContVsolid*J_micro*Y_PG)*Weight(gp)*detJX*FactorAxiX)/TotalVolX           
-                   !$OMP END CRITICAL 
-               enddo
-           enddo
-           !$OMP END DO
-           !$OMP END PARALLEL
-           !************************************************************************************                     
+                    !Homogenized Relative Velocity
+                    !$OMP CRITICAL
+                    HomogenizedwX = HomogenizedwX + ((wY_micro - ContVsolid*J_micro*Y_PG)*Weight(gp)*detJX*FactorAxiX)/TotalVolX           
+                    !HomogenizedwX = HomogenizedwX + (ContVsolid*J_micro*Y_PG*Weight(gp)*detJX*FactorAxiX)/TotalVolX           
+                    !HomogenizedwX = HomogenizedwX + (ContVsolid*J_micro*[1,1,1]*Weight(gp)*detJX*FactorAxiX)/TotalVolX           
+                    !HomogenizedwX = HomogenizedwX + (wY_micro*Weight(gp)*detJX*FactorAxiX)/TotalVolX           
+                   
+                    !$OMP END CRITICAL 
+                enddo
+            enddo
+            !$OMP END DO
+            !$OMP END PARALLEL
+            !************************************************************************************                     
+        end subroutine
+        !=================================================================================================
+        
+        !=================================================================================================
+        subroutine GetHomogenizedSolidVelocityDivergent( AnalysisSettings, ElementList, VSolid, HomogenizeddivV )
+ 
+            use ModMathRoutines
+  
+            !************************************************************************************
+            ! DECLARATIONS OF VARIABLES
+            !************************************************************************************
+            ! Modules and implicit declarations
+            ! -----------------------------------------------------------------------------------
+            implicit none
+  
+            ! Object
+            ! -----------------------------------------------------------------------------------
+            type  (ClassAnalysis)                                    :: AnalysisSettings
+            type  (ClassElementsWrapper),     pointer, dimension(:)  :: ElementList
+
+            ! Input variables
+            ! ----------------------------------------------- ------------------------------------
+            real(8),  dimension(:)   :: VSolid   ! Global vector of solid velocity
+  
+            ! Input/Output variables
+            ! -----------------------------------------------------------------------------------
+            real(8)                  :: HomogenizeddivV
+  
+  
+            ! Internal variables
+            ! -----------------------------------------------------------------------------------
+            integer							     :: e, gp, i, j, n, DimProb
+            real(8)                              :: TotalVolX, rX, detJX
+            real(8) , pointer , dimension(:)     :: Weight
+            real(8) , pointer , dimension(:,:)   :: NaturalCoord
+            real(8)                              :: FactorAxiX
+            real(8) , dimension(AnalysisSettings%AnalysisDimension,AnalysisSettings%AnalysisDimension) :: JacobX
+            real(8) , dimension(:)   , pointer   :: ShapeFunctionsFluid
+            real(8) , dimension(:,:) , pointer   :: DifSF
+       
+          
+            class(ClassElementBiphasic), pointer :: ElBiphasic
+            integer , pointer , dimension(:)     :: GM_solid
+            integer                              :: nDOFel_fluid, nDOFel_solid, nNodesFluid, nNodesSolid
+            real(8)                              :: F_micro(3,3), J_micro 
+            real(8), pointer, dimension(:)       :: VSe
+            real(8)                              :: ContVsolid
+            real(8)                              :: GradVs(3,3)
+            real(8)                              :: GradVsFinv(3,3)
+            integer                              :: NumberOfThreads
+       
+            !************************************************************************************
+            ! RELATIVE VELOCITY HOMOGENISATION - SOLID REFERENCE CONFIGURATION
+            !************************************************************************************
+       
+            !-------------------------------
+            FactorAxiX = 1.0d0  ! Análise 3D
+            !-------------------------------
+             
+            DimProb = AnalysisSettings%AnalysisDimension
+            VSe_Memory = 0.0d0
+            ! Solid reference total volume
+            TotalVolX = AnalysisSettings%TotalVolX 
+  
+            HomogenizeddivV = 0.0d0
+            !$OMP PARALLEL DEFAULT(PRIVATE)                                &
+                    Shared( AnalysisSettings,  ElementList, VSolid, TotalVolX, HomogenizeddivV, DimProb, FactorAxiX)         
+            !$OMP DO
+            !Loop over Elements
+            do e = 1,size(ElementList)
+           
+                ! Aponta o objeto ElBiphasic para o ElementList(e)%El mas com o type correto ClassElementBiphasic
+                call ConvertElementToElementBiphasic(ElementList(e)%el,  ElBiphasic)
+                ! Number of degrees of freedom of fluid
+                call ElBiphasic%GetElementNumberDOF_fluid(AnalysisSettings, nDOFel_fluid)
+                ! Number of degrees of freedom of solid
+                call ElBiphasic%GetElementNumberDOF(AnalysisSettings, nDOFel_solid)
+           
+                Vse => VSe_Memory(1:nDOFel_solid)
+                GM_solid => GM_Memory(1:nDOFel_solid)
+                call ElBiphasic%GetGlobalMapping(AnalysisSettings, GM_solid)
+                Vse = VSolid (GM_solid)  
+           
+                nNodesSolid = ElementList(e)%El%GetNumberOfNodes()
+                DifSF => DifSF_Memory ( 1:nNodesSolid , 1:DimProb  )
+           
+                ! Fluid number of nodes
+                nNodesFluid = ElBiphasic%GetNumberOfNodes_fluid()
+                ShapeFunctionsFluid =>  Nf_Memory ( 1:nNodesFluid )
+  
+                ! Retrieving fluid gauss points parameters for numerical integration
+                call ElBiphasic%GetGaussPoints_fluid(NaturalCoord,Weight)
+  
+                !Loop over gauss points
+                do gp = 1, size(NaturalCoord,dim=1)
+  
+                    F_micro =  ElBiphasic%GaussPoints(gp)%F
+                    J_micro =  det(F_micro)                  
+                    ! Obtaining the ShapeFunctionsFluid on gauss point location
+                    ShapeFunctionsFluid=0.0d0
+                    call ElBiphasic%GetShapeFunctions_fluid(NaturalCoord(gp,:) , ShapeFunctionsFluid )
+                                                 
+                    call ElBiphasic%GetDifShapeFunctions(NaturalCoord(gp,:) , DifSF )
+
+                    !Jacobian
+                    JacobX=0.0d0
+                    do i=1,DimProb
+                        do j=1,DimProb
+                            do n=1,nNodesSolid
+                                JacobX(i,j)=JacobX(i,j) + DifSf(n,i) * ElBiphasic%ElementNodes(n)%Node%CoordX(j)
+                            enddo
+                        enddo
+                    enddo
+               
+                    !Determinant of the Jacobian
+                    detJX = det(JacobX)
+                             
+                    !Inverse of the Jacobian
+                    JacobX = inverse(JacobX)
+               
+                    !Convert the derivatives in the natural coordinates to global coordinates.
+                    do i=1,size(DifSf,dim=1)
+                        DifSf(i,:) = matmul( JacobX , DifSf(i,:) )
+                    enddo
+               
+                    GradVs=0.0d0
+                    do i=1,DimProb
+                        do j=1,DimProb
+                            GradVs(i,j) = GradVs(i,j) + dot_product( DifSf(:,j) ,  Vse([(n , n=i,size(Vse),DimProb)] ) )
+                        enddo
+                    enddo
+               
+                    ! Get Matrix Grad Vs * F^-1
+                    GradVsFinv = 0.0d0
+                    call MatrixMatrixMultiply ( GradVs, inverse(F_micro), GradVsFinv, 1.0d0, 0.0d0 )  ! C := alpha*op(A)*op(B) + beta*C,
+              
+                    ContVsolid = Trace(GradVsFinv)
+               
+                    !Homogenized the Divergent of Solid Velocity
+                    !$OMP CRITICAL
+                    HomogenizeddivV = HomogenizeddivV + (ContVsolid*J_micro*Weight(gp)*detJX*FactorAxiX)/TotalVolX           
+                    !$OMP END CRITICAL 
+                enddo
+            enddo
+            !$OMP END DO
+            !$OMP END PARALLEL
+            !************************************************************************************                     
         end subroutine
         !=================================================================================================
    

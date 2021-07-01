@@ -41,6 +41,7 @@ module ModFEMSystemOfEquationsSolid
         type (ClassGlobalSparseMatrix)              , pointer  :: Kg
         
         real(8),dimension(9)                                   :: FMacro_current
+        real(8),dimension(3)                                   :: uMacro_current = 0.0d0
 
 
     contains
@@ -78,7 +79,7 @@ module ModFEMSystemOfEquationsSolid
             if (this%Status%Error ) then
                 return
             endif
-
+                
             ! Residual
             R = this%Fint - this%Fext
             valor = maxval( dabs(R))

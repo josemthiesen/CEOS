@@ -19,6 +19,10 @@ module ModFEMSystemOfEquationsSolidMinimal
     use ModElementLibrary
     use ModGlobalSparseMatrix
     use ModGlobalFEMBiphasic
+    use ModMultiscaleHomogenizations
+    use ModGlobalFEMMultiscale
+    use ModGlobalFEMMultiscaleBiphasic
+    
 
     implicit none
 
@@ -59,11 +63,15 @@ module ModFEMSystemOfEquationsSolidMinimal
         class(ClassFEMSystemOfEquationsSolidMinimal) :: this
         real(8),dimension(:) :: X,R
         real(8)  :: valor
+        integer  :: nDOFsolid, i, j, k
+        real(8)  ::  F_Homogenized(3,3), F_Homogenized_Voigt(9), u_Homogenized(3), TotalVolX
 
             !X -> Global Solid displacement    
         
+            ! Compute nDOFsolid
+            call this%AnalysisSettings%GetTotalNumberOfDOF (this%GlobalNodesList, nDOFsolid)
             ! Update stress and internal variables (Se o modelo constitutivo depende da Pressão, precisa atualizar o SolveConstitutiveModel)
-            call SolveConstitutiveModel( this%ElementList , this%AnalysisSettings , this%Time, X, this%Status)
+            call SolveConstitutiveModel( this%ElementList , this%AnalysisSettings , this%Time, X(1:nDOFsolid), this%Status)
 
             ! Constitutive Model Failed. Used for Cut Back Strategy
             if (this%Status%Error ) then
@@ -78,9 +86,30 @@ module ModFEMSystemOfEquationsSolidMinimal
                 return
             endif
 
+            call ExternalForceMultiscaleMinimal( this%ElementList, this%AnalysisSettings, X((nDOFsolid+1):(nDOFsolid+9)),  X((nDOFsolid+10):(nDOFsolid+12)), this%Fext )
+            
+            call GetHomogenizedDeformationGradient(this%AnalysisSettings, this%ElementList, F_Homogenized)
+
+            ! Obs.: Mapeamento em linhas (ao contrário do Jog) pois a Matrix Gradiente de U (matrix G)
+            ! foi mapeada deste modo para o cálculo da matriz rigidez.
+            k=1
+            do i = 1,3
+                do j=1,3
+                    F_Homogenized_Voigt(k) = F_Homogenized(i,j)
+                    k = k + 1
+                enddo
+            enddo
+            
+            call GetHomogenizedDisplacement( this%AnalysisSettings, this%ElementList,  X(1:nDOFsolid), u_Homogenized )
+            
+            TotalVolX = this%AnalysisSettings%TotalVolX
             ! Residual
-            R = this%Fint - this%Fext
-            valor = maxval( dabs(R))
+            R = 0.0d0
+            R(1:nDOFsolid)                   =  this%Fint - this%Fext
+            R((nDOFsolid+1):(nDOFsolid+9))   =  TotalVolX*( this%Fmacro_current - F_Homogenized_Voigt )
+            R((nDOFsolid+10):(nDOFsolid+12)) =  TotalVolX*( this%uMacro_current - u_Homogenized )
+
+            !valor = maxval( dabs(R))
 
     end subroutine
     !=================================================================================================
@@ -94,8 +123,11 @@ module ModFEMSystemOfEquationsSolidMinimal
         class (ClassGlobalSparseMatrix), pointer     :: G
         real(8),dimension(:)                         :: X , R
         real(8)                                      :: norma
+        integer                                      :: nDOFSolid
         
-        call TangentStiffnessMatrixSolid(this%AnalysisSettings , this%ElementList , this%Pfluid , this%Kg )
+        call this%AnalysisSettings%GetTotalNumberOfDOF(this%GlobalNodesList, nDOFSolid)
+        
+        call TangentStiffnessMatrixSolidMinimal(this%AnalysisSettings , this%ElementList , this%Pfluid , nDOFSolid, this%Kg )
 
         ! The dirichelet BC (Mechanical -> displacement) are being applied in the system Kx=R and not in Kx = -R
         R = -R      

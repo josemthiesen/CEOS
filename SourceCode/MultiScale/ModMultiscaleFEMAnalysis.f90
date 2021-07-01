@@ -139,7 +139,14 @@ module ModMultiscaleFEMAnalysis
             ! Internal variables
             integer :: MultiscaleModel
 
-            ! Calling the quasi-static analysis routine
+            ! Calling the additional material routine, which defines the orientation of the fibers, when necessary
+            !************************************************************************************
+            if(this%AnalysisSettings%FiberReinforcedAnalysis) then
+                write(*,*) "Calling the Additional Material Routine in order to define the fiber direction."
+                call this%AdditionalMaterialModelRoutine()
+            endif
+            
+            ! Setting the origin of the coordinate system at the centroid of the mesh
             !************************************************************************************  
             call TranslateCentroidToOrigin(this%ElementList, this%AnalysisSettings, this%GlobalNodesList )
 
@@ -202,6 +209,7 @@ module ModMultiscaleFEMAnalysis
             real(8) :: alpha, alpha_max, alpha_min, alpha_aux
             integer :: LC , ST , nSteps, nLoadCases ,  CutBack, SubStep, e,gp, nDOF, FileID_FEMAnalysisResults, Flag_EndStep
             real(8), parameter :: GR = (1.0d0 + dsqrt(5.0d0))/2.0d0
+
     
             integer, allocatable, dimension(:) :: KgValZERO, KgValONE
             integer :: contZERO, contONE  
@@ -211,6 +219,7 @@ module ModMultiscaleFEMAnalysis
     
             FileID_FEMAnalysisResults = 42
             open (FileID_FEMAnalysisResults,file='FEMAnalysis.result',status='unknown')
+
     
             !************************************************************************************
     
@@ -382,7 +391,7 @@ module ModMultiscaleFEMAnalysis
     
     
                     enddo SUBSTEPS
-    
+                       
                     ! -----------------------------------------------------------------------------------
                     ! SWITCH THE CONVERGED STATE: StateVariable_n := StateVariable_n+1
                     ! -----------------------------------------------------------------------------------

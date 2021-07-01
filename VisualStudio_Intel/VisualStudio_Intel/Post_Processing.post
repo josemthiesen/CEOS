@@ -5,7 +5,7 @@
 POST PROCESSOR 
 
 	Post Processor = HyperView 12 !None !GiD 7 !
-	Results = Displacements, Cauchy Stress , Pressure, Biphasic Total Cauchy Stress  !, Pressure, Biphasic Total Cauchy Stress !, Pressure  ,  Relative Velocity !, Fiber_Direction! Logarithmic Strain !, Fiber_Direction , Fiber_Dissipation , Matrix_Dissipation !,  
+	Results = Displacements , Relative Velocity, Cauchy Stress , Pressure, Biphasic Total Cauchy Stress , Relative Velocity, Logarithmic Strain, Jacobian !, Pressure, Biphasic Total Cauchy Stress !, Pressure  ,  Relative Velocity !, Fiber_Direction! Logarithmic Strain !, Fiber_Direction , Fiber_Dissipation , Matrix_Dissipation !,  
 	File Name = hypermesh_results.hwascii
 	
 END POST PROCESSOR 
@@ -49,6 +49,9 @@ END POST PROCESSOR
 ! Variable Name: Deformation Gradient
 ! Components: 1=XX ; 2=YX ; 3=ZX ; 4=XY ; 5=YY ; 6=ZY ; 7=XZ ; 8=YZ ; 9=ZZ ; All
 !
+! Variable Name: Displacements
+! Components: 1=X ; 2=Y ; 3=Z ; All
+!
 ! Variable Name: First Piola Stress
 ! Components: 1=XX ; 2=YX ; 3=ZX ; 4=XY ; 5=YY ; 6=ZY ; 7=XZ ; 8=YZ ; 9=ZZ ; All
 
@@ -56,6 +59,12 @@ END POST PROCESSOR
 ! Components: 1=X ; 2=Y ; 3=Z ; All
 
 ! Variable Name: Pressure
+! Components: All 
+!
+! Variable Name: Solid Velocity Divergent
+! Components: All 
+!
+! Variable Name: Macroscopic Jacobian
 ! Components: All 
 
 ! Variable Name: Gradient Pressure
@@ -76,9 +85,37 @@ END POST PROCESSOR
 ! Components: Solid; Total  ( Solid = Just Solid ; Total = Solid + Fluid)
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-NUMBER OF PROBES = 3
+NUMBER OF PROBES = 7
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+PROBE
+	Location = Micro Structure Biphasic
+	File Name = Homogenized_SolidVelocityDivergent.probe
+	Variable Name = Solid Velocity Divergent
+	Components = All
+END PROBE
+
+PROBE
+	Location = Micro Structure Biphasic
+	File Name = Homogenized_Displacement.probe
+	Variable Name = Displacements
+	Components = All
+END PROBE
+
+PROBE
+	Location = Micro Structure Biphasic
+	File Name = Homogenized_Jacobian.probe
+	Variable Name = Macroscopic Jacobian
+	Components = All
+END PROBE
+
+PROBE
+	Location = Micro Structure Biphasic
+	File Name = Homogenized_Relative_Velocity.probe
+	Variable Name = Relative Velocity
+	Components = All
+END PROBE
+
 PROBE
 	Location = Micro Structure Biphasic
 	File Name = Homogenized_F.probe
@@ -100,6 +137,19 @@ PROBE
 	Components = All
 END PROBE
 
+PROBE
+	Location = Micro Structure Biphasic
+	File Name = Homogenized_Piola.probe
+	Variable Name = First Piola Stress
+	Components = All
+END PROBE
+
+PROBE
+	Location = Micro Structure Biphasic
+	File Name = Homogenized_Cauchy.probe
+	Variable Name = Cauchy Stress
+	Components = All
+END PROBE
 PROBE
 	Location = Micro Structure
 	File Name = Homogenized_F.probe

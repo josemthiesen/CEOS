@@ -123,6 +123,7 @@ module ModAnalysis
     real(8) , target , dimension( 9 , MaxElementNumberDOF)                      :: Gpg_Memory
     real(8) , target , dimension( 3 , MaxElementNumberDOF)                      :: Npg_Memory
     real(8) , target , dimension( MaxElementNumberDOF)                          :: Nfpg_Memory
+    real(8) , target , dimension( 3 , MaxElementNumberDOF)                      :: Hfpg_Memory
     real(8) , target , dimension( 3 , MaxElementNumberDOF)                      :: Hfe_Memory
     real(8) , target , dimension( MaxElementNumberDOF)                          :: Nfe_Memory
     
@@ -166,7 +167,8 @@ module ModAnalysis
     !$OMP THREADPRIVATE(Ne_Memory)
     !$OMP THREADPRIVATE(Gpg_Memory)
     !$OMP THREADPRIVATE(Npg_Memory)
-    !$OMP THREADPRIVATE(Nfpg_Memory)  
+    !$OMP THREADPRIVATE(Nfpg_Memory) 
+    !$OMP THREADPRIVATE(Hfpg_Memory) 
     !$OMP THREADPRIVATE(Hfe_Memory)
     !$OMP THREADPRIVATE(Nfe_Memory)
     

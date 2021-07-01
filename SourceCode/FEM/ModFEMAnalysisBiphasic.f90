@@ -752,7 +752,7 @@ module ModFEMAnalysisBiphasic
                 allocate( ClassFEMSystemOfEquationsSolidMinimal :: FEMSoESolid)
                 select type(FEMSoESolid)
                     class is(ClassFEMSystemOfEquationsSolidMinimal)
-                        AdditionalMinimalDoFSolid = size(FEMSoESolid%FMacro_current) 
+                        AdditionalMinimalDoFSolid = size(FEMSoESolid%FMacro_current) + size(FEMSoESolid%uMacro_current)
                 endselect
             else
                 allocate( ClassFEMSystemOfEquationsSolid :: FEMSoESolid)
@@ -1181,9 +1181,12 @@ module ModFEMAnalysisBiphasic
             real(8) , dimension(3)   :: GradPMacro , DeltaGradPMacro     ! Used only in multiscale analysis
             real(8)                  :: PMacro     , DeltaPMacro         ! Used only in multiscale analysis
             
+            
+            real(8), dimension(3)    :: UMACRO_alphaZero
+            
             integer :: NumberOfSolidNewtonIterations = 0
             integer :: NumberOfFluidNewtonIterations = 0
-            integer :: FileID_NumberOfIterations
+            integer :: FileID_NumberOfIterations, FileID_Lambdas_fluid, FileID_Lambdas_solid
             integer :: MultiscaleModel, MultiscaleModelFluid
             
             integer :: AdditionalMinimalDoFFluid = 0 
@@ -1203,7 +1206,7 @@ module ModFEMAnalysisBiphasic
                 allocate( ClassFEMSystemOfEquationsSolidMinimal :: FEMSoESolid)
                 select type(FEMSoESolid)
                     class is(ClassFEMSystemOfEquationsSolidMinimal)
-                        AdditionalMinimalDoFSolid = size(FEMSoESolid%FMacro_current) 
+                        AdditionalMinimalDoFSolid = size(FEMSoESolid%FMacro_current) + size(FEMSoESolid%uMacro_current)
                 endselect
             else
                 allocate( ClassFEMSystemOfEquationsSolid :: FEMSoESolid)
@@ -1227,8 +1230,11 @@ module ModFEMAnalysisBiphasic
             open (FileID_FEMAnalysisResultsFluid,file='FEMAnalysisFluid.result',status='unknown')
             FileID_NumberOfIterations = 467
             open (FileID_NumberOfIterations,file='NumberOfStaggeredIterations.dat',status='unknown')
+            FileID_Lambdas_fluid = 468
+            open (FileID_Lambdas_fluid,file='Lambdas_fluid.dat',status='unknown')
+            FileID_Lambdas_solid = 469
+            open (FileID_Lambdas_solid,file='Lambdas_solid.dat',status='unknown')
             
-
             !************************************************************************************
             ! QUASI-STATIC ANALYSIS
             !***********************************************************************************
@@ -1411,6 +1417,8 @@ module ModFEMAnalysisBiphasic
                     NumberOfSolidNewtonIterations = 0
                     NumberOfFluidNewtonIterations = 0
                     
+                    UMACRO_alphaZero = FEMSoESolid % Umacro_current
+                    
                     SUBSTEPS: do while(.true.)   !Staggered procedure
 
                         ! Update staggered variables : StateVariable_i := StateVariable_i+1
@@ -1457,6 +1465,10 @@ module ModFEMAnalysisBiphasic
                         FEMSoESolid % Ubar = Ubar_alpha0 + alpha*DeltaUPresc
                         FEMSoESolid % Pfluid = P(1:nDOFFluid)
                         FEMSoESolid % Fmacro_current = Fext_alpha0(1:9) + alpha*DeltaFext(1:9)
+                        
+                        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                        !FEMSoESolid % Umacro_current = UMACRO_alphaZero + alpha*[1.0d-3 , 0.0d0 , 0.0d0]
+                        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                         
                         write(*,'(12x,a)') 'Solve the Solid system of equations '
                         call NLSolver%Solve( FEMSoESolid , XGuess = Ustaggered , X = U, Phase = 1 )
@@ -1555,7 +1567,16 @@ module ModFEMAnalysisBiphasic
                     write(FileID_NumberOfIterations,*) 'Number of Fluid Newton Iterations :', NumberOfFluidNewtonIterations
                     write(FileID_NumberOfIterations,*) ''
                     
-
+                    if (MultiscaleModelFluid == MultiscaleModels%Minimal) then
+                        write(FileID_Lambdas_fluid,*) 'LambdaGradP :', P(nDOFFluid+1:nDOFFluid+3)
+                        write(FileID_Lambdas_fluid,*) 'LambdaP:'     , P(nDOFFluid+4)
+                    endif
+                  
+                    if (MultiscaleModel == MultiscaleModels%Minimal) then
+                        write(FileID_Lambdas_solid,*) 'LambdaF :', U(nDOFSolid+1:nDOFSolid+9)
+                        write(FileID_Lambdas_solid,*) 'LambdaU:' , U(nDOFSolid+10:nDOFSolid+12)
+                    endif
+                    
                     ! -----------------------------------------------------------------------------------
                     ! SWITCH THE CONVERGED STATE: StateVariable_n := StateVariable_n+1
                     ! -----------------------------------------------------------------------------------

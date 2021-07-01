@@ -16,6 +16,7 @@ module ModExportResultFile
     use ModElementBiphasic
     use ModFEMAnalysis
     use ModFEMAnalysisBiphasic
+    use ModMultiscaleFEMAnalysis
     use ModProbe
     use ModPostProcessors
     use ModGid
@@ -463,6 +464,7 @@ module ModExportResultFile
         character(len=255) :: FileNameSolid, FileNameFluid
         integer :: Flag_EndStep, NumberOfIterations,IterationFile
         logical :: CalculateRelativeVelocity, InterpolatePressure
+        real(8) :: TotalVolX, Volume, VolumeX
         !************************************************************************************
 
         write(*,*) 'Post Processing Results...'
@@ -481,15 +483,21 @@ module ModExportResultFile
         InterpolatePressure    = .false.
         DO cont=1,size(PostProcessor%VARIABLENAMES)
             ! Check if it is necessary to compute the relative velocity
-            IF (PostProcessor%VARIABLENAMES(cont) == 'relativevelocity') THEN
+            IF (PostProcessor%VARIABLENAMEID(cont) .eq. VariableNames%RelativeVelocity) THEN
                 CalculateRelativeVelocity = .true.
             ENDIF
             ! Check if it is necessary to interpolate the pressure on the solid nodes
-            IF (PostProcessor%VARIABLENAMES(cont) == 'pressure') THEN
+            IF (PostProcessor%VARIABLENAMEID(cont) .eq. VariableNames%Pressure) THEN
                 InterpolatePressure = .true.
             ENDIF
         ENDDO
-        
+        DO cont=1,size(ProbeList)
+            ! Check if it is necessary to compute the relative velocity
+            IF (ProbeList(cont)%PR%VARIABLENAMEID .eq. VariableNames%RelativeVelocity) THEN
+                CalculateRelativeVelocity = .true.
+                exit
+            ENDIF
+        ENDDO
 
         IterationFile = FreeFile()
         open(IterationFile,File='NumberOfIterationsToConverge.dat',status='unknown')
@@ -547,6 +555,24 @@ module ModExportResultFile
             FEA%GlobalNodesList(i)%Coord = FEA%GlobalNodesList(i)%CoordX
         enddo
         
+        ! Setting the origin of the coordinate system at the centroid of the mesh (if is Multiscale Analysis)
+        ! -----------------------------------------------------------------------------------
+        if(FEA%AnalysisSettings%MultiscaleAnalysis) then
+            call TranslateCentroidToOrigin(FEA%ElementList, FEA%AnalysisSettings, FEA%GlobalNodesList )
+        endif
+        
+        ! Calculating the referential volume
+        ! -----------------------------------------------------------------------------------
+        TotalVolX = 0.0d0
+        !Loop over Elements
+        do el = 1,size(FEA%ElementList)
+            call FEA%ElementList(el)%El%ElementVolume(FEA%AnalysisSettings, Volume, VolumeX, Status)
+            TotalVolX = TotalVolX + VolumeX
+        enddo
+
+        FEA%AnalysisSettings%TotalVolX = TotalVolX  
+        
+        
         conta_flux = 0
         do i = 1, size(ProbeList)
             Probe => ProbeList(i)%Pr
@@ -579,7 +605,6 @@ module ModExportResultFile
         OldTime = 0.0d0
 
         LOOP_TIME :do while (.true.)
-
 
             call ResultFileSolid%GetNextOption(OptionName,OptionValue)           
             call ResultFileFluid%GetNextOption(OptionName,OptionValue)
@@ -660,6 +685,9 @@ module ModExportResultFile
 
             ! Update stress and internal variables
             call SolveConstitutiveModel( FEA%ElementList , FEA%AnalysisSettings, Time, U, Status)
+            
+            ! Update the deformation gradient and permeability on fluid gauss points
+            call SolvePermeabilityModel( FEA%ElementList , FEA%AnalysisSettings , U, Status)
             
             ! Update fluid stress on solid gauss points
             call SolveFluidCauchyStress( FEA%ElementList , FEA%AnalysisSettings, Time, P, Status)
@@ -950,7 +978,6 @@ module ModExportResultFile
             Pe => Pe_Memory(1:nDOFel_fluid)
             call ElBiphasic%GetGaussPoints_fluid(NaturalCoord,Weight)
             call ElBiphasic%GetGlobalMapping_fluid(AnalysisSettings,GM_Fluid)
-           
             
             ! Allocating matrix H
             H => H_Memory( 1:3 , 1:NDOFel_fluid )

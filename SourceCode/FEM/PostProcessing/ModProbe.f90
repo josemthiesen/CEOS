@@ -31,7 +31,8 @@ module ModProbe
     type ClassVariableNames
         integer  :: Displacements=1 , Temperature=2, CauchyStress=3, LogarithmicStrain=4, &
                     DeformationGradient=5 , FirstPiolaStress=6, UserDefined=7, Pressure = 8, &
-                    RelativeVelocity=9, Total_Volume = 10, GradientPressure = 11, BiphasicTotalCauchyStress = 12
+                    RelativeVelocity=9, Total_Volume = 10, GradientPressure = 11, BiphasicTotalCauchyStress = 12, &
+                    MacroscopicJacobian = 13, SolidVelocityDivergent = 14
     end type
     type (ClassVariableNames), parameter :: VariableNames = ClassVariableNames()
 
@@ -179,6 +180,10 @@ module ModProbe
                 enu = VariableNames%RelativeVelocity
             ELSEIF ( Comp%CompareStrings( Variable,'Total Volume') ) then
                 enu = VariableNames%Total_Volume
+            ELSEIF ( Comp%CompareStrings( Variable,'Macroscopic Jacobian') ) then
+                enu = VariableNames%MacroscopicJacobian
+            ELSEIF ( Comp%CompareStrings( Variable,'Solid Velocity Divergent') ) then
+                enu = VariableNames%SolidVelocityDivergent
             ELSE
                 enu = VariableNames%UserDefined
             ENDIF
@@ -1287,6 +1292,9 @@ module ModProbe
             real(8)                                 :: HomogenizedCauchy(3,3), HomogenizedCauchy_Voigt(6)
             real(8)                                 :: HomogenizedPressure, HomogenizedPressureWrite(1)
             real(8)                                 :: HomogenizedPressureGradient(3), HomogenizedwX(3)
+            real(8)                                 :: HomogenizedJacobian, HomogenizedJacobianWrite(1)
+            real(8)                                 :: HomogenizeddivV, HomogenizeddivVWrite(1)
+            real(8)                                 :: HomogenizedU(3)
             !************************************************************************************
             ! Test if the probe is active
             if (.not. this%Active) then
@@ -1321,7 +1329,14 @@ module ModProbe
                                             call this%WriteOnFile(FEA%Time , ProbeVariable)
                                         endif
                                     endif
+                                
+                                ! Writing Macroscopic Displacement
+                                case (VariableNames%Displacements)
 
+                                    ! Computing Homogenized wX
+                                    call GetHomogenizedDisplacement(FEA%AnalysisSettings, FEA%ElementList, FEA%U, HomogenizedU )
+                                    
+                                    call this%WriteOnFile(FEA%Time , HomogenizedU)
 
                                 ! Writing Deformation Gradient
                                 case (VariableNames%DeformationGradient)
@@ -1398,10 +1413,28 @@ module ModProbe
                                     call GetHomogenizedRelativeVelocitywXBiphasic(FEA%AnalysisSettings, FEA%ElementList, FEA%VSolid, HomogenizedwX )
                                     
                                     call this%WriteOnFile(FEA%Time , HomogenizedwX)
-                                    
+                                
+                                ! Writing Homogeneized Jacobian
+                                case (VariableNames%MacroscopicJacobian)
+
+                                    ! Computing Homogenized Jacobian
+                                    call GetHomogenizedJacobian(FEA%AnalysisSettings, FEA%ElementList, HomogenizedJacobian)
+                                    HomogenizedJacobianWrite(1) = HomogenizedJacobian
+
+                                    call this%WriteOnFile(FEA%Time , HomogenizedJacobianWrite)
+                                
+                                ! Writing Homogeneized Solid Velocity Divergent
+                                case (VariableNames%SolidVelocityDivergent)
+
+                                    ! Computing Homogenized Jacobian
+                                    call GetHomogenizedSolidVelocityDivergent(FEA%AnalysisSettings, FEA%ElementList, FEA%VSolid, HomogenizeddivV)
+                                    HomogenizeddivVWrite(1) = HomogenizeddivV
+
+                                    call this%WriteOnFile(FEA%Time , HomogenizeddivVWrite)
+ 
                                 case default
                                 stop 'Error in ModProbe - WriteProbeResult_MicroStructureBiphasic - VariableNameID - not identified'
-
+                                
                             end select
 
                         class default

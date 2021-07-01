@@ -15,7 +15,7 @@
 ANALYSIS SETTINGS
 
 	Multiscale Analysis =  True
-	Multiscale Model = Linear !MinimalLinearD1 !Linear !Taylor !Minimal  
+	Multiscale Model = Minimal !Linear !MinimalLinearD1 !Linear !Taylor !Minimal  
 	Problem Type = Biphasic !Mechanical !
 	Solution Scheme = Sequential !Monolithic !Sequential
 	Multiscale Model Fluid = Minimal !Linear !Taylor Minimal
@@ -45,8 +45,8 @@ NONLINEAR SOLVER
 
 	Newton_Raphson_Full
 	
-	Tol_Force_Mechanical = 1e-6
-	Tol_Flux_Biphasic    = 1e-6
+	Tol_Force_Mechanical = 1e-8
+	Tol_Flux_Biphasic    = 1e-10
 	MaxIter = 500
 
 END NONLINEAR SOLVER
@@ -55,8 +55,8 @@ END NONLINEAR SOLVER
 
 STAGGERED SPLITTING SCHEME
 
-	Splitting Scheme 	 = Drained ! Fixed Stress !Fixed Strain! Undrained! Fixed Stress
-	Stability Constant 	 = 100.0 ! Depende do modelo ! 1.0d4 rodou o k = 0.76e-3
+	Splitting Scheme 	 = Fixed Stress !Fixed Strain! Undrained! Fixed Stress
+	Stability Constant 	 = 0.5 ! Depende do modelo ! 1.0d4 rodou o k = 0.76e-3
 	Mechanical Staggered Tolerance    = 1.0d-3
 	Flux Staggered Tolerance 		  = 1.0d-3 ! com 1.0d-1 rodou, mas o resultado nao deu boa
 	
@@ -97,7 +97,6 @@ PERMEABILITY
 	!ka = 1.0e-2
 	!kt = 1.0e-4
 
-	
 	!Material ID = 1
 	!Spatial_Isotropic_Exponential_Permeability
 	!k0 = 1.0e-2
@@ -106,8 +105,7 @@ PERMEABILITY
 		
 	 Material ID = 1
 	 Spatial_Isotropic_Constant_Permeability
-	 k =  1.0e-0
-
+	 k =  1.0e-2
 
 
 END PERMEABILITY
