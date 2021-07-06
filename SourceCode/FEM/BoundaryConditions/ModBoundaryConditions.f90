@@ -48,8 +48,6 @@ module ModBoundaryConditions
         type (ClassNodalBC),        allocatable, dimension(:) :: NodalForceBC , NodalDispBC
         type (ClassNodalBC),        allocatable, dimension(:) :: NodalFluxBC , NodalPresBC
         type (ClassBoundaryNodes),  allocatable, dimension(:) :: BoundaryNodes
-        !type (ClassBoundaryNodes),  allocatable, dimension(:) :: BoundaryNodesSolid
-        !type (ClassBoundaryNodes),  allocatable, dimension(:) :: BoundaryNodesFluid
 
         contains
 
@@ -60,14 +58,10 @@ module ModBoundaryConditions
             procedure :: GetTimeInformation
             procedure :: ApplyBoundaryConditions
             procedure :: GetBoundaryConditions
-            procedure :: GetBoundaryConditionsFluid !*********
 
             !-----------------
             procedure :: AllocatePrescDispSparseMapping
             procedure :: AllocateFixedSupportSparseMapping
-            procedure :: ApplyBoundaryConditionsNEW  !*********
-            procedure :: ApplyBoundaryConditionsFluid  !*********
-            procedure :: AllocatePrescPresSparseMapping !*********
             !----------------
 
     end type
@@ -141,7 +135,7 @@ module ModBoundaryConditions
 !=================================================================================================
 
 !=================================================================================================
-    subroutine ApplyBoundaryConditions(this, Kg , R , Presc_Disp_DOF , Ubar , U )
+    subroutine ApplyBoundaryConditionsMUSEUM(this, Kg , R , Presc_Disp_DOF , Ubar , U )
 
         !************************************************************************************
         ! DECLARATIONS OF VARIABLES
@@ -243,7 +237,7 @@ module ModBoundaryConditions
 !=================================================================================================
 
 !=================================================================================================
-    subroutine ApplyBoundaryConditionsNEW(this, Kg , R , Presc_Disp_DOF , Ubar , U, PrescDispSparseMapZERO, PrescDispSparseMapONE, FixedSupportSparseMapZERO, FixedSupportSparseMapONE )
+    subroutine ApplyBoundaryConditions(this, Kg , R , Presc_Disp_DOF , Ubar , U, PrescDispSparseMapZERO, PrescDispSparseMapONE, FixedSupportSparseMapZERO, FixedSupportSparseMapONE )
 
         !************************************************************************************
         ! DECLARATIONS OF VARIABLES
@@ -338,29 +332,6 @@ module ModBoundaryConditions
 !=================================================================================================
     
 !=================================================================================================
-    subroutine ApplyBoundaryConditionsFluid(this, Kg , R , Presc_Pres_DOF , Pbar , P, PrescPresSparseMapZERO, PrescPresSparseMapONE)
-        !************************************************************************************
-        ! DECLARATIONS OF VARIABLES
-        !************************************************************************************
-        ! Modules and implicit declarations
-        ! -----------------------------------------------------------------------------------
-        use ModGlobalSparseMatrix
-        implicit none
-        ! Input variables
-        ! -----------------------------------------------------------------------------------
-        class(ClassBoundaryConditions)  :: this
-        integer , dimension(:) , intent(in) :: Presc_Pres_DOF
-        integer , dimension(:) :: PrescPresSparseMapZERO
-        integer , dimension(:) :: PrescPresSparseMapONE
-        ! Input/Output variables
-        ! -----------------------------------------------------------------------------------
-        real(8) , dimension(:) , intent(inout) :: R , Pbar , P
-        type(ClassGlobalSparseMatrix) :: Kg
-        stop "Erro::ApplyBoundaryConditionsFluid::Dummy"
-    end subroutine
-!=================================================================================================
-
-!=================================================================================================
     subroutine AllocatePrescDispSparseMapping (this, Kg, Presc_Disp_DOF, KgValZERO, KgValONE, contZERO, contONE)
 
         !************************************************************************************
@@ -370,7 +341,6 @@ module ModBoundaryConditions
         ! -----------------------------------------------------------------------------------
         use OMP_LIB
         use ModGlobalSparseMatrix
-
 
         implicit none
 
@@ -382,29 +352,32 @@ module ModBoundaryConditions
         ! -----------------------------------------------------------------------------------
         type (ClassGlobalSparseMatrix), pointer :: Kg
         integer, pointer, dimension(:)          :: Presc_Disp_DOF
-        integer, dimension(size(Kg%Val))        :: KgValZERO, KgValONE
+        !integer, dimension(size(Kg%Val))        :: KgValZERO, KgValONE
+        integer, dimension(:)                   :: KgValZERO, KgValONE
         integer :: contZERO, contONE
 
 
         ! Internal variables
         ! -----------------------------------------------------------------------------------
         integer :: i, n, dof, NumberOfThreads, nCC_Presc, RowSize
-        integer :: AuxZERO(size(Kg%Val))  , AuxONE(size(Kg%Val))
-
+        !integer :: AuxZERO(size(Kg%Val))  , AuxONE(size(Kg%Val))
+        integer, allocatable, dimension(:) :: AuxZERO, AuxONE
         !************************************************************************************
 
 
         ! Mapeando as posições do vetor de valores da matrix de rigidez esparsa (Kg%Val)
         ! para receber os valores de ZERO e UM na aplicação da CC de deslocamento prescrito
         !************************************************************************************
+
+
+        nCC_Presc = size(Presc_Disp_DOF)
+        RowSize = size(Kg%Row)
+        allocate( AuxZERO(RowSize) , AuxONE(RowSize))
+        
         AuxZERO = 0
         AuxONE = 0
         KgValZERO = 0
         KgValONE = 0
-
-        nCC_Presc = size(Presc_Disp_DOF)
-        RowSize = size(Kg%Row)
-
         !---------------------------------------------------------------------------------
         
         NumberOfThreads = omp_get_max_threads()
@@ -438,10 +411,9 @@ module ModBoundaryConditions
 
         !$OMP END PARALLEL
         !---------------------------------------------------------------------------------
-
         contZERO = 0
         contONE = 0
-        do i=1,size(Kg%Row)
+        do i=1,RowSize
 
             if ( AuxZERO(i) == 1 ) then
                 contZERO = contZERO + 1
@@ -454,34 +426,6 @@ module ModBoundaryConditions
             endif
 
         enddo
-
-
-        !************************************************************************************
-
-    end subroutine
-!=================================================================================================
-
-!=================================================================================================
-    subroutine AllocatePrescPresSparseMapping (this, Kg, Presc_Pres_DOF, KgValZERO, KgValONE, contZERO, contONE)
-
-        !************************************************************************************
-        ! DECLARATIONS OF VARIABLES
-        !************************************************************************************
-        ! Modules and implicit declarations
-        ! -----------------------------------------------------------------------------------
-        use ModGlobalSparseMatrix
-        implicit none
-        ! Object
-        ! -----------------------------------------------------------------------------------
-        class(ClassBoundaryConditions)  :: this
-        ! Input/Output variables
-        ! -----------------------------------------------------------------------------------
-        type (ClassGlobalSparseMatrix), pointer :: Kg
-        integer, pointer, dimension(:)          :: Presc_Pres_DOF
-        integer, dimension(size(Kg%Val))        :: KgValZERO, KgValONE
-        integer :: contZERO, contONE
-        !************************************************************************************
-        stop "Erro::AllocatePrescPresSparseMapping::Dummy"
         !************************************************************************************
 
     end subroutine
@@ -508,14 +452,14 @@ module ModBoundaryConditions
         ! Input/Output variables
         ! -----------------------------------------------------------------------------------
         type (ClassGlobalSparseMatrix), pointer :: Kg
-        integer, dimension(size(Kg%Val))        :: KgValZERO, KgValONE
+        integer, dimension(:)                   :: KgValZERO, KgValONE
         integer :: contZERO, contONE
 
 
         ! Internal variables
         ! -----------------------------------------------------------------------------------
         integer :: i, n, dof, NumberOfThreads, nCC_Presc, RowSize
-        integer :: AuxZERO(size(Kg%Val))  , AuxONE(size(Kg%Val))
+        integer, allocatable, dimension(:) :: AuxZERO, AuxONE
         integer,  dimension(size(this%FixedSupport%dof))   ::   FixedSupportDOF
 
         !************************************************************************************
@@ -525,12 +469,14 @@ module ModBoundaryConditions
         ! Mapeando as posições do vetor de valores da matrix de rigidez esparsa (Kg%Val)
         ! para receber os valores de ZERO e UM na aplicação da CC de deslocamento prescrito
         !************************************************************************************
+        nCC_Presc = size(this%FixedSupport%dof)
+        RowSize = size(Kg%Row)
+        allocate( AuxZERO(RowSize) , AuxONE(RowSize))
+        
         AuxZERO = 0
         AuxONE = 0
         KgValZERO = 0
         KgValONE = 0
-        nCC_Presc = size(this%FixedSupport%dof)
-        RowSize = size(Kg%Row)
 
         !---------------------------------------------------------------------------------
         
@@ -627,30 +573,6 @@ module ModBoundaryConditions
 !=================================================================================================
     
 !=================================================================================================
-    subroutine GetBoundaryConditionsFluid( this, AnalysisSettings, GlobalNodesList, LC, ST, FluxExt, DeltaFluxExt, NodalPresDOF, P, DeltaPPresc, &
-                                             PMacro , DeltaPMacro, PGradMacro , DeltaPGradMacro )
-        !************************************************************************************
-        ! DECLARATIONS OF VARIABLES
-        use ModAnalysis
-        implicit none
-        ! Input variables
-        ! -----------------------------------------------------------------------------------
-        class(ClassBoundaryConditions) :: this
-        class(ClassAnalysis)           :: AnalysisSettings
-        type (ClassNodes),   pointer, dimension(:)  :: GlobalNodesList
-        integer                        :: LC, ST
-        ! Output variables
-        ! -----------------------------------------------------------------------------------
-        real(8) , dimension(:)               :: FluxExt , DeltaFluxExt
-        real(8) , dimension(:)               :: P, DeltaPPresc
-        real(8) , dimension(:)               :: PGradMacro , DeltaPGradMacro ! Used only in multiscale analysis
-        real(8)                              :: PMacro , DeltaPMacro         ! Used only in multiscale analysis
-        integer , pointer , dimension(:)     :: NodalPresDOF
-        stop "Erro::GetBoundaryConditionsFluid::Dummy"
-    end subroutine
-!=================================================================================================    
-
-!=================================================================================================
     subroutine GetExternalForces( this, LC, ST, Fext, DeltaFext )
 
         !************************************************************************************
@@ -746,17 +668,7 @@ module ModBoundaryConditions
 !=================================================================================================
 
 
-
-
-
-
-
-
-
-
-! Rotinas que não são métodos de alguma classe.
-
-
+! SUBROUTINES THAT DO NOT ARE METHODS OF ANY CLASS
 !=================================================================================================
     subroutine CreateNodalBoundaryCondition( SwitchDOF , TableDOF , SetOfLoadHistory , NodalBC )
 

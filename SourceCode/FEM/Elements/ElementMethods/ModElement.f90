@@ -36,6 +36,7 @@ module ModElement
         type(ClassElementNodes)      , pointer , dimension(:) :: ElementNodes => null()
         class(ClassConstitutiveModel), pointer , dimension(:) :: GaussPoints  => null()
         real (8)                                              :: Volume, VolumeX
+        integer                                               :: Material = 0
 
         contains
 

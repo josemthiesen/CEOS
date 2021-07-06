@@ -64,25 +64,27 @@ module ModBoundaryConditionsFluid
         ! -----------------------------------------------------------------------------------
         type (ClassGlobalSparseMatrix), pointer :: Kg
         integer, pointer, dimension(:)          :: Presc_Pres_DOF
-        integer, dimension(size(Kg%Val))        :: KgValZERO, KgValONE
+        integer, dimension(:)                   :: KgValZERO, KgValONE
         integer :: contZERO, contONE
 
         ! Internal variables
         ! -----------------------------------------------------------------------------------
         integer :: i, n, dof, NumberOfThreads, nCC_Presc, RowSize
-        integer :: AuxZERO(size(Kg%Val))  , AuxONE(size(Kg%Val))
+        integer, allocatable, dimension(:) :: AuxZERO, AuxONE
         !************************************************************************************
 
         ! Mapeando as posições do vetor de valores da matrix de rigidez esparsa (Kg%Val)
-        ! para receber os valores de ZERO e UM na aplicação da CC de deslocamento prescrito
+        ! para receber os valores de ZERO e UM na aplicação da CC de pressão prescrito
         !************************************************************************************
+        
+        nCC_Presc = size(Presc_Pres_DOF)
+        RowSize = size(Kg%Row)
+        allocate( AuxZERO(RowSize) , AuxONE(RowSize))
+
         AuxZERO = 0
         AuxONE = 0
         KgValZERO = 0
         KgValONE = 0
-
-        nCC_Presc = size(Presc_Pres_DOF)
-        RowSize = size(Kg%Row)
 
         !---------------------------------------------------------------------------------
         NumberOfThreads = omp_get_max_threads()
@@ -115,7 +117,7 @@ module ModBoundaryConditionsFluid
 
         contZERO = 0
         contONE = 0
-        do i=1,size(Kg%Row)
+        do i=1,RowSize
 
             if ( AuxZERO(i) == 1 ) then
                 contZERO = contZERO + 1

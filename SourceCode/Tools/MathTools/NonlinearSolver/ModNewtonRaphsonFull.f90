@@ -175,37 +175,40 @@ module ModNewtonRaphsonFull
                 !---------------------------------------------------------------------------------------------------------------
                 ! Solving the Linear System of Equations
                 !---------------------------------------------------------------------------------------------------------------
-               ! DX=0.0D0
+                ! DX=0.0D0
                 select case (this%MatrixType)
                     case (NewtonRaphsonFull_MatrixTypes%Full)
                         call this%LinearSolver%Solve(GFull, -R, DX)
                     case (NewtonRaphsonFull_MatrixTypes%Sparse)
                         call this%LinearSolver%Solve(GSparse, -R, DX)
                     case default
-                end select
+                    end select
                 
-                X_atkin = X + DX    
-                
-                if (it == 1) then
-                    w_atkin = this%w_atkin
-                else
-                    !w_atkin = -w_atkin*(dot_product(DX_atkin_previous, DX - DX_atkin_previous)/norm(DX-DX_atkin_previous)**2)    
-                end if
-                                
-                X = (1.0d0 - w_atkin)*X + w_atkin*X_atkin
-                
-                DX_atkin_previous = DX
-                
-                !if (this%LinearSolver%status%error) then
-                !    call this%Status%SetError(NewtonRaphsonFull_Errors%LinearSystemError,'Error Solving Linear System')
-                !    return
-                !endif
+                if (this%LinearSolver%status%error) then
+                    call this%Status%SetError(NewtonRaphsonFull_Errors%LinearSystemError,'Error Solving Linear System')
+                    return
+                endif
                 !---------------------------------------------------------------------------------------------------------------
-
+    
+                    
+                !-------------------------------------------------------------------
+                ! Atkin Method Block - Active
+                !-------------------------------------------------------------------
+                !X_atkin = X + DX    
+                !if (it == 1) then
+                !    w_atkin = this%w_atkin
+                !else
+                !    w_atkin = -w_atkin*(dot_product(DX_atkin_previous, DX - DX_atkin_previous)/norm(DX-DX_atkin_previous)**2)    
+                !end if
+                !DX_atkin_previous = DX                
+                !X = (1.0d0 - w_atkin)*X + w_atkin*X_atkin
+                !-------------------------------------------------------------------
+               
+                ! Classical Update - Active
                 !---------------------------------------------------------------------------------------------------------------
                 ! Update Unknown Variable and Additional Variables
                 !---------------------------------------------------------------------------------------------------------------
-                !X = X + DX
+                X = X + DX
 
                 call SOE%PostUpdate(X)
                 !---------------------------------------------------------------------------------------------------------------

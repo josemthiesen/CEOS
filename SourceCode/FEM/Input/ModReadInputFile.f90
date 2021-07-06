@@ -1513,7 +1513,10 @@ module ModReadInputFile
                 if (.not.FoundMaterial) then
                     call DataFile%RaiseError("Element's Material was not found")
                 endif
-
+                
+                ! Indicating the MaterialID of the element
+                ElementList(i)%El%Material = ElementMaterialID(i)
+                
                 ! Creating the constitutive models in elements ( Creating the gauss points)
                 call MaterialConstructor( ElementList(i)%El, ElementList, GlobalNodesList, Material, AnalysisSettings )
                 if (AnalysisSettings%ProblemType .eq. ProblemTypes%Biphasic) then

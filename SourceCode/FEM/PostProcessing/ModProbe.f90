@@ -1333,7 +1333,7 @@ module ModProbe
                                 ! Writing Macroscopic Displacement
                                 case (VariableNames%Displacements)
 
-                                    ! Computing Homogenized wX
+                                    ! Computing Homogenized U
                                     call GetHomogenizedDisplacement(FEA%AnalysisSettings, FEA%ElementList, FEA%U, HomogenizedU )
                                     
                                     call this%WriteOnFile(FEA%Time , HomogenizedU)

@@ -162,7 +162,7 @@ module ModFEMSystemOfEquationsMonolithicBiphasic
         ! The dirichelet BC (Fluid -> pressure) are being applied in the system Kx=R and not in Kx = -R
         R = -R
         !****************************************************************************************
-        call this%BCSolid%ApplyBoundaryConditionsNEW(  this%Kg , R , this%DirichletDOF, this%Xbar , X, this%PrescDirichletSparseMapZERO, &
+        call this%BCSolid%ApplyBoundaryConditions(  this%Kg , R , this%DirichletDOF, this%Xbar , X, this%PrescDirichletSparseMapZERO, &
                                                     this%PrescDirichletSparseMapONE, this%FixedSupportSparseMapZERO, this%FixedSupportSparseMapONE )
         !****************************************************************************************
         R = -R
