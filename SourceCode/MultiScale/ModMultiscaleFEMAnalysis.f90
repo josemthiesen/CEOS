@@ -204,7 +204,7 @@ module ModMultiscaleFEMAnalysis
     
             ! Internal variables
             ! -----------------------------------------------------------------------------------
-            real(8), allocatable, dimension(:) :: X , R , DeltaMacroscopicF, DeltaUPresc, MacroscopicF_alpha0, Ubar_alpha0, Xconverged
+            real(8), allocatable, dimension(:) :: X , R , DeltaFext, DeltaUPresc, Fext_alpha0, Ubar_alpha0, Xconverged
             real(8) :: DeltaTime , Time_alpha0
             real(8) :: alpha, alpha_max, alpha_min, alpha_aux
             integer :: LC , ST , nSteps, nLoadCases ,  CutBack, SubStep, e,gp, nDOF, FileID_FEMAnalysisResults, Flag_EndStep
@@ -214,6 +214,8 @@ module ModMultiscaleFEMAnalysis
             integer, allocatable, dimension(:) :: KgValZERO, KgValONE
             integer :: contZERO, contONE  
             integer :: Phase ! Indicates the material phase (1 = Solid; 2 = Fluid)
+            real(8) , dimension(3)   :: UMacro , DeltaUMacro             ! Used only in multiscale analysis
+            real(8) , dimension(9)   :: FMacro , DeltaFMacro             ! Used only in multiscale analysis
             
             type(ClassMultiscaleMinimalFEMSoE) :: FEMSoE
     
@@ -242,14 +244,11 @@ module ModMultiscaleFEMAnalysis
             FEMSoE % GlobalNodesList => GlobalNodesList
             FEMSoE % BC => BC
             FEMSoE % Kg => Kg
-            allocate( FEMSoE%Fint(nDOF) , FEMSoE%Fext(nDOF) , FEMSoE%Ubar(nDOF) , FEMSoE%Fmacro_current(9) )
+            allocate( FEMSoE%Fint(nDOF) , FEMSoE%Fext(nDOF) , FEMSoE%Ubar(nDOF) )
     
             ! Allocating arrays
             allocate( R(nDOF) )
-            allocate( X(nDOF+12), DeltaUPresc(nDOF), Ubar_alpha0(nDOF), Xconverged(nDOF+12)  )
-        
-            allocate( DeltaMacroscopicF(9),   MacroscopicF_alpha0(9) )
-        
+            allocate( X(nDOF+12), DeltaUPresc(nDOF), Ubar_alpha0(nDOF), Xconverged(nDOF+12)  )       
     
             ! Initial Guess
             X = 0.0d0
@@ -281,7 +280,8 @@ module ModMultiscaleFEMAnalysis
                     ! Rotina utilizada para obter o gradiente de deformação macro no instante anterior (n), a variável MacroscopicF_alpha0 e a variável DeltaMacroscopicF.
                     ! Além dos deslocamento prescritos quando assim necessário.
                     !-------------------------------------------------------------
-                    call BC%GetBoundaryConditions(AnalysisSettings, GlobalNodesList, LC, ST, MacroscopicF_alpha0, DeltaMacroscopicF,FEMSoE%DispDOF, X, DeltaUPresc)
+                    call BC%GetBoundaryConditions(AnalysisSettings, GlobalNodesList, LC, ST, Fext_alpha0, DeltaFext,FEMSoE%DispDOF, &
+                                                  X, DeltaUPresc, FMacro , DeltaFMacro, UMacro , DeltaUMacro)
     
                     ! Mapeando os graus de liberdade da matrix esparsa para a aplicação
                     ! da CC de deslocamento prescrito
@@ -328,7 +328,8 @@ module ModMultiscaleFEMAnalysis
     
                         FEMSoE % Ubar = Ubar_alpha0 + alpha*DeltaUPresc
                         FEMSoE % Time = Time_alpha0 + alpha*DeltaTime
-                        FEMSoE%Fmacro_current = MacroscopicF_alpha0 + alpha*DeltaMacroscopicF
+                        FEMSoE%FMacro_current = FMacro + alpha*DeltaFMacro
+                        FEMSoE%UMacro_current = UMacro + alpha*DeltaUMacro
     
                         call NLSolver%Solve( FEMSoE , XGuess = Xconverged , X=X, Phase = 1 )
     

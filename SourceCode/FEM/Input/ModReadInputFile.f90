@@ -35,7 +35,7 @@ module ModReadInputFile
     type (ClassPreprocessors) , parameter :: PreProcessors = ClassPreprocessors()
 
     integer,parameter :: iAnalysisSettings=1, iLinearSolver=2, iNonLinearSolver=3, iStaggeredSplittingScheme=4, iMaterial=5, &
-                         iPermeability=6, iMeshAndBC=7, iMacroscopicDeformationGradient=8, iMacroscopicPressureAndGradient=9, &
+                         iPermeability=6, iMeshAndBC=7, iMacroscopicDispAndDeformationGradient=8, iMacroscopicPressureAndGradient=9, &
                          nblocks=9
     logical,dimension(nblocks)::BlockFound=.false.
     character(len=100),dimension(nblocks)::BlockName
@@ -72,7 +72,7 @@ module ModReadInputFile
             BlockName(5)="Material"
             BlockName(6)="Permeability"
             BlockName(7)="Mesh and Boundary Conditions"
-            BlockName(8)="Macroscopic Deformation Gradient"
+            BlockName(8)="Macroscopic Displacement And Deformation Gradient"
             BlockName(9)="Macroscopic Pressure And Gradient"
 
             BlockFound=.false.
@@ -136,9 +136,9 @@ module ModReadInputFile
                         call ReadMeshAndBC(DataFile,GlobalNodesList,ElementList,AnalysisSettings,MaterialList,PermeabilityList,BC,BCFluid,TimeFileName)
 
         !---------------------------------------------------------------------------------------------------------------------------------------------------------
-                   case (iMacroscopicDeformationGradient)
+                   case (iMacroscopicDispAndDeformationGradient)
                         if (.not.all(BlockFound([iMeshAndBC]))) call DataFile%RaiseError("Mesh must be specified before Multiscale Settings.")
-                        call ReadMacroscopicDeformationGradient(AnalysisSettings,DataFile,TimeFileName,BC,GlobalNodesList)
+                        call ReadMacroscopicDispAndDeformationGradient(AnalysisSettings,DataFile,TimeFileName,BC,GlobalNodesList)
                                    
         !---------------------------------------------------------------------------------------------------------------------------------------------------------
                     case (iMacroscopicPressureAndGradient)
@@ -569,7 +569,7 @@ module ModReadInputFile
         !=======================================================================================================================
     
         !=======================================================================================================================
-        subroutine ReadMacroscopicDeformationGradient(AnalysisSettings,DataFile,TimeFileName,BC,GlobalNodesList)
+        subroutine ReadMacroscopicDispAndDeformationGradient(AnalysisSettings,DataFile,TimeFileName,BC,GlobalNodesList)
  
             implicit none
 
@@ -580,12 +580,12 @@ module ModReadInputFile
             character(len=100)                                 :: TimeFileName
             character(len=255)::string
 
-            character(len=100),dimension(9)::ListOfOptions,ListOfValues
-            logical,dimension(9)::FoundOption
+            character(len=100),dimension(12)::ListOfOptions,ListOfValues
+            logical,dimension(12)::FoundOption
             integer :: i, j, k, cont
 
 
-            ListOfOptions=["F11","F12","F13","F21","F22","F23","F31","F32","F33"]
+            ListOfOptions=["U1","U2","U3","F11","F12","F13","F21","F22","F23","F31","F32","F33"]
 
             call DataFile%FillListOfOptions(ListOfOptions,ListOfValues,FoundOption)
 
@@ -593,7 +593,7 @@ module ModReadInputFile
 
             do i=1,size(FoundOption)
                 if (.not.FoundOption(i)) then
-                    write(*,*) "Macroscopic Deformation Gradient :: Option not found ["//trim(ListOfOptions(i))//"]"
+                    write(*,*) "Macroscopic Displacement and Deformation Gradient :: Option not found ["//trim(ListOfOptions(i))//"]"
                     stop
                 endif
             enddo
@@ -619,37 +619,15 @@ module ModReadInputFile
                         else 
                             stop "Error: Multiscale Type of BC not defined - Select Type (BC)"
                         endif
-            
+                        
+                        ! Reading the values of displacement
+                        call ReadMacroscopicDisplacementComponents(BC%MacroscopicDisp, DataFile, TimeFileName, ListofValues(1:3))
                         ! Reading the values of deformation gradient
-                        call ReadMacroscopicDeformationGradientComponents(BC%MacroscopicDefGrad, DataFile, TimeFileName, ListofValues)
+                        call ReadMacroscopicDeformationGradientComponents(BC%MacroscopicDefGrad, DataFile, TimeFileName, ListofValues(4:))
                         ! Defining the nodal displacement constraint for each multiscale BC model.
                         ! Global nodes or only Boundary nodes
-                        call DefineNodalMultiscaleDispBC(BC%TypeOfBC, BC%BoundaryNodes, BC%NodalMultiscaleDispBC , BC%MacroscopicDefGrad , GlobalNodesList)
+                        call DefineNodalMultiscaleDispBC(BC%TypeOfBC, BC%BoundaryNodes, BC%NodalMultiscaleDispBC , GlobalNodesList)
               
-                    !! Biphasic Analysis    
-                    !class is ( ClassMultiscaleBoundaryConditionsBiphasic )
-                    !
-                    !    ! Option: Kinematical Constraints
-                    !    if (AnalysisSettings%MultiscaleModelSolid == MultiscaleModels%Taylor) then
-                    !         BC%TypeOfBCSolid = MultiscaleBCType%Taylor
-                    !    elseif (AnalysisSettings%MultiscaleModelSolid == MultiscaleModels%Linear) then
-                    !        BC%TypeOfBCSolid = MultiscaleBCType%Linear
-                    !    elseif (AnalysisSettings%MultiscaleModelSolid == MultiscaleBCType%Minimal) then
-                    !        BC%TypeOfBCSolid = MultiscaleBCType%Minimal
-                    !    elseif (AnalysisSettings%MultiscaleModelSolid == MultiscaleBCType%MinimalLinearD1) then
-                    !        BC%TypeOfBCSolid = MultiscaleBCType%MinimalLinearD1
-                    !    elseif (AnalysisSettings%MultiscaleModelSolid == MultiscaleBCType%MinimalLinearD3) then
-                    !        BC%TypeOfBCSolid = MultiscaleBCType%MinimalLinearD3
-                    !    else 
-                    !        stop "Error: Multiscale Type of BC not defined - Select Type (BC)"
-                    !    endif
-                    !
-                    !    ! Reading the values of deformation gradient
-                    !    call ReadMacroscopicDeformationGradientComponents(BC%MacroscopicDefGrad, DataFile, TimeFileName, ListofValues)
-                    !    ! Defining the nodal displacement constraint for each multiscale BC model.
-                    !    ! Global nodes or only Boundary nodes
-                    !    call DefineNodalMultiscaleDispBC(BC%TypeOfBCSolid, BC%BoundaryNodesSolid, BC%NodalMultiscaleDispBC , BC%MacroscopicDefGrad , GlobalNodesList)                  
-                    !  
 
                 class default
                          stop "Error: Multiscale Settings - Select Type (BC)"
@@ -657,10 +635,10 @@ module ModReadInputFile
 
             endif
 
-            BlockFound(iMacroscopicDeformationGradient)=.true.
+            BlockFound(iMacroscopicDispAndDeformationGradient)=.true.
             call DataFile%GetNextString(string)
-            if (.not.DataFile%CompareStrings(string,'end'//trim(BlockName(iMacroscopicDeformationGradient)))) then
-                call DataFile%RaiseError("End of block was expected. BlockName="//trim(BlockName(iMacroscopicDeformationGradient)))
+            if (.not.DataFile%CompareStrings(string,'end'//trim(BlockName(iMacroscopicDispAndDeformationGradient)))) then
+                call DataFile%RaiseError("End of block was expected. BlockName="//trim(BlockName(iMacroscopicDispAndDeformationGradient)))
             endif
 
 
@@ -668,13 +646,41 @@ module ModReadInputFile
         !=======================================================================================================================
     
         !=======================================================================================================================
+        subroutine ReadMacroscopicDisplacementComponents(MacroscopicDisp, DataFile, TimeFileName, ListofValues)
+ 
+            implicit none
+
+            type (ClassLoadHistory), pointer,  dimension(:)       :: MacroscopicDisp
+            character(len=100)                                    :: TimeFileName
+            character(len=100),dimension(:)                       :: ListOfValues
+            type(ClassParser)                                     :: DataFile 
+            integer :: i 
+       
+            allocate(MacroscopicDisp(3))
+            do i=1,3
+
+                    call MacroscopicDisp(i)%ReadTimeDiscretization(TimeFileName)
+
+                    if (DataFile%CompareStrings(ListOfValues(i),"Zero")) then
+                        call MacroscopicDisp(i)%CreateConstantLoadHistory(0.0d0)
+                    else
+                        call MacroscopicDisp(i)%ReadValueDiscretization(ListOfValues(i))
+                    endif
+
+            enddo                        
+                     
+        end subroutine
+        !=======================================================================================================================
+    
+        
+        !=======================================================================================================================
         subroutine ReadMacroscopicDeformationGradientComponents(MacroscopicDefGrad, DataFile, TimeFileName, ListofValues)
  
             implicit none
 
             type (ClassLoadHistory), pointer,  dimension(:,:)     :: MacroscopicDefGrad
             character(len=100)                                    :: TimeFileName
-            character(len=100),dimension(9)                       :: ListOfOptions,ListOfValues
+            character(len=100),dimension(:)                       :: ListOfValues
             type(ClassParser)                                     :: DataFile 
             integer :: i, j, k, cont
        
@@ -702,7 +708,7 @@ module ModReadInputFile
         !=======================================================================================================================
     
         !=======================================================================================================================
-        subroutine DefineNodalMultiscaleDispBC(TypeOfBC, BoundaryNodes, NodalMultiscaleDispBC , MacroscopicDefGrad , GlobalNodesList)
+        subroutine DefineNodalMultiscaleDispBC(TypeOfBC, BoundaryNodes, NodalMultiscaleDispBC  , GlobalNodesList)
         
             implicit none
 
@@ -710,7 +716,6 @@ module ModReadInputFile
             type (ClassBoundaryNodes),  dimension(:)                  :: BoundaryNodes
             type (ClassMultiscaleNodalBC), allocatable, dimension(:)  :: NodalMultiscaleDispBC
             type (ClassNodes) , pointer , dimension(:)                :: GlobalNodesList
-            type (ClassLoadHistory), pointer, dimension(:,:)          :: MacroscopicDefGrad
             integer :: i, j, k, cont
        
             ! Creating the class of the kinematic constraints
@@ -806,9 +811,8 @@ module ModReadInputFile
                         ! Defining the nodal displacement constraint for each multiscale BC model.
                         ! Global nodes or only Boundary nodes
                         call DefineNodalMultiscalePresBC(AnalysisSettings, BCFluid%TypeOfBCFluid, BCFluid%BoundaryNodesFluid, BCFluid%NodalMultiscalePresBC , &
-                                                        BCFluid%MacroscopicPressure, BCFluid%MacroscopicPresGrad  , GlobalNodesList)
-                             
-           
+                                                         GlobalNodesList)
+                                      
                     class default
                         stop "Error: ReadMultiscaleMacroscopicPressureAndGradiente - Multiscale BC not implemented"
                     end select
@@ -868,7 +872,7 @@ module ModReadInputFile
         !=======================================================================================================================
       
         !=======================================================================================================================
-        subroutine DefineNodalMultiscalePresBC(AnalysisSettings, TypeOfBCFluid, BoundaryNodesFluid, NodalMultiscalePresBC , MacroscopicPressure, MacroscopicPresGrad  , GlobalNodesList)
+        subroutine DefineNodalMultiscalePresBC(AnalysisSettings, TypeOfBCFluid, BoundaryNodesFluid, NodalMultiscalePresBC , GlobalNodesList)
                 
             implicit none
 
@@ -876,9 +880,7 @@ module ModReadInputFile
             integer                                                         :: TypeOfBCFluid
             type (ClassBoundaryNodesFluid),  dimension(:)                   :: BoundaryNodesFluid
             type (ClassMultiscaleNodalBCFluid), allocatable, dimension(:)   :: NodalMultiscalePresBC
-            type (ClassNodes), pointer , dimension(:)                       :: GlobalNodesList
-            type (ClassLoadHistory), pointer, dimension(:)                  :: MacroscopicPressure
-            type (ClassLoadHistory), pointer, dimension(:)                  :: MacroscopicPresGrad                                                                          
+            type (ClassNodes), pointer , dimension(:)                       :: GlobalNodesList                                                                       
             integer :: i, j, k, cont, nDOFFluid, nNosFluid, node
  
        

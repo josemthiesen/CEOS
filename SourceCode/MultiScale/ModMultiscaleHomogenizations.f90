@@ -354,6 +354,119 @@ module ModMultiscaleHomogenizations
         !=================================================================================================
         
         !=================================================================================================
+        subroutine GetHomogenizedJacobianRate(AnalysisSettings, ElementList , DeltaTime, HomogenizedJRate )
+            !************************************************************************************
+            ! DECLARATIONS OF VARIABLES
+            !************************************************************************************
+            ! Modules and implicit declarations
+            ! -----------------------------------------------------------------------------------
+            implicit none
+
+            ! Object
+            ! -----------------------------------------------------------------------------------
+            type  (ClassAnalysis)                                    :: AnalysisSettings
+            type  (ClassElementsWrapper),     pointer, dimension(:)  :: ElementList
+
+            ! Input variables
+            ! -----------------------------------------------------------------------------------
+
+            ! Input/Output variables
+            ! -----------------------------------------------------------------------------------
+            real(8) :: HomogenizedJRate
+            real(8) :: DeltaTime
+
+            ! Internal variables
+            ! -----------------------------------------------------------------------------------
+            integer							    :: NDOFel , gp, e, nNodes, DimProb,i,j,n
+            real(8)							    :: detJX, TotalVolX , rX
+            real(8) , pointer , dimension(:)    :: Weight
+            real(8) , pointer , dimension(:,:)  :: NaturalCoord
+            real(8)                             :: FactorAxiX
+            real(8)                             :: F(3,3)
+            real(8) , dimension(:,:) , pointer  :: DifSF
+            real(8) , dimension(AnalysisSettings%AnalysisDimension,AnalysisSettings%AnalysisDimension) :: JacobX
+            real(8) , dimension(:)   , pointer  :: ShapeFunctions
+            integer                             :: NumberOfThreads
+            real(8)                             :: Jacobian, JacobianRate
+            !************************************************************************************
+
+            !************************************************************************************
+            ! DEFORMATION GRADIENT HOMOGENISATION
+            !************************************************************************************
+            DimProb = AnalysisSettings%AnalysisDimension
+
+            TotalVolX = AnalysisSettings%TotalVolX
+
+            FactorAxiX = 1.0d0 ! 3D Analysis
+        
+            HomogenizedJRate = 0.0d0
+        
+            NumberOfThreads = omp_get_max_threads()
+                
+            call omp_set_num_threads( NumberOfThreads )
+           
+            !$OMP PARALLEL DEFAULT(PRIVATE)                                &
+                            Shared( AnalysisSettings,  ElementList, TotalVolX, DeltaTime, HomogenizedJRate, DimProb, FactorAxiX)         
+            !$OMP DO
+            !Loop over Elements
+            do e = 1,size(ElementList)
+
+                nNodes = ElementList(e)%El%GetNumberOfNodes()
+
+                DifSF => DifSF_Memory ( 1:nNodes , 1:DimProb )
+
+                ShapeFunctions => SF_Memory( 1:nNodes )
+
+                ! Number of degrees of freedom
+                call ElementList(e)%El%GetElementNumberDOF(AnalysisSettings,NDOFel)
+
+                ! Retrieving gauss points parameters for numerical integration
+                call ElementList(e)%El%GetGaussPoints(NaturalCoord,Weight)
+
+                !Loop over gauss points
+                do gp = 1, size(NaturalCoord,dim=1)
+
+                    call ElementList(e)%El%GetDifShapeFunctions(NaturalCoord(gp,:) , DifSF )
+
+                    !Jacobian
+                    JacobX=0.0d0
+                    do i=1,DimProb
+                        do j=1,DimProb
+                            do n=1,nNodes
+                                JacobX(i,j)=JacobX(i,j) + DifSf(n,i) * ElementList(e)%El%ElementNodes(n)%Node%CoordX(j)
+                            enddo
+                        enddo
+                    enddo
+
+                    !Determinant of the Jacobian
+                    detJX = det(JacobX)
+
+                    !Get F
+                    F = ElementList(e)%El%GaussPoints(gp)%F
+                    Jacobian = det(F)
+                    
+                    JacobianRate = (Jacobian - ElementList(e)%El%GaussPoints(gp)%AdditionalVariables%Jn)/DeltaTime
+               
+                    ElementList(e)%El%GaussPoints(gp)%AdditionalVariables%Jn = Jacobian
+                    if ( AnalysisSettings%Hypothesis == HypothesisOfAnalysis%Axisymmetric ) then
+                        call ElementList(e)%El%GetShapeFunctions(NaturalCoord(gp,:),ShapeFunctions)
+                        !Radius
+                        rX = dot_product( ShapeFunctions , [( ElementList(e)%El%ElementNodes(n)%Node%CoordX(1),n=1,nNodes )] )
+                        FactorAxiX = 2.0d0*Pi*rX
+                    endif
+                    !HomogenizedJRate
+                    !$OMP CRITICAL
+                    HomogenizedJRate = HomogenizedJRate + (JacobianRate*Weight(gp)*detJX*FactorAxiX)/TotalVolX
+                    !$OMP END CRITICAL
+                enddo
+            enddo
+            !$OMP END DO
+            !$OMP END PARALLEL
+            !************************************************************************************      
+        end subroutine
+        !=================================================================================================
+        
+        !=================================================================================================
         subroutine GetHomogenizedDisplacement( AnalysisSettings, ElementList, U, HomogenizedU )
             !************************************************************************************
             ! DECLARATIONS OF VARIABLES
@@ -697,7 +810,7 @@ module ModMultiscaleHomogenizations
                    do i=1,DimProb
                        do j=1,DimProb
                            do n=1,nNodesFluid
-                               JacobX(i,j)=JacobX(i,j) + DifSf(n,i) * ElBiphasic%ElementNodes(n)%Node%CoordX(j)
+                               JacobX(i,j)=JacobX(i,j) + DifSf(n,i) * ElBiphasic%ElementNodes_fluid(n)%Node%CoordX(j)
                            enddo
                        enddo
                    enddo

@@ -41,7 +41,7 @@ module ModFEMSystemOfEquationsSolid
         type (ClassGlobalSparseMatrix)              , pointer  :: Kg
         
         real(8),dimension(9)                                   :: FMacro_current
-        real(8),dimension(3)                                   :: uMacro_current = 0.0d0
+        real(8),dimension(3)                                   :: UMacro_current
 
 
     contains

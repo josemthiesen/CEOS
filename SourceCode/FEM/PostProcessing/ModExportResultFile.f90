@@ -578,6 +578,7 @@ module ModExportResultFile
         !=============================================================================
         !*****************************************************************************
         !Loop over Elements - Counting the elements of material Material
+        !TotalVolX = 0.0d0
         !TotalElements = 0
         !Material = 1 ! DEFINING THE MATERIAL
         !do el = 1,size(FEA%ElementList)
@@ -591,8 +592,12 @@ module ModExportResultFile
         !    if (FEA%ElementList(el)%El%Material .eq. Material) then
         !        elem = elem + 1
         !        ElementListMaterial(elem)%El => FEA%ElementList(el)%El
+        !        call ElementListMaterial(elem)%El%ElementVolume(FEA%AnalysisSettings, Volume, VolumeX, Status)
+        !        TotalVolX = TotalVolX + VolumeX
         !    endif
         !enddo
+        !FEA%AnalysisSettings%TotalVolX = TotalVolX
+        ! call TranslateCentroidToOrigin(ElementListMaterial, FEA%AnalysisSettings, FEA%GlobalNodesList )
         !*****************************************************************************
         !=============================================================================
         
@@ -696,7 +701,7 @@ module ModExportResultFile
                 call ComputeVelocity(DeltaTime, OldU, U, OldVSolid, VSolid, OldASolid, ASolid)
             endif
             FEA%Vsolid => Vsolid
-            
+            FEA%DeltaTime = DeltaTime
             ! Update stress and internal variables
             
             !-------------------------------------------------------------------------------------------
@@ -1188,8 +1193,8 @@ module ModExportResultFile
         call HomogenizationWriteOnFile(FileNameP, Time , HomogenizedPressure)
         call HomogenizationWriteOnFile(FileNameGP, Time , HomogenizedPressureGradient)
         call HomogenizationWriteOnFile(FileNamewX, Time , HomogenizedwX)
-        call HomogenizationWriteOnFile(FileNamewX, Time , HomogenizeddivV)
-        call HomogenizationWriteOnFile(FileNamewX, Time , HomogenizedTotalStress)
+        call HomogenizationWriteOnFile(FileNamedivV, Time , HomogenizeddivV)
+        call HomogenizationWriteOnFile(FileNameStress, Time , HomogenizedTotalStress)
     end subroutine
     !==========================================================================================
    

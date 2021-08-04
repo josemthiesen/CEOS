@@ -51,6 +51,7 @@ module ModFEMAnalysis
         real(8), pointer, dimension(:) :: Psolid => null()
         real(8), pointer, dimension(:) :: Vsolid => null()
         real (8)                       :: Time
+        real (8)                       :: DeltaTime
         integer                        :: LoadCase
 
         contains
@@ -383,6 +384,8 @@ module ModFEMAnalysis
             integer, allocatable, dimension(:) :: KgValZERO, KgValONE
             integer :: contZERO, contONE
             integer :: Phase ! Indicates the material phase (1 = Solid; 2 = Fluid),
+            real(8) , dimension(3)   :: UMacro , DeltaUMacro     ! Used only in multiscale analysis
+            real(8) , dimension(9)   :: FMacro , DeltaFMacro             ! Used only in multiscale analysis
             
             type(ClassFEMSystemOfEquations) :: FEMSoE
 
@@ -440,7 +443,8 @@ module ModFEMAnalysis
                     write(*,'(4x,a,i3,a,i3,a)')'Step: ',ST,' (LC: ',LC,')'
                     write(*,*)''
 
-                    call BC%GetBoundaryConditions(AnalysisSettings, GlobalNodesList, LC, ST, Fext_alpha0, DeltaFext,FEMSoE%DispDOF, U, DeltaUPresc)
+                    call BC%GetBoundaryConditions(AnalysisSettings, GlobalNodesList, LC, ST, Fext_alpha0, DeltaFext,FEMSoE%DispDOF,&
+                                                  U, DeltaUPresc, FMacro , DeltaFMacro, UMacro , DeltaUMacro)
 
                     ! Mapeando os graus de liberdade da matrix esparsa para a aplicação
                     ! da CC de deslocamento prescrito

@@ -41,6 +41,7 @@ module ModMultiscaleBoundaryConditions
         integer :: TypeOfBC
         type (ClassMultiscaleNodalBC), allocatable, dimension(:) :: NodalMultiscaleDispBC
         type (ClassLoadHistory), pointer, dimension(:,:)         :: MacroscopicDefGrad
+        type (ClassLoadHistory), pointer, dimension(:)           :: MacroscopicDisp
 
     end type
     !-----------------------------------------------------------------------------------
@@ -89,7 +90,8 @@ module ModMultiscaleBoundaryConditions
     contains
 
     !=================================================================================================
-    subroutine GetBoundaryConditionsMultiscaleTaylorAndLinear( this, AnalysisSettings, GlobalNodesList, LC, ST, Fext, DeltaFext, NodalDispDOF, U, DeltaUPresc )
+    subroutine GetBoundaryConditionsMultiscaleTaylorAndLinear( this, AnalysisSettings, GlobalNodesList, LC, ST, Fext, DeltaFext, NodalDispDOF, &
+                                                               U, DeltaUPresc, FMacro , DeltaFMacro, UMacro , DeltaUMacro )
         !************************************************************************************
         ! DECLARATIONS OF VARIABLES
         !************************************************************************************
@@ -110,20 +112,33 @@ module ModMultiscaleBoundaryConditions
         real(8) , dimension(:)                          :: Fext , DeltaFext
         integer , pointer , dimension(:)                :: NodalDispDOF
         real(8) , dimension(:)                          :: U, DeltaUPresc
+        real(8) , dimension(:)                          :: UMacro , DeltaUMacro
+        real(8) , dimension(:)                          :: FMacro , DeltaFMacro
 
         ! Internal variables
         ! -----------------------------------------------------------------------------------
         integer                                         :: i,j,k, nActive
         real(8) , dimension(3,3)                        :: MacroscopicF_Initial, MacroscopicF_Final
         integer                                         :: NDOFTaylorandLinear
+        real(8) , dimension(3)                          :: MacroscopicU_Initial, MacroscopicU_Final
         !************************************************************************************
-
+        Fext      = 0.0d0    ! Values of External Force       - Not used in Multiscale Analysis
+        DeltaFext = 0.0d0    ! Values of Delta External Force - Not used in Multiscale Analysis
+        !************************************************************************************
+        
+        !************************************************************************************             
+        ! Obtaining the Macroscopic Displacement U
+        UMacro = 0.0d0        !This variable represent the Macroscopic Displacement at time tn
+        DeltaUMacro = 0.0d0   !This variable represent the Delta Macroscopic Displacement at time tn+1
+        call GetMacroscopicDisplacement( this%MacroscopicDisp, LC, ST, MacroscopicU_Initial, MacroscopicU_Final, &
+                                         UMacro, DeltaUMacro)  
         !************************************************************************************             
         ! Obtaining the Macroscopic deformation gradient F
-        Fext = 0.0d0        !This variable represent the Macroscopic Deformation Gradient at time tn
-        DeltaFext = 0.0d0   !This variable represent the Delta Macroscopic Deformation Gradient at time tn+1
+        FMacro = 0.0d0        !This variable represent the Macroscopic Deformation Gradient at time tn
+        DeltaFMacro = 0.0d0   !This variable represent the Delta Macroscopic Deformation Gradient at time tn+1
         call GetMacroscopicDeformationGradient( this%MacroscopicDefGrad, LC, ST, MacroscopicF_Initial, MacroscopicF_Final, &
-                                                Fext, DeltaFext)       
+                                                FMacro, DeltaFMacro)       
+        !************************************************************************************
         !************************************************************************************ 
         ! Calculating the prescribed displacement for the multiscale BC model
         NDOFTaylorandLinear = AnalysisSettings%NDOFnode ! Number of prescribed GDL/node in Taylor and Linear model
@@ -133,13 +148,15 @@ module ModMultiscaleBoundaryConditions
         nActive = size(this%NodalMultiscaleDispBC)*NDOFTaylorandLinear 
         Allocate( NodalDispDOF(nActive))
         call GetNodalMultiscaleDispBCandDeltaU(AnalysisSettings, GlobalNodesList, MacroscopicF_Initial, MacroscopicF_Final, &
-                                               NDOFTaylorandLinear, this%NodalMultiscaleDispBC, NodalDispDOF, U, DeltaUPresc)      
+                                               MacroscopicU_Initial, MacroscopicU_Final, NDOFTaylorandLinear, &
+                                               this%NodalMultiscaleDispBC, NodalDispDOF, U, DeltaUPresc)      
         !************************************************************************************
     end subroutine
     !=================================================================================================
 
     !=================================================================================================
-    subroutine GetBoundaryConditionsMultiscaleMinimal( this, AnalysisSettings, GlobalNodesList, LC, ST, Fext, DeltaFext, NodalDispDOF, U, DeltaUPresc)
+    subroutine GetBoundaryConditionsMultiscaleMinimal( this, AnalysisSettings, GlobalNodesList, LC, ST, Fext, DeltaFext, NodalDispDOF, U, DeltaUPresc,&
+                                                      FMacro , DeltaFMacro, UMacro , DeltaUMacro)
 
         !************************************************************************************
         ! DECLARATIONS OF VARIABLES
@@ -160,18 +177,32 @@ module ModMultiscaleBoundaryConditions
         real(8) , dimension(:)                          :: Fext , DeltaFext
         integer , pointer , dimension(:)                :: NodalDispDOF
         real(8) , dimension(:)                          :: U, DeltaUPresc
+        real(8) , dimension(:)                          :: UMacro , DeltaUMacro
+        real(8) , dimension(:)                          :: FMacro , DeltaFMacro
 
         ! Internal variables
         ! -----------------------------------------------------------------------------------
         integer                                         :: i,j,k, nActive
         real(8) , dimension(3,3)                        :: MacroscopicF_Initial, MacroscopicF_Final
+        real(8) , dimension(3)                          :: MacroscopicU_Initial, MacroscopicU_Final
         !************************************************************************************
 
         !************************************************************************************
+        Fext      = 0.0d0    ! Values of External Force       - Not used in Multiscale Analysis
+        DeltaFext = 0.0d0    ! Values of Delta External Force - Not used in Multiscale Analysis
+        !************************************************************************************
+        
+        !************************************************************************************             
+        ! Obtaining the Macroscopic Displacement U
+        UMacro = 0.0d0        !This variable represent the Macroscopic Displacement at time tn
+        DeltaUMacro = 0.0d0   !This variable represent the Delta Macroscopic Displacement at time tn+1
+        call GetMacroscopicDisplacement( this%MacroscopicDisp, LC, ST, MacroscopicU_Initial, MacroscopicU_Final, &
+                                         UMacro, DeltaUMacro)  
+        !************************************************************************************
         ! Obtaining the Macroscopic deformation gradient F
-        Fext = 0.0d0        !This variable represent the Macroscopic Deformation Gradient at time tn
-        DeltaFext = 0.0d0   !This variable represent the Delta Macroscopic Deformation Gradient at time tn+1
-        call GetMacroscopicDeformationGradient( this%MacroscopicDefGrad, LC, ST, MacroscopicF_Initial, MacroscopicF_Final, Fext, DeltaFext)
+        FMacro = 0.0d0        !This variable represent the Macroscopic Deformation Gradient at time tn
+        DeltaFMacro = 0.0d0   !This variable represent the Delta Macroscopic Deformation Gradient at time tn+1
+        call GetMacroscopicDeformationGradient( this%MacroscopicDefGrad, LC, ST, MacroscopicF_Initial, MacroscopicF_Final, FMacro, DeltaFMacro)
         !************************************************************************************ 
         ! Calculating the prescribed displacement for the multiscale BC model
         ! (For Minimal Model there are no prescribed displacement
@@ -185,8 +216,8 @@ module ModMultiscaleBoundaryConditions
     !=================================================================================================
                
     !=================================================================================================
-    subroutine GetBoundaryConditionsMultiscaleMinimalLinearD1( this, AnalysisSettings, GlobalNodesList, LC, ST, Fext, &
-                                                               DeltaFext, NodalDispDOF, U, DeltaUPresc)
+    subroutine GetBoundaryConditionsMultiscaleMinimalLinearD1( this, AnalysisSettings, GlobalNodesList, LC, ST, Fext, DeltaFext, &
+                                                                NodalDispDOF, U, DeltaUPresc, FMacro , DeltaFMacro, UMacro , DeltaUMacro)
         !************************************************************************************
         ! DECLARATIONS OF VARIABLES
         !************************************************************************************
@@ -206,20 +237,32 @@ module ModMultiscaleBoundaryConditions
         real(8) , dimension(:)                          :: Fext , DeltaFext
         integer , pointer , dimension(:)                :: NodalDispDOF
         real(8) , dimension(:)                          :: U, DeltaUPresc
+        real(8) , dimension(:)                          :: UMacro , DeltaUMacro
+        real(8) , dimension(:)                          :: FMacro , DeltaFMacro
 
         ! Internal variables
         ! -----------------------------------------------------------------------------------
         integer                                         :: i,j,k, nActive
         real(8) , dimension(3,3)                        :: MacroscopicF_Initial, MacroscopicF_Final
         integer                                         :: NDOFMinimalLinearD1
+        real(8) , dimension(3)                          :: MacroscopicU_Initial, MacroscopicU_Final
         !************************************************************************************
-
+        Fext      = 0.0d0    ! Values of External Force       - Not used in Multiscale Analysis
+        DeltaFext = 0.0d0    ! Values of Delta External Force - Not used in Multiscale Analysis
+        !************************************************************************************
+        
+        !************************************************************************************             
+        ! Obtaining the Macroscopic Displacement U
+        UMacro = 0.0d0        !This variable represent the Macroscopic Displacement at time tn
+        DeltaUMacro = 0.0d0   !This variable represent the Delta Macroscopic Displacement at time tn+1
+        call GetMacroscopicDisplacement( this%MacroscopicDisp, LC, ST, MacroscopicU_Initial, MacroscopicU_Final, &
+                                         UMacro, DeltaUMacro)  
         !************************************************************************************             
         ! Obtaining the Macroscopic deformation gradient F
-        Fext = 0.0d0        !This variable represent the Macroscopic Deformation Gradient at time tn
-        DeltaFext = 0.0d0   !This variable represent the Delta Macroscopic Deformation Gradient at time tn+1
+        FMacro = 0.0d0        !This variable represent the Macroscopic Deformation Gradient at time tn
+        DeltaFMacro = 0.0d0   !This variable represent the Delta Macroscopic Deformation Gradient at time tn+1
         call GetMacroscopicDeformationGradient( this%MacroscopicDefGrad, LC, ST, MacroscopicF_Initial, MacroscopicF_Final, &
-                                                Fext, DeltaFext)       
+                                                FMacro, DeltaFMacro)       
         !************************************************************************************ 
         ! Calculating the prescribed displacement for the multiscale BC model
         NDOFMinimalLinearD1 = 1 ! Number of prescribed GDL/node in Minimal D1 model
@@ -229,13 +272,15 @@ module ModMultiscaleBoundaryConditions
         nActive = size(this%NodalMultiscaleDispBC)*NDOFMinimalLinearD1 
         Allocate( NodalDispDOF(nActive))
         call GetNodalMultiscaleDispBCandDeltaU(AnalysisSettings, GlobalNodesList, MacroscopicF_Initial, MacroscopicF_Final, &
-                                               NDOFMinimalLinearD1, this%NodalMultiscaleDispBC, NodalDispDOF, U, DeltaUPresc)      
+                                               MacroscopicU_Initial, MacroscopicU_Final, NDOFMinimalLinearD1, &
+                                               this%NodalMultiscaleDispBC, NodalDispDOF, U, DeltaUPresc)          
         !************************************************************************************
     end subroutine
     !=================================================================================================
     
     !=================================================================================================
-    subroutine GetBoundaryConditionsMultiscaleMinimalLinearD3( this, AnalysisSettings, GlobalNodesList, LC, ST, Fext, DeltaFext, NodalDispDOF, U, DeltaUPresc)
+    subroutine GetBoundaryConditionsMultiscaleMinimalLinearD3( this, AnalysisSettings, GlobalNodesList, LC, ST, Fext, DeltaFext, NodalDispDOF, &
+                                                            U, DeltaUPresc, FMacro , DeltaFMacro, UMacro , DeltaUMacro)
         !************************************************************************************
         ! DECLARATIONS OF VARIABLES
         !************************************************************************************
@@ -255,20 +300,32 @@ module ModMultiscaleBoundaryConditions
         real(8) , dimension(:)                          :: Fext , DeltaFext
         integer , pointer , dimension(:)                :: NodalDispDOF
         real(8) , dimension(:)                          :: U, DeltaUPresc
-
+        real(8) , dimension(:)                          :: UMacro , DeltaUMacro
+        real(8) , dimension(:)                          :: FMacro , DeltaFMacro
+        
         ! Internal variables
         ! -----------------------------------------------------------------------------------
         integer                                         :: i,j,k, nActive
         real(8) , dimension(3,3)                        :: MacroscopicF_Initial, MacroscopicF_Final
         integer                                         :: NDOFMinimalLinearD3
+        real(8) , dimension(3)                          :: MacroscopicU_Initial, MacroscopicU_Final
         !************************************************************************************
-
+        Fext      = 0.0d0    ! Values of External Force       - Not used in Multiscale Analysis
+        DeltaFext = 0.0d0    ! Values of Delta External Force - Not used in Multiscale Analysis
+        !************************************************************************************
+        
+        !************************************************************************************             
+        ! Obtaining the Macroscopic Displacement U
+        UMacro = 0.0d0        !This variable represent the Macroscopic Displacement at time tn
+        DeltaUMacro = 0.0d0   !This variable represent the Delta Macroscopic Displacement at time tn+1
+        call GetMacroscopicDisplacement( this%MacroscopicDisp, LC, ST, MacroscopicU_Initial, MacroscopicU_Final, &
+                                         UMacro, DeltaUMacro)  
         !************************************************************************************             
         ! Obtaining the Macroscopic deformation gradient F
-        Fext = 0.0d0        !This variable represent the Macroscopic Deformation Gradient at time tn
-        DeltaFext = 0.0d0   !This variable represent the Delta Macroscopic Deformation Gradient at time tn+1
+        FMacro = 0.0d0        !This variable represent the Macroscopic Deformation Gradient at time tn
+        DeltaFMacro = 0.0d0   !This variable represent the Delta Macroscopic Deformation Gradient at time tn+1
         call GetMacroscopicDeformationGradient( this%MacroscopicDefGrad, LC, ST, MacroscopicF_Initial, MacroscopicF_Final, &
-                                                Fext, DeltaFext)       
+                                                FMacro, DeltaFMacro)       
         !************************************************************************************ 
         ! Calculating the prescribed displacement for the multiscale BC model
         NDOFMinimalLinearD3 = AnalysisSettings%NDOFnode ! Number of prescribed GDL/node in Minimal D3 model
@@ -278,14 +335,16 @@ module ModMultiscaleBoundaryConditions
         nActive = size(this%NodalMultiscaleDispBC)*NDOFMinimalLinearD3 
         Allocate( NodalDispDOF(nActive))
         call GetNodalMultiscaleDispBCandDeltaU(AnalysisSettings, GlobalNodesList, MacroscopicF_Initial, MacroscopicF_Final, &
-                                               NDOFMinimalLinearD3, this%NodalMultiscaleDispBC, NodalDispDOF, U, DeltaUPresc)      
+                                               MacroscopicU_Initial, MacroscopicU_Final, NDOFMinimalLinearD3, &
+                                               this%NodalMultiscaleDispBC, NodalDispDOF, U, DeltaUPresc)           
         !************************************************************************************
     end subroutine
     !================================================================================================= 
     
     !=================================================================================================
     subroutine GetNodalMultiscaleDispBCandDeltaU(AnalysisSettings, GlobalNodesList, MacroscopicF_Initial, MacroscopicF_Final, &
-                                                 NDOFMultiscaleModel, NodalMultiscaleDispBC, NodalDispDOF, U, DeltaUPresc)
+                                                 MacroscopicU_Initial, MacroscopicU_Final, NDOFMultiscaleModel, &
+                                                 NodalMultiscaleDispBC, NodalDispDOF, U, DeltaUPresc)
         !************************************************************************************
         ! DECLARATIONS OF VARIABLES
         !************************************************************************************
@@ -301,6 +360,7 @@ module ModMultiscaleBoundaryConditions
         ! Input variables
         ! -----------------------------------------------------------------------------------
         real(8) , dimension(3,3)                                :: MacroscopicF_Initial, MacroscopicF_Final
+        real(8) , dimension(3)                                  :: MacroscopicU_Initial, MacroscopicU_Final
         integer                                                 :: NDOFMultiscaleModel
         type (ClassMultiscaleNodalBC), dimension(:)             :: NodalMultiscaleDispBC
         
@@ -328,8 +388,8 @@ module ModMultiscaleBoundaryConditions
             Y(1:size(NodalMultiscaleDispBC(k)%Node%CoordX)) = NodalMultiscaleDispBC(k)%Node%CoordX
 
             ! Computing the microscopic displacement of node k
-            UmicroYInitial = matmul((MacroscopicF_Initial - IdentityMatrix(3)),Y)
-            UmicroYFinal   = matmul((MacroscopicF_Final   - IdentityMatrix(3)),Y)
+            UmicroYInitial = MacroscopicU_Initial +  matmul((MacroscopicF_Initial - IdentityMatrix(3)),Y)
+            UmicroYFinal   = MacroscopicU_Final   +  matmul((MacroscopicF_Final   - IdentityMatrix(3)),Y)
 
             ! Assembling the vector NodalDispDOF and its respective prescribed micro displacements
             do i = 1,NDOFMultiscaleModel
@@ -395,6 +455,44 @@ module ModMultiscaleBoundaryConditions
         !************************************************************************************
     end subroutine
     !=================================================================================================
-      
+    
+    !=================================================================================================
+    subroutine GetMacroscopicDisplacement( MacroscopicDisplacement, LC, ST, MacroscopicU_Initial, MacroscopicU_Final, UMacro , DeltaUMacro)
+
+        !************************************************************************************
+        ! DECLARATIONS OF VARIABLES
+        !************************************************************************************
+        ! Modules and implicit declarations
+        ! -----------------------------------------------------------------------------------
+         implicit none
+
+        ! Input variables
+        ! -----------------------------------------------------------------------------------
+        type (ClassLoadHistory), pointer, dimension(:)   :: MacroscopicDisplacement
+        integer                                          :: LC, ST
+
+        ! Output variables
+        ! -----------------------------------------------------------------------------------
+        real(8) , dimension(:)          :: MacroscopicU_Initial, MacroscopicU_Final
+        real(8) , dimension(:)          :: UMacro , DeltaUMacro
+
+        ! Internal variables
+        ! -----------------------------------------------------------------------------------
+        integer                         :: i
+        
+        !************************************************************************************
+        MacroscopicU_Initial = 0.0d0
+        MacroscopicU_Final   = 0.0d0
+        do i = 1,3
+            ! Macroscopic U
+            MacroscopicU_Initial(i)  = MacroscopicDisplacement(i)%LoadCase(LC)%Step(ST)%InitVal
+            MacroscopicU_Final(i)    = MacroscopicDisplacement(i)%LoadCase(LC)%Step(ST)%FinalVal
+                
+            UMacro(i)      = MacroscopicU_Initial(i)
+            DeltaUMacro(i) = MacroscopicU_Final(i) - UMacro(i) 
+        enddo
+        !************************************************************************************
+    end subroutine
+    !=================================================================================================
     
 end module

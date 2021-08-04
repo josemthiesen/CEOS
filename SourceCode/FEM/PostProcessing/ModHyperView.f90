@@ -87,9 +87,9 @@ module ModHyperView
 			
 			type(ClassElementProfile)               :: Profile
 
-            real(8) , dimension(9)            :: UD_Variable
-            integer                           :: UD_ID, UD_Length, UD_VariableType, VariableType, VariableLength
-            character(len=255)                :: UD_Name
+            real(8) , dimension(9)                  :: UD_Variable
+            integer                                 :: UD_ID, UD_Length, UD_VariableType, VariableType, VariableLength
+            character(len=255)                      :: UD_Name
             logical :: FoundUserVariable
             character(len=255)                     :: LoadCaseChar
             integer, allocatable, dimension(:,:)   :: Conec
@@ -138,7 +138,7 @@ module ModHyperView
                     deallocate(NodalValues)
                     
 
-                    case (VariableNames%CauchyStress)
+                case (VariableNames%CauchyStress)
                     ! TODO (Thiago#2#): O HyperView lê os resultados nos pontos de gauss segundo a conectividade dos nós. 
                     !Implementado somente para elementos com a mesma quantidade de nós e pontos de gauss.
 

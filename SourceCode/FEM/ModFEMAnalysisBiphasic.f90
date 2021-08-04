@@ -414,6 +414,8 @@ module ModFEMAnalysisBiphasic
             
             real(8) , dimension(3)   :: GradPMacro , DeltaGradPMacro ! Used only in multiscale analysis
             real(8)                  :: PMacro , DeltaPMacro         ! Used only in multiscale analysis
+            real(8) , dimension(3)   :: UMacro , DeltaUMacro         ! Used only in multiscale analysis
+            real(8) , dimension(9)   :: FMacro , DeltaFMacro             ! Used only in multiscale analysis
             
             type(ClassFEMSystemOfEquationsMonolithicBiphasic) :: FEMSoE
 
@@ -502,7 +504,7 @@ module ModFEMAnalysisBiphasic
                     
                     ! Get boundary conditions for both displacement and pressure fields
                     call BCSolid%GetBoundaryConditions(AnalysisSettings, GlobalNodesList,  LC, ST, Fext_solid_alpha0, DeltaFext_solid,FEMSoE%DispDOF, &
-                                                    X(1:nDOFSolid), DeltaUPresc)
+                                                    X(1:nDOFSolid), DeltaUPresc, FMacro , DeltaFMacro, UMacro , DeltaUMacro )
                     call BCFluid%GetBoundaryConditions(AnalysisSettings, GlobalNodesList,  LC, ST, Fext_fluid_alpha0, DeltaFext_fluid,FEMSoE%PresDOF, &
                                                     X((nDOFSolid+1):nDOF), DeltaPPresc, PMacro , DeltaPMacro, GradPMacro , DeltaGradPMacro)
                     
@@ -729,6 +731,8 @@ module ModFEMAnalysisBiphasic
             
             real(8) , dimension(3)   :: GradPMacro , DeltaGradPMacro ! Used only in multiscale analysis
             real(8)                  :: PMacro , DeltaPMacro         ! Used only in multiscale analysis
+            real(8) , dimension(3)   :: UMacro , DeltaUMacro         ! Used only in multiscale analysis
+            real(8) , dimension(9)   :: FMacro , DeltaFMacro         ! Used only in multiscale analysis
             
             integer :: NumberOfSolidNewtonIterations = 0
             integer :: NumberOfFluidNewtonIterations = 0
@@ -866,7 +870,8 @@ module ModFEMAnalysisBiphasic
                     write(*,'(4x,a,i3,a,i3,a)')'Step: ',ST,' (LC: ',LC,')'
                     write(*,*)''
 
-                    call BCSolid%GetBoundaryConditions(AnalysisSettings, GlobalNodesList,  LC, ST, Fext_alpha0, DeltaFext,FEMSoESolid%DispDOF, U, DeltaUPresc)
+                    call BCSolid%GetBoundaryConditions(AnalysisSettings, GlobalNodesList,  LC, ST, Fext_alpha0, DeltaFext,FEMSoESolid%DispDOF, &
+                                                       U, DeltaUPresc, FMacro , DeltaFMacro, UMacro , DeltaUMacro )
                     call BCFluid%GetBoundaryConditions(AnalysisSettings, GlobalNodesList,  LC, ST, FluxExt_alpha0, DeltaFluxExt,FEMSoEFluid%PresDOF, P, DeltaPPresc, &
                                                         PMacro , DeltaPMacro, GradPMacro , DeltaGradPMacro )
 
@@ -963,7 +968,8 @@ module ModFEMAnalysisBiphasic
                         FEMSoESolid % Fext   = Fext_alpha0 + alpha*DeltaFext
                         FEMSoESolid % Ubar   = Ubar_alpha0 + alpha*DeltaUPresc
                         FEMSoESolid % Pfluid = Pstaggered(1:nDOFFluid)   !Pconverged
-                        FEMSoESolid % Fmacro_current = Fext_alpha0(1:9) + alpha*DeltaFext(1:9)
+                        FEMSoESolid % Fmacro_current =  FMacro + alpha*DeltaFMacro
+                        FEMSoESolid % Umacro_current =  UMacro + alpha*DeltaUMacro
                         
                         write(*,'(12x,a)') 'Solve the Solid system of equations '
                         call NLSolver%Solve( FEMSoESolid , XGuess = Ustaggered , X = U, Phase = 1 )
@@ -1180,9 +1186,8 @@ module ModFEMAnalysisBiphasic
             
             real(8) , dimension(3)   :: GradPMacro , DeltaGradPMacro     ! Used only in multiscale analysis
             real(8)                  :: PMacro     , DeltaPMacro         ! Used only in multiscale analysis
-            
-            
-            real(8), dimension(3)    :: UMACRO_alphaZero
+            real(8) , dimension(3)   :: UMacro , DeltaUMacro             ! Used only in multiscale analysis
+            real(8) , dimension(9)   :: FMacro , DeltaFMacro             ! Used only in multiscale analysis
             
             integer :: NumberOfSolidNewtonIterations = 0
             integer :: NumberOfFluidNewtonIterations = 0
@@ -1333,10 +1338,12 @@ module ModFEMAnalysisBiphasic
                     write(*,'(4x,a,i3,a,i3,a)')'Step: ',ST,' (LC: ',LC,')'
                     write(*,*)''
 
-                    call BCSolid%GetBoundaryConditions(AnalysisSettings, GlobalNodesList,  LC, ST, Fext_alpha0, DeltaFext,FEMSoESolid%DispDOF, U, DeltaUPresc)
+                    call BCSolid%GetBoundaryConditions(AnalysisSettings, GlobalNodesList,  LC, ST, Fext_alpha0, DeltaFext,FEMSoESolid%DispDOF, &
+                                                       U, DeltaUPresc, FMacro , DeltaFMacro, UMacro , DeltaUMacro )
                     call BCFluid%GetBoundaryConditions(AnalysisSettings, GlobalNodesList,  LC, ST, FluxExt_alpha0, DeltaFluxExt,FEMSoEFluid%PresDOF, P, DeltaPPresc, &
                                                         PMacro , DeltaPMacro, GradPMacro , DeltaGradPMacro)
 
+                    
                     !-----------------------------------------------------------------------------------
                     ! Mapeando os graus de liberdade da matrix esparsa para a aplicação das CC de Dirichlet
                     
@@ -1388,10 +1395,7 @@ module ModFEMAnalysisBiphasic
                     Uconverged = U
                     VSolidconverged = VSolid
                     ASolidconverged = ASolid
-                    
-                    ! Switch Pressure Converged
-                    Pconverged = P
-
+                   
                     !-----------------------------------------------------------------------------------
                     ! Variáveis do CutBack  - alpha = passo no step
                     !alpha_max = 1.0d0 ; alpha_min = 0.0d0
@@ -1399,6 +1403,9 @@ module ModFEMAnalysisBiphasic
                     !CutBack = 0
                     alpha = 1.0d0   ! passo no step
                     !-----------------------------------------------------------------------------------
+                                           
+                    ! Switch Pressure Converged
+                    Pconverged = P
                     
                     SubStep = 1
                     
@@ -1416,8 +1423,6 @@ module ModFEMAnalysisBiphasic
                     
                     NumberOfSolidNewtonIterations = 0
                     NumberOfFluidNewtonIterations = 0
-                    
-                    UMACRO_alphaZero = FEMSoESolid % Umacro_current
                     
                     SUBSTEPS: do while(.true.)   !Staggered procedure
 
@@ -1464,11 +1469,9 @@ module ModFEMAnalysisBiphasic
                         FEMSoESolid % Fext = Fext_alpha0 + alpha*DeltaFext
                         FEMSoESolid % Ubar = Ubar_alpha0 + alpha*DeltaUPresc
                         FEMSoESolid % Pfluid = P(1:nDOFFluid)
-                        FEMSoESolid % Fmacro_current = Fext_alpha0(1:9) + alpha*DeltaFext(1:9)
-                        
-                        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                        !FEMSoESolid % Umacro_current = UMACRO_alphaZero + alpha*[1.0d-3 , 0.0d0 , 0.0d0]
-                        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                        FEMSoESolid % Fmacro_current =  FMacro + alpha*DeltaFMacro
+                        FEMSoESolid % Umacro_current =  UMacro + alpha*DeltaUMacro
+             
                         
                         write(*,'(12x,a)') 'Solve the Solid system of equations '
                         call NLSolver%Solve( FEMSoESolid , XGuess = Ustaggered , X = U, Phase = 1 )

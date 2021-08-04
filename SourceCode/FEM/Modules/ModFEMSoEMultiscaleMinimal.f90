@@ -26,23 +26,6 @@ module ModFEMSoEMultiscaleMinimal
 
     type , extends(ClassFEMSystemOfEquations) :: ClassMultiscaleMinimalFEMSoE
 
-        !real(8),dimension(:),allocatable                       :: Fint , Fext , UBar
-        !real (8)                                               :: Time
-        !integer, dimension(:) , pointer                        :: DispDOF
-        !
-        !integer, dimension(:), allocatable                     :: PrescDispSparseMapZERO
-        !integer, dimension(:), allocatable                     :: PrescDispSparseMapONE
-        !integer, dimension(:), allocatable                     :: FixedSupportSparseMapZERO
-        !integer, dimension(:), allocatable                     :: FixedSupportSparseMapONE
-        !
-        !type (ClassElementsWrapper)  , dimension(:) , pointer  :: ElementList
-        !type (ClassNodes)            , dimension(:) , pointer  :: GlobalNodesList
-        !type (ClassAnalysis)                                   :: AnalysisSettings
-        !class (ClassBoundaryConditions)             , pointer  :: BC
-        !type (ClassGlobalSparseMatrix)              , pointer  :: Kg
-        !
-        !real(8),dimension(:), allocatable                      :: Fmacro_current
-
 
     contains
 
@@ -105,7 +88,7 @@ module ModFEMSoEMultiscaleMinimal
             R = 0.0d0
             R(1:nDOF)              =  this%Fint - this%Fext
             R((nDOF+1):(nDOF+9))   =  TotalVolX*( this%Fmacro_current - F_Homogenized_Voigt )
-            R((nDOF+10):(nDOF+12)) =  TotalVolX*( -u_Homogenized )
+            R((nDOF+10):(nDOF+12)) =  TotalVolX*( this%UMacro_current - u_Homogenized )
 
     end subroutine
     !=================================================================================================

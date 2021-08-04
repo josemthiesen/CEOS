@@ -25,7 +25,7 @@
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
 		<Configuration Name="Debug|x64">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" MultiProcessorCompilation="true" Optimization="optimizeFull" Parallelization="true" FixedFormLineLength="fixedLength132" OpenMP="OpenMPParallelCode" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" UseMkl="mklParallel"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" MultiProcessorCompilation="true" Optimization="optimizeFull" Parallelization="true" FixedFormLineLength="fixedLength132" OpenMP="OpenMPParallelCode" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDLL" UseMkl="mklParallel"/>
 				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateDebugInformation="true" SubSystem="subSystemConsole" StackReserveSize="100000000"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -35,7 +35,7 @@
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
 		<Configuration Name="Release|x64">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" MultiProcessorCompilation="true" Optimization="optimizeFull" Parallelization="true" OpenMP="OpenMPParallelCode" UseMkl="mklParallel"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" MultiProcessorCompilation="true" Optimization="optimizeFull" Parallelization="true" OpenMP="OpenMPParallelCode" RuntimeLibrary="rtMultiThreadedDLL" UseMkl="mklParallel"/>
 				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" SubSystem="subSystemConsole" StackReserveSize="100000000"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>

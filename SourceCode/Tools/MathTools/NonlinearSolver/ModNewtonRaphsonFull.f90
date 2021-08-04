@@ -194,21 +194,21 @@ module ModNewtonRaphsonFull
                 !-------------------------------------------------------------------
                 ! Atkin Method Block - Active
                 !-------------------------------------------------------------------
-                !X_atkin = X + DX    
-                !if (it == 1) then
-                !    w_atkin = this%w_atkin
-                !else
-                !    w_atkin = -w_atkin*(dot_product(DX_atkin_previous, DX - DX_atkin_previous)/norm(DX-DX_atkin_previous)**2)    
-                !end if
-                !DX_atkin_previous = DX                
-                !X = (1.0d0 - w_atkin)*X + w_atkin*X_atkin
+                 X_atkin = X + DX    
+                 if (it == 1) then
+                     w_atkin = this%w_atkin
+                 else
+                     w_atkin = -w_atkin*(dot_product(DX_atkin_previous, DX - DX_atkin_previous)/norm(DX-DX_atkin_previous)**2)    
+                 end if
+                 DX_atkin_previous = DX                
+                 X = (1.0d0 - w_atkin)*X + w_atkin*X_atkin
                 !-------------------------------------------------------------------
                
                 ! Classical Update - Active
                 !---------------------------------------------------------------------------------------------------------------
                 ! Update Unknown Variable and Additional Variables
                 !---------------------------------------------------------------------------------------------------------------
-                X = X + DX
+                !X = X + DX
 
                 call SOE%PostUpdate(X)
                 !---------------------------------------------------------------------------------------------------------------

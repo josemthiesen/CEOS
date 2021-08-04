@@ -535,7 +535,8 @@ module ModBoundaryConditions
 !=================================================================================================
 
 !=================================================================================================
-    subroutine GetBoundaryConditions( this, AnalysisSettings, GlobalNodesList, LC, ST, Fext, DeltaFext, NodalDispDOF, U, DeltaUPresc )
+    subroutine GetBoundaryConditions( this, AnalysisSettings, GlobalNodesList, LC, ST, Fext, DeltaFext, NodalDispDOF, &
+                                      U, DeltaUPresc, FMacro , DeltaFMacro, UMacro , DeltaUMacro )
 
         !************************************************************************************
         ! DECLARATIONS OF VARIABLES
@@ -558,9 +559,14 @@ module ModBoundaryConditions
         real(8) , dimension(:)               :: Fext , DeltaFext
         real(8) , dimension(:)               :: U, DeltaUPresc
         integer , pointer , dimension(:)     :: NodalDispDOF
-
+        real(8) , dimension(:)               :: UMacro , DeltaUMacro ! Used only in multiscale analysis
+        real(8) , dimension(:)               :: FMacro , DeltaFMacro ! Used only in multiscale analysis
         !************************************************************************************
-
+        ! Values only used in Multiscale Analysis
+        UMacro              = 0.0d0    
+        DeltaUMacro         = 0.0d0
+        FMacro              = 0.0d0    
+        DeltaFMacro         = 0.0d0
         !************************************************************************************
 
         call this%GetExternalForces(LC, ST, Fext, DeltaFext)
@@ -568,7 +574,6 @@ module ModBoundaryConditions
         call this%GetPrescribedDisplacements(LC , ST, NodalDispDOF, U, DeltaUPresc)
 
         !************************************************************************************
-
     end subroutine
 !=================================================================================================
     

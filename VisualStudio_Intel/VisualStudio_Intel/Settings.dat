@@ -14,11 +14,11 @@
 
 ANALYSIS SETTINGS
 
-	Multiscale Analysis =  True
-	Multiscale Model = Minimal !Linear !MinimalLinearD1 !Linear !Taylor !Minimal  
-	Problem Type = Biphasic !Mechanical !
-	Solution Scheme = Sequential !Monolithic !Sequential
-	Multiscale Model Fluid = Minimal !Linear !Taylor Minimal
+	Multiscale Analysis =  False
+	Multiscale Model = Linear !MinimalLinearD1 !Linear !Taylor !Minimal  
+	Problem Type = Biphasic !Biphasic!Mechanical !
+	Solution Scheme = Monolithic !Sequential
+	Multiscale Model Fluid = Linear !Linear !Taylor
 	Fiber Reinforced Analysis = False !True!False
 	Fiber Data File = Fiber_Data.dat
 	Analysis Type = Quasi Static
@@ -26,8 +26,7 @@ ANALYSIS SETTINGS
 	Hypothesis of Analysis = 3D ! Axisymmetric ! Plane Strain !  
 	Element Technology = Full Integration !Mean Dilatation ! Reduced Integration
 	Maximum Cut Backs = 100
-	Multiscale Epsilon Parameter  = 1.0d-14
-
+	Multiscale Epsilon Parameter  = 1.0d-15
 	
 END ANALYSIS SETTINGS
 
@@ -45,8 +44,8 @@ NONLINEAR SOLVER
 
 	Newton_Raphson_Full
 	
-	Tol_Force_Mechanical = 1e-8
-	Tol_Flux_Biphasic    = 1e-10
+	Tol_Force_Mechanical = 1e-6
+	Tol_Flux_Biphasic    = 1e-6
 	MaxIter = 500
 
 END NONLINEAR SOLVER
@@ -83,7 +82,6 @@ MATERIAL
 	!Mu_e = 50.0
 	!Ni_v = 1500.0 
 
-	
 	 	
 END MATERIAL 
 
@@ -92,20 +90,11 @@ PERMEABILITY
 
 	Number of Materials = 1	
 	
-	!Material ID = 1
-	!Spatial_Transverse_Isotropic_Constant_Permeability
-	!ka = 1.0e-2
-	!kt = 1.0e-4
-
-	!Material ID = 1
-	!Spatial_Isotropic_Exponential_Permeability
-	!k0 = 1.0e-2
-	!Phi0 = 0.0e-0
-	!M = 1.0
-		
-	 Material ID = 1
-	 Spatial_Isotropic_Constant_Permeability
-	 k =  1.0e-2
+	Material ID = 1
+	Spatial_Isotropic_Exponential_Permeability
+	k0 = 1.0e-2 !Modificado
+	Phi0 = 0.3
+	M = 4.0 ! 0.5 2.0   4.0  
 
 
 END PERMEABILITY
@@ -113,7 +102,7 @@ END PERMEABILITY
 
 MESH AND BOUNDARY CONDITIONS
 
-	Mesh File =  Cube_multiscale_biphasic_all_boundary.cdb
+	Mesh File =   unconfined_3d_quarter_d2xh2_5000.cdb
 	Preprocessor = HyperMesh 
 	Time Discretization File = Time_Discretization.dat
 		
@@ -121,19 +110,22 @@ END MESH AND BOUNDARY CONDITIONS
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-MACROSCOPIC DEFORMATION GRADIENT
+MACROSCOPIC DISPLACEMENT AND DEFORMATION GRADIENT
 
+	U1  = U1.dat !Zero 
+	U2  = U2.dat !Zero 
+	U3  = U3.dat !Zero 
 	F11 = F11.dat !One !
-	F12 = Zero !F12.dat !  
-	F13 = Zero 
-	F21 = Zero
+	F12 = F12.dat !Zero !F12.dat !  
+	F13 = F13.dat !Zero 
+	F21 = F21.dat !Zero
 	F22 = F22.dat  !One !
-	F23 = Zero
-	F31 = Zero
-	F32 = Zero
+	F23 = F23.dat !Zero
+	F31 = F31.dat !Zero
+	F32 = F32.dat !Zero
 	F33 = F33.dat !One !One	
 		
-END MACROSCOPIC DEFORMATION GRADIENT
+END MACROSCOPIC DISPLACEMENT AND DEFORMATION GRADIENT
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 

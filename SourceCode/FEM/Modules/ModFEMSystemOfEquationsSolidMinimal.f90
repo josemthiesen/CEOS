@@ -28,24 +28,6 @@ module ModFEMSystemOfEquationsSolidMinimal
 
     type , extends(ClassFEMSystemOfEquationsSolid) :: ClassFEMSystemOfEquationsSolidMinimal
 
-        !real(8),dimension(:),allocatable                       :: Fint , Fext , UBar
-        !real(8),dimension(:),allocatable                       :: Pfluid     !Global pressure of biphasic analysis
-        !real(8)                                                :: Time
-        !integer, dimension(:) , pointer                        :: DispDOF
-        !
-        !integer, dimension(:), allocatable                     :: PrescDispSparseMapZERO
-        !integer, dimension(:), allocatable                     :: PrescDispSparseMapONE
-        !integer, dimension(:), allocatable                     :: FixedSupportSparseMapZERO
-        !integer, dimension(:), allocatable                     :: FixedSupportSparseMapONE
-        !
-        !type (ClassElementsWrapper)  , dimension(:) , pointer  :: ElementList
-        !type (ClassNodes)            , dimension(:) , pointer  :: GlobalNodesList
-        !type (ClassAnalysis)                                   :: AnalysisSettings
-        !class (ClassBoundaryConditions)             , pointer  :: BC
-        !type (ClassGlobalSparseMatrix)              , pointer  :: Kg
-
-
-
     contains
 
         procedure :: EvaluateSystem         => EvaluateMinimalR
@@ -107,7 +89,7 @@ module ModFEMSystemOfEquationsSolidMinimal
             R = 0.0d0
             R(1:nDOFsolid)                   =  this%Fint - this%Fext
             R((nDOFsolid+1):(nDOFsolid+9))   =  TotalVolX*( this%Fmacro_current - F_Homogenized_Voigt )
-            R((nDOFsolid+10):(nDOFsolid+12)) =  TotalVolX*( this%uMacro_current - u_Homogenized )
+            R((nDOFsolid+10):(nDOFsolid+12)) =  TotalVolX*( this%UMacro_current - u_Homogenized )
 
             !valor = maxval( dabs(R))
 

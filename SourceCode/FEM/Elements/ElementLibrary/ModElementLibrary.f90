@@ -291,7 +291,7 @@ LOOP:      do el = 1 , size(AvailableElements)
             call ElHexa8 %GetProfile(AvailableElements(4)) ; AvailableElements(4)%ElementType = ElementTypes % Hexa8
             call ElTetra10%GetProfile(AvailableElements(5)) ; AvailableElements(5)%ElementType = ElementTypes % Tetra10
             call ElTetraU10P4%GetProfile(AvailableElements(6)) ; AvailableElements(6)%ElementType = ElementTypes % TetraU10P4
-            call ElHexa8 %GetProfile(AvailableElements(7)) ; AvailableElements(7)%ElementType = ElementTypes % Hexa20
+            call ElHexa20 %GetProfile(AvailableElements(7)) ; AvailableElements(7)%ElementType = ElementTypes % Hexa20
             call ElHexaU20P8%GetProfile(AvailableElements(8)) ; AvailableElements(8)%ElementType = ElementTypes%HexaU20P8
 
         end subroutine

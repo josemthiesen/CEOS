@@ -32,7 +32,7 @@ module ModProbe
         integer  :: Displacements=1 , Temperature=2, CauchyStress=3, LogarithmicStrain=4, &
                     DeformationGradient=5 , FirstPiolaStress=6, UserDefined=7, Pressure = 8, &
                     RelativeVelocity=9, Total_Volume = 10, GradientPressure = 11, BiphasicTotalCauchyStress = 12, &
-                    MacroscopicJacobian = 13, SolidVelocityDivergent = 14
+                    MacroscopicJacobian = 13,MacroscopicJacobianRate = 14, SolidVelocityDivergent = 15
     end type
     type (ClassVariableNames), parameter :: VariableNames = ClassVariableNames()
 
@@ -182,6 +182,8 @@ module ModProbe
                 enu = VariableNames%Total_Volume
             ELSEIF ( Comp%CompareStrings( Variable,'Macroscopic Jacobian') ) then
                 enu = VariableNames%MacroscopicJacobian
+            ELSEIF ( Comp%CompareStrings( Variable,'Macroscopic Jacobian Rate') ) then
+                enu = VariableNames%MacroscopicJacobianRate
             ELSEIF ( Comp%CompareStrings( Variable,'Solid Velocity Divergent') ) then
                 enu = VariableNames%SolidVelocityDivergent
             ELSE
@@ -1293,6 +1295,7 @@ module ModProbe
             real(8)                                 :: HomogenizedPressure, HomogenizedPressureWrite(1)
             real(8)                                 :: HomogenizedPressureGradient(3), HomogenizedwX(3)
             real(8)                                 :: HomogenizedJacobian, HomogenizedJacobianWrite(1)
+            real(8)                                 :: HomogenizedJacobianRate, HomogenizedJacobianRateWrite(1)
             real(8)                                 :: HomogenizeddivV, HomogenizeddivVWrite(1)
             real(8)                                 :: HomogenizedU(3)
             !************************************************************************************
@@ -1423,6 +1426,14 @@ module ModProbe
 
                                     call this%WriteOnFile(FEA%Time , HomogenizedJacobianWrite)
                                 
+                                ! Writing Homogeneized Jacobian Rate
+                                case (VariableNames%MacroscopicJacobianRate)
+
+                                    ! Computing Homogenized Jacobian
+                                    call GetHomogenizedJacobianRate(FEA%AnalysisSettings, FEA%ElementList, FEA%DeltaTime,  HomogenizedJacobianRate)
+                                    HomogenizedJacobianRateWrite(1) = HomogenizedJacobianRate
+
+                                    call this%WriteOnFile(FEA%Time , HomogenizedJacobianRateWrite)    
                                 ! Writing Homogeneized Solid Velocity Divergent
                                 case (VariableNames%SolidVelocityDivergent)
 
