@@ -463,7 +463,7 @@ module ModExportResultFile
         character(len=255) :: OptionName, OptionValue, String
         character(len=255) :: FileNameSolid, FileNameFluid
         integer :: Flag_EndStep, NumberOfIterations,IterationFile
-        logical :: CalculateRelativeVelocity, InterpolatePressure
+        logical :: CalculateRelativeVelocity, InterpolatePressure, CalculateJdivV
         real(8) :: TotalVolX, Volume, VolumeX
         integer :: Material ! The material of the elements that will be homogenized
         type (ClassElementsWrapper) , pointer , dimension(:)    :: ElementListMaterial
@@ -487,19 +487,28 @@ module ModExportResultFile
         InterpolatePressure    = .false.
         DO cont=1,size(PostProcessor%VARIABLENAMES)
             ! Check if it is necessary to compute the relative velocity
-            IF (PostProcessor%VARIABLENAMEID(cont) .eq. VariableNames%RelativeVelocity) THEN
+            IF (PostProcessor%VARIABLENAMEID(cont) .eq. VariableNames%SpatialRelativeVelocity .or. &
+                PostProcessor%VARIABLENAMEID(cont) .eq. VariableNames%ReferentialRelativeVelocity) THEN
                 CalculateRelativeVelocity = .true.
             ENDIF
             ! Check if it is necessary to interpolate the pressure on the solid nodes
             IF (PostProcessor%VARIABLENAMEID(cont) .eq. VariableNames%Pressure) THEN
                 InterpolatePressure = .true.
             ENDIF
+            ! Check if it is necessary to calculate the J*divV on Gauss Point
+            IF (PostProcessor%VARIABLENAMEID(cont) .eq. VariableNames%JdivV) THEN
+                CalculateJdivV = .true.
+            ENDIF
         ENDDO
         DO cont=1,size(ProbeList)
             ! Check if it is necessary to compute the relative velocity
-            IF (ProbeList(cont)%PR%VARIABLENAMEID .eq. VariableNames%RelativeVelocity) THEN
+            IF (ProbeList(cont)%PR%VARIABLENAMEID .eq. VariableNames%SpatialRelativeVelocity .or. &
+                ProbeList(cont)%PR%VARIABLENAMEID .eq. VariableNames%ReferentialRelativeVelocity) THEN
                 CalculateRelativeVelocity = .true.
-                exit
+            ENDIF
+            ! Check if it is necessary to calculate the J*divV on Gauss Point
+            IF (ProbeList(cont)%PR%VARIABLENAMEID .eq. VariableNames%JdivV) THEN
+                CalculateJdivV = .true.
             ENDIF
         ENDDO
 
@@ -575,31 +584,42 @@ module ModExportResultFile
         enddo
         FEA%AnalysisSettings%TotalVolX = TotalVolX  
         
-        !=============================================================================
-        !*****************************************************************************
-        !Loop over Elements - Counting the elements of material Material
+        !!=============================================================================
+        !!*****************************************************************************
+        !!Loop over Elements - Counting the elements of material Material
         !TotalVolX = 0.0d0
         !TotalElements = 0
-        !Material = 1 ! DEFINING THE MATERIAL
-        !do el = 1,size(FEA%ElementList)
-        !    if (FEA%ElementList(el)%El%Material .eq. Material) then
-        !        TotalElements = TotalElements + 1
-        !    endif
+        !NumberRVEMaterials = 2   ! Number of phases of the RVE
+        !allocate( RVEMaterials(NumberRVEMaterials))
+        !RVEMaterials(1) = 5 
+        !RVEMaterials(2) = 8
+        !do i=1,size(RVEMaterials)
+        !    Material = RVEMaterials(i) ! DEFINING THE MATERIAL
+        !    do el = 1,size(FEA%ElementList)
+        !        if (FEA%ElementList(el)%El%Material .eq. Material) then
+        !            TotalElements = TotalElements + 1   
+        !        endif
+        !    enddo
         !enddo
         !allocate( ElementListMaterial(TotalElements))
         !elem = 0
-        !do el = 1,size(FEA%ElementList)
-        !    if (FEA%ElementList(el)%El%Material .eq. Material) then
-        !        elem = elem + 1
-        !        ElementListMaterial(elem)%El => FEA%ElementList(el)%El
-        !        call ElementListMaterial(elem)%El%ElementVolume(FEA%AnalysisSettings, Volume, VolumeX, Status)
-        !        TotalVolX = TotalVolX + VolumeX
-        !    endif
+        !do i=1,size(RVEMaterials)
+        !    Material = RVEMaterials(i) ! DEFINING THE MATERIAL
+        !    do el = 1,size(FEA%ElementList)
+        !        if (FEA%ElementList(el)%El%Material .eq. Material) then
+        !            elem = elem + 1
+        !            ElementListMaterial(elem)%El => FEA%ElementList(el)%El
+        !            call ElementListMaterial(elem)%El%ElementVolume(FEA%AnalysisSettings, Volume, VolumeX, Status)
+        !            TotalVolX = TotalVolX + VolumeX
+        !        endif
+        !    enddo
         !enddo
         !FEA%AnalysisSettings%TotalVolX = TotalVolX
-        ! call TranslateCentroidToOrigin(ElementListMaterial, FEA%AnalysisSettings, FEA%GlobalNodesList )
-        !*****************************************************************************
-        !=============================================================================
+        !
+        !call TranslateCentroidToOrigin(ElementListMaterial, FEA%AnalysisSettings, FEA%GlobalNodesList )
+        !CalculateRelativeVelocity = .true.
+        !!*****************************************************************************
+        !!=============================================================================
         
         conta_flux = 0
         do i = 1, size(ProbeList)
@@ -722,7 +742,12 @@ module ModExportResultFile
             
             ! Update the relative velocity w
             IF (CalculateRelativeVelocity) THEN
-                call SolveVelocidadeRelativaW( FEA%ElementList , FEA%AnalysisSettings, Time, P, Status)
+                call SolveSpatialRelativevelocity_w( FEA%ElementList , FEA%AnalysisSettings, Time, P, Status)
+            ENDIF
+            
+            ! Update the Jacobian*div V on gauss point
+            IF (CalculateJdivV) THEN
+                call SolveJdivV_GaussPoint( FEA%ElementList , FEA%AnalysisSettings, Time, Vsolid, Status)
             ENDIF
             
             ! Writing the required points. The cut backs solution are exclude.
@@ -966,7 +991,7 @@ module ModExportResultFile
     !==========================================================================================
     
     !==========================================================================================
-    subroutine SolveVelocidadeRelativaW( ElementList , AnalysisSettings, Time, P, Status)
+    subroutine SolveSpatialRelativevelocity_w( ElementList , AnalysisSettings, Time, P, Status)
 
         !************************************************************************************
         ! DECLARATIONS OF VARIABLES
@@ -997,7 +1022,7 @@ module ModExportResultFile
   
 
         !************************************************************************************
-        ! COMPUTING RELATIVE VELOCITY
+        ! COMPUTING SPATIAL RELATIVE VELOCITY ON GAUSS POINT
         !************************************************************************************
 
         !$OMP PARALLEL DEFAULT(PRIVATE) FIRSTPRIVATE(Status) SHARED(ElementList, AnalysisSettings, P, Time)
@@ -1029,6 +1054,7 @@ module ModExportResultFile
                 !Get matrix H
                 call ElBiphasic%MatrixH_ThreeDimensional(AnalysisSettings, NaturalCoord(gp,:), H, detJ , FactorAxi)
 
+                ! ONLY VALID WHEN SOLID AND FLUID HAVE THE SAME GAUSS POINTS
                 ElBiphasic%GaussPoints(gp)%AdditionalVariables%w= -matmul(matmul(Kf , H), Pe)
                 
             enddo
@@ -1038,6 +1064,130 @@ module ModExportResultFile
 
     end subroutine
     !==========================================================================================
+    
+    !==========================================================================================
+    subroutine SolveJdivV_GaussPoint( ElementList , AnalysisSettings, Time, VSolid, Status)
+
+        !************************************************************************************
+        ! DECLARATIONS OF VARIABLES
+        !************************************************************************************
+        ! Modules and implicit declarations
+        ! -----------------------------------------------------------------------------------
+
+        implicit none
+
+        ! Input variables
+        ! -----------------------------------------------------------------------------------
+        type(ClassElementsWrapper) , dimension(:)  :: ElementList
+        type(ClassAnalysis)                        :: AnalysisSettings
+        type(ClassStatus)                          :: Status
+        real(8)                    , dimension(:)  :: VSolid
+        real(8)                                    :: Time
+
+        ! Internal variables
+        ! -----------------------------------------------------------------------------------
+        integer							     :: e, gp, i, j, n, DimProb
+        integer , pointer , dimension(:)     :: GM_fluid
+        real(8) , pointer , dimension(:,:)   :: NaturalCoord
+        real(8) , pointer , dimension(:)     :: Weight
+        real(8) , dimension(AnalysisSettings%AnalysisDimension,AnalysisSettings%AnalysisDimension) :: JacobX
+        real(8) , dimension(:,:) , pointer   :: DifSF
+        class(ClassElementBiphasic), pointer :: ElBiphasic
+        real(8)							     :: detJX
+
+        integer                              :: nDOFel_solid, nNodesSolid
+        integer , pointer , dimension(:)     :: GM_solid
+        real(8), pointer, dimension(:)       :: VSe
+        real(8)                              :: F(3,3), JVol
+        real(8)                              :: GradVs(3,3)
+        real(8)                              :: GradVsFinv(3,3)
+        real(8)                              :: ContVsolid
+  
+
+        !************************************************************************************
+        ! COMPUTING J*divV ON GAUSS POINT
+        !************************************************************************************
+
+        !-------------------------------
+        DimProb = AnalysisSettings%AnalysisDimension
+        VSe_Memory = 0.0d0
+        
+        !$OMP PARALLEL DEFAULT(PRIVATE)                                &
+                Shared( AnalysisSettings,  ElementList, VSolid, DimProb)         
+        !$OMP DO
+        !Loop over Elements
+        do e = 1,size(ElementList)
+           
+            ! Point the object ElBiphasic to the ElementList(e)%El but with the type correct ClassElementBiphasic
+            call ConvertElementToElementBiphasic(ElementList(e)%el,  ElBiphasic)
+            ! Number of degrees of freedom of solid
+            call ElBiphasic%GetElementNumberDOF(AnalysisSettings, nDOFel_solid)
+           
+            Vse => VSe_Memory(1:nDOFel_solid)
+            GM_solid => GM_Memory(1:nDOFel_solid)
+            call ElBiphasic%GetGlobalMapping(AnalysisSettings, GM_solid)
+            Vse = VSolid (GM_solid)  
+            nNodesSolid = ElementList(e)%El%GetNumberOfNodes()
+            DifSF => DifSF_Memory ( 1:nNodesSolid , 1:DimProb  )
+           
+            ! Retrieving solid gauss points
+            call ElBiphasic%GetGaussPoints(NaturalCoord,Weight)
+  
+            !Loop over gauss points
+            do gp = 1, size(NaturalCoord,dim=1)
+            
+                F =  ElBiphasic%GaussPoints(gp)%F
+                JVol =  det(F)                  
+                                                
+                call ElBiphasic%GetDifShapeFunctions(NaturalCoord(gp,:) , DifSF )
+            
+                !Jacobian
+                JacobX=0.0d0
+                do i=1,DimProb
+                    do j=1,DimProb
+                        do n=1,nNodesSolid
+                            JacobX(i,j)=JacobX(i,j) + DifSf(n,i) * ElBiphasic%ElementNodes(n)%Node%CoordX(j)
+                        enddo
+                    enddo
+                enddo
+               
+                !Determinant of the Jacobian
+                detJX = det(JacobX)
+                             
+                !Inverse of the Jacobian
+                JacobX = inverse(JacobX)
+              
+                !Convert the derivatives in the natural coordinates to global coordinates.
+                do i=1,size(DifSf,dim=1)
+                    DifSf(i,:) = matmul( JacobX , DifSf(i,:) )
+                enddo
+               
+                GradVs=0.0d0
+                do i=1,DimProb
+                    do j=1,DimProb
+                        GradVs(i,j) = GradVs(i,j) + dot_product( DifSf(:,j) ,  Vse([(n , n=i,size(Vse),DimProb)] ) )
+                    enddo
+                enddo
+               
+                ! Get Matrix Grad Vs * F^-1
+                GradVsFinv = 0.0d0
+                call MatrixMatrixMultiply ( GradVs, inverse(F), GradVsFinv, 1.0d0, 0.0d0 )  ! C := alpha*op(A)*op(B) + beta*C,
+              
+                ContVsolid = Trace(GradVsFinv)
+               
+                ! Set Jacobian*DivergentSolidVelocity on Gauss Point
+                ElBiphasic%GaussPoints(gp)%AdditionalVariables%JdivV = JVol*ContVsolid 
+
+            enddo
+        enddo
+        !$OMP END DO
+        !$OMP END PARALLEL
+        !************************************************************************************ 
+
+    end subroutine
+    !==========================================================================================
+    
+    
     
     !==========================================================================================
     subroutine SolveFluidCauchyStress( ElementList , AnalysisSettings, Time, P, Status)
@@ -1146,7 +1296,7 @@ module ModExportResultFile
         character(len=255)                                      :: FileNameP = ''
         character(len=255)                                      :: FileNameGP = ''
         character(len=255)                                      :: FileNamewX = ''
-        character(len=255)                                      :: FileNamedivV = ''
+        character(len=255)                                      :: FileNameJdivV = ''
         character(len=255)                                      :: FileNameStress = ''
         real(8), dimension(3)                                   :: HomogenizedU
         real(8), dimension(3,3)                                 :: HomogenizedF
@@ -1154,7 +1304,7 @@ module ModExportResultFile
         real(8), dimension(1)                                   :: HomogenizedPressure
         real(8), dimension(3)                                   :: HomogenizedPressureGradient
         real(8), dimension(3)                                   :: HomogenizedwX
-        real(8), dimension(1)                                   :: HomogenizeddivV
+        real(8), dimension(1)                                   :: HomogenizedJdivV
         real(8), dimension(9)                                   :: HomogenizedTotalStress
   
         !************************************************************************************
@@ -1164,8 +1314,8 @@ module ModExportResultFile
         call GetHomogenizedDeformationGradient(AnalysisSettings, ElementListMaterial , HomogenizedF)
         call GetHomogenizedPressureBiphasic( AnalysisSettings, ElementListMaterial, P, HomogenizedPressure(1) )
         call GetHomogenizedPressureGradientBiphasic( AnalysisSettings, ElementListMaterial, P, HomogenizedPressureGradient ) 
-        call GetHomogenizedRelativeVelocitywXBiphasic( AnalysisSettings, ElementListMaterial, VSolid, HomogenizedwX)
-        call GetHomogenizedSolidVelocityDivergent( AnalysisSettings, ElementListMaterial, VSolid, HomogenizeddivV(1) )
+        call GetHomogenizedReferentialRelativeVelocitywXBiphasic( AnalysisSettings, ElementListMaterial, VSolid, HomogenizedwX)
+        call GetHomogenizedJacobianSolidVelocityDivergent( AnalysisSettings, ElementListMaterial, VSolid, HomogenizedJdivV(1) )
         call GetHomogenizedTotalStressBiphasic( AnalysisSettings, ElementListMaterial, P, HomogenizedTotalStress )
         
         !************************************************************************************
@@ -1175,8 +1325,8 @@ module ModExportResultFile
         FileNameF  = 'ElementMaterialMesh_HomogenizedF.dat'
         FileNameP  = 'ElementMaterialMesh_HomogenizedPressure.dat'
         FileNameGP = 'ElementMaterialMesh_HomogenizedGradientPressure.dat'
-        FileNamewX = 'ElementMaterialMesh_HomogenizedRelativeVelocity.dat'
-        FileNamedivV = 'ElementMaterialMesh_HomogenizedDivergentVelocity.dat'
+        FileNamewX = 'ElementMaterialMesh_HomogenizedReferentilRelativeVelocity.dat'
+        FileNameJdivV = 'ElementMaterialMesh_HomogenizedJacobianDivergentVelocity.dat'
         FileNameStress = 'ElementMaterialMesh_HomogenizedTotalPiolaStress.dat'
         if(Time .eq. 0.0d0) then
             call InitializeHomogenizationFile(FileNameU)
@@ -1184,7 +1334,7 @@ module ModExportResultFile
             call InitializeHomogenizationFile(FileNameP)
             call InitializeHomogenizationFile(FileNameGP)
             call InitializeHomogenizationFile(FileNamewX)
-            call InitializeHomogenizationFile(FileNamedivV)
+            call InitializeHomogenizationFile(FileNameJdivV)
             call InitializeHomogenizationFile(FileNameStress)
         endif
         call HomogenizationWriteOnFile(FileNameU, Time , HomogenizedU)
@@ -1193,7 +1343,7 @@ module ModExportResultFile
         call HomogenizationWriteOnFile(FileNameP, Time , HomogenizedPressure)
         call HomogenizationWriteOnFile(FileNameGP, Time , HomogenizedPressureGradient)
         call HomogenizationWriteOnFile(FileNamewX, Time , HomogenizedwX)
-        call HomogenizationWriteOnFile(FileNamedivV, Time , HomogenizeddivV)
+        call HomogenizationWriteOnFile(FileNameJdivV, Time , HomogenizedJdivV)
         call HomogenizationWriteOnFile(FileNameStress, Time , HomogenizedTotalStress)
     end subroutine
     !==========================================================================================

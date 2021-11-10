@@ -95,8 +95,13 @@ module ModHyperView
             integer, allocatable, dimension(:,:)   :: Conec
             integer                                :: nNosFluid, nk
             integer, allocatable, dimension(:)     :: IDnoGlobal
+            
+            real(8)                                :: DefGrad_F(3,3), detF_J
+            real(8)                                :: w_spatial(3), wX_referential(3)
 
-
+            
+            
+            
         call Comp%Setup()
 
         do v = 1,size(this%VariableNames)
@@ -213,7 +218,7 @@ module ModHyperView
 
                     deallocate(GaussPointlValues, Conec)
                     
-                case (VariableNames%RelativeVelocity)
+                case (VariableNames%SpatialRelativeVelocity)
 
                     nelem = size( FEA%ElementList )
                     nnodes = size(FEA%ElementList(1)%El%ElementNodes)
@@ -247,7 +252,50 @@ module ModHyperView
                                                      GaussPointlValues(:,:,1:3)  , 2 )
 
                     deallocate(GaussPointlValues, Conec)
+                
+                case (VariableNames%ReferentialRelativeVelocity)
 
+                    nelem = size( FEA%ElementList )
+                    nnodes = size(FEA%ElementList(1)%El%ElementNodes)
+                    
+                    call FEA%ElementList(1)%El%GetProfile(Profile)
+                    if ((Profile%ElementType == 420) .or. (Profile%ElementType == 430)) then! Hexa20 Element
+                        GaussPointsToNodes = 20
+                        ngp = GaussPointsToNodes
+                    else
+                        ngp = size(FEA%ElementList(1)%el%GaussPoints)
+                    end if
+                    
+                    allocate( GaussPointlValues( nelem , ngp , 3 ) )
+                    allocate( Conec(nelem , nnodes ) )
+
+                    do e=1,nelem
+                        do gp=1,ngp
+                            
+                            w_spatial =  FEA%ElementList(e)%El%GaussPoints(gp)%AdditionalVariables%w !Spatial relative velocity
+                            DefGrad_F =  FEA%ElementList(e)%El%GaussPoints(gp)%F
+                            detF_J    =  det(DefGrad_F)
+                            wX_referential = 0.0d0    ! Referential relative velocity
+                            ! wX_referential = J * DefGrad_F^-1 * w_spatial
+                            call MatrixVectorMultiply ( 'N', inverse(DefGrad_F), w_spatial, wX_referential,  detF_J, 0.0d0 ) !  y := alpha*op(A)*x + beta*y
+                            
+                            GaussPointlValues(e,gp,1:3) =  wX_referential
+                            
+                        enddo
+                        do n = 1,nnodes
+                            Conec(e,n) = FEA%ElementList(e)%El%ElementNodes(n)%Node%ID
+                        enddo
+                    enddo
+
+
+                    LoadCaseChar = FEA%LoadCase
+                    LoadCaseChar = RemoveSpaces(LoadCaseChar)
+                    call this%ExportOnGaussPointsHV( this%VariableNames(v), LoadCaseChar, FEA%Time, Conec, &
+                                                     GaussPointlValues(:,:,1:3)  , 2 )
+
+                    deallocate(GaussPointlValues, Conec)                  
+                    
+                    
                 case (VariableNames%BiphasicTotalCauchyStress)
                     
                     nelem = size( FEA%ElementList )
@@ -282,6 +330,41 @@ module ModHyperView
 
                     deallocate(GaussPointlValues, Conec)
 
+                case (VariableNames%JdivV)
+                    
+                    nelem = size( FEA%ElementList )
+                    nnodes = size(FEA%ElementList(1)%El%ElementNodes)
+
+                    call FEA%ElementList(1)%El%GetProfile(Profile)
+                    if ((Profile%ElementType == 420) .or. (Profile%ElementType == 430)) then! Hexa20 Element
+                        GaussPointsToNodes = 20
+                        ngp = GaussPointsToNodes
+                    else
+                        ngp = size(FEA%ElementList(1)%el%GaussPoints)
+                    end if
+                    
+                    allocate( GaussPointlValues( nelem , ngp , 6 ) )
+                    allocate( Conec(nelem , nnodes ) )
+                    GaussPointlValues = 0.0d0
+                    Conec = 0
+
+                    do e=1,nelem
+                        do gp=1,ngp
+                            GaussPointlValues(e,gp,1:1) = FEA%ElementList(e)%El%GaussPoints(gp)%AdditionalVariables%JdivV
+                        enddo
+                        do n = 1,nnodes
+                            Conec(e,n) = FEA%ElementList(e)%El%ElementNodes(n)%Node%ID
+                        enddo
+                    enddo
+                    VariableType = 1
+                    VariableLength = 1                    
+                    LoadCaseChar = FEA%LoadCase
+                    LoadCaseChar = RemoveSpaces(LoadCaseChar)
+                    call this%ExportOnGaussPointsHV( this%VariableNames(v), LoadCaseChar, FEA%Time, Conec, &
+                                                     GaussPointlValues(:,:,1:VariableLength), VariableType )
+                            
+
+                    deallocate(GaussPointlValues, Conec)
 
                  case (VariableNames%UserDefined)
 

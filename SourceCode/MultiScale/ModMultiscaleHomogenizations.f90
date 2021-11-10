@@ -842,9 +842,9 @@ module ModMultiscaleHomogenizations
         !=================================================================================================
     
         !=================================================================================================
-        subroutine GetHomogenizedRelativeVelocitywXBiphasic( AnalysisSettings, ElementList, VSolid, HomogenizedwX )
+        subroutine GetHomogenizedReferentialRelativeVelocitywXBiphasic( AnalysisSettings, ElementList, VSolid, HomogenizedwX )
        
-            ! NOTE: Relative velocity homogenization realized on the solid reference configuration.
+            ! NOTE: Referential Relative velocity homogenization realized on the solid reference configuration. wX
             use ModMathRoutines
   
             !************************************************************************************
@@ -892,11 +892,11 @@ module ModMultiscaleHomogenizations
             integer                              :: NumberOfThreads
        
             !************************************************************************************
-            ! RELATIVE VELOCITY HOMOGENISATION - SOLID REFERENCE CONFIGURATION
+            ! REFERENTIAL RELATIVE VELOCITY HOMOGENISATION - SOLID REFERENCE CONFIGURATION
             !************************************************************************************
        
             !-------------------------------
-            FactorAxiX = 1.0d0  ! Análise 3D
+            FactorAxiX = 1.0d0  ! 3D ANALISYS
             !-------------------------------
              
             DimProb = AnalysisSettings%AnalysisDimension
@@ -911,7 +911,7 @@ module ModMultiscaleHomogenizations
             !Loop over Elements
             do e = 1,size(ElementList)
            
-                ! Aponta o objeto ElBiphasic para o ElementList(e)%El mas com o type correto ClassElementBiphasic
+                ! Point the object ElBiphasic to ElementList(e)%El but with the type correct ClassElementBiphasic
                 call ConvertElementToElementBiphasic(ElementList(e)%el,  ElBiphasic)
                 ! Number of degrees of freedom of fluid
                 call ElBiphasic%GetElementNumberDOF_fluid(AnalysisSettings, nDOFel_fluid)
@@ -936,10 +936,10 @@ module ModMultiscaleHomogenizations
                 !Loop over gauss points
                 do gp = 1, size(NaturalCoord,dim=1)
   
-                    w_micro =  ElBiphasic%GaussPoints(gp)%AdditionalVariables%w
+                    w_micro =  ElBiphasic%GaussPoints(gp)%AdditionalVariables%w !Spatial relative velocity
                     F_micro =  ElBiphasic%GaussPoints(gp)%F
                     J_micro =  det(F_micro)
-                    wY_micro = 0.0d0
+                    wY_micro = 0.0d0    ! Referential relative velocity
                     ! wY_micro = J_micro * F^-1 * w_micro
                     call MatrixVectorMultiply ( 'N', inverse(F_micro),  w_micro, wY_micro, J_micro, 0.0d0 ) !  y := alpha*op(A)*x + beta*y
                
@@ -989,9 +989,10 @@ module ModMultiscaleHomogenizations
               
                     ContVsolid = Trace(GradVsFinv)
                
-                    !Homogenized Relative Velocity
+                    !Homogenized Referential Relative Velocity
                     !$OMP CRITICAL
                     HomogenizedwX = HomogenizedwX + ((wY_micro - ContVsolid*J_micro*Y_PG)*Weight(gp)*detJX*FactorAxiX)/TotalVolX           
+                    
                     !HomogenizedwX = HomogenizedwX + (ContVsolid*J_micro*Y_PG*Weight(gp)*detJX*FactorAxiX)/TotalVolX           
                     !HomogenizedwX = HomogenizedwX + (ContVsolid*J_micro*[1,1,1]*Weight(gp)*detJX*FactorAxiX)/TotalVolX           
                     !HomogenizedwX = HomogenizedwX + (wY_micro*Weight(gp)*detJX*FactorAxiX)/TotalVolX           
@@ -1006,7 +1007,7 @@ module ModMultiscaleHomogenizations
         !=================================================================================================
         
         !=================================================================================================
-        subroutine GetHomogenizedSolidVelocityDivergent( AnalysisSettings, ElementList, VSolid, HomogenizeddivV )
+        subroutine GetHomogenizedJacobianSolidVelocityDivergent( AnalysisSettings, ElementList, VSolid, HomogenizedJdivV )
  
             use ModMathRoutines
   
@@ -1028,7 +1029,7 @@ module ModMultiscaleHomogenizations
   
             ! Input/Output variables
             ! -----------------------------------------------------------------------------------
-            real(8)                  :: HomogenizeddivV
+            real(8)                  :: HomogenizedJdivV
   
   
             ! Internal variables
@@ -1039,22 +1040,22 @@ module ModMultiscaleHomogenizations
             real(8) , pointer , dimension(:,:)   :: NaturalCoord
             real(8)                              :: FactorAxiX
             real(8) , dimension(AnalysisSettings%AnalysisDimension,AnalysisSettings%AnalysisDimension) :: JacobX
-            real(8) , dimension(:)   , pointer   :: ShapeFunctionsFluid
             real(8) , dimension(:,:) , pointer   :: DifSF
        
           
             class(ClassElementBiphasic), pointer :: ElBiphasic
             integer , pointer , dimension(:)     :: GM_solid
-            integer                              :: nDOFel_fluid, nDOFel_solid, nNodesFluid, nNodesSolid
+            integer                              :: nDOFel_fluid, nDOFel_solid, nNodesSolid
             real(8)                              :: F_micro(3,3), J_micro 
             real(8), pointer, dimension(:)       :: VSe
             real(8)                              :: ContVsolid
             real(8)                              :: GradVs(3,3)
             real(8)                              :: GradVsFinv(3,3)
             integer                              :: NumberOfThreads
+            real(8)                              :: JdivV
        
             !************************************************************************************
-            ! RELATIVE VELOCITY HOMOGENISATION - SOLID REFERENCE CONFIGURATION
+            ! JACOBIAN*VELOCITY DIVERGENT HOMOGENISATION- SOLID REFERENCE CONFIGURATION
             !************************************************************************************
        
             !-------------------------------
@@ -1066,14 +1067,14 @@ module ModMultiscaleHomogenizations
             ! Solid reference total volume
             TotalVolX = AnalysisSettings%TotalVolX 
   
-            HomogenizeddivV = 0.0d0
+            HomogenizedJdivV = 0.0d0
             !$OMP PARALLEL DEFAULT(PRIVATE)                                &
-                    Shared( AnalysisSettings,  ElementList, VSolid, TotalVolX, HomogenizeddivV, DimProb, FactorAxiX)         
+                    Shared( AnalysisSettings,  ElementList, VSolid, TotalVolX, HomogenizedJdivV, DimProb, FactorAxiX)         
             !$OMP DO
             !Loop over Elements
             do e = 1,size(ElementList)
            
-                ! Aponta o objeto ElBiphasic para o ElementList(e)%El mas com o type correto ClassElementBiphasic
+                ! Point the object ElBiphasic to the ElementList(e)%El but with the type correct ClassElementBiphasic
                 call ConvertElementToElementBiphasic(ElementList(e)%el,  ElBiphasic)
                 ! Number of degrees of freedom of fluid
                 call ElBiphasic%GetElementNumberDOF_fluid(AnalysisSettings, nDOFel_fluid)
@@ -1087,11 +1088,7 @@ module ModMultiscaleHomogenizations
            
                 nNodesSolid = ElementList(e)%El%GetNumberOfNodes()
                 DifSF => DifSF_Memory ( 1:nNodesSolid , 1:DimProb  )
-           
-                ! Fluid number of nodes
-                nNodesFluid = ElBiphasic%GetNumberOfNodes_fluid()
-                ShapeFunctionsFluid =>  Nf_Memory ( 1:nNodesFluid )
-  
+               
                 ! Retrieving fluid gauss points parameters for numerical integration
                 call ElBiphasic%GetGaussPoints_fluid(NaturalCoord,Weight)
   
@@ -1100,10 +1097,7 @@ module ModMultiscaleHomogenizations
   
                     F_micro =  ElBiphasic%GaussPoints(gp)%F
                     J_micro =  det(F_micro)                  
-                    ! Obtaining the ShapeFunctionsFluid on gauss point location
-                    ShapeFunctionsFluid=0.0d0
-                    call ElBiphasic%GetShapeFunctions_fluid(NaturalCoord(gp,:) , ShapeFunctionsFluid )
-                                                 
+                                                        
                     call ElBiphasic%GetDifShapeFunctions(NaturalCoord(gp,:) , DifSF )
 
                     !Jacobian
@@ -1140,9 +1134,11 @@ module ModMultiscaleHomogenizations
               
                     ContVsolid = Trace(GradVsFinv)
                
-                    !Homogenized the Divergent of Solid Velocity
+                    JdivV = ElBiphasic%GaussPoints(gp)%AdditionalVariables%JdivV
+                    !Homogenized the Jacobian Divergent of Solid Velocity
                     !$OMP CRITICAL
-                    HomogenizeddivV = HomogenizeddivV + (ContVsolid*J_micro*Weight(gp)*detJX*FactorAxiX)/TotalVolX           
+                    HomogenizedJdivV = HomogenizedJdivV + (ContVsolid*J_micro*Weight(gp)*detJX*FactorAxiX)/TotalVolX           
+                    !HomogenizedJdivV = HomogenizedJdivV + (JdivV*Weight(gp)*detJX*FactorAxiX)/TotalVolX           
                     !$OMP END CRITICAL 
                 enddo
             enddo

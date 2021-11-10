@@ -17,9 +17,10 @@ module ModConstitutiveModel
     type ClassAdditionalVariables
 
         real(8) :: Jbar
-        real(8) :: mX(3)    ! Fiber vector on the reference configuration
-        real(8) :: w(3)     ! Relative velocity on biphasic model
-        real(8) :: Jn=1.0d0     ! Jacobian in time tn, used to compute the rate of J
+        real(8) :: mX(3)            ! Fiber vector on the reference configuration
+        real(8) :: w(3)             ! Spatial Relative velocity on biphasic model
+        real(8) :: JdivV=0.0d0      ! Jacobian * Divergent velocity on biphasic model
+        real(8) :: Jn=1.0d0         ! Jacobian in time tn, used to compute the rate of J
 
     endtype
     

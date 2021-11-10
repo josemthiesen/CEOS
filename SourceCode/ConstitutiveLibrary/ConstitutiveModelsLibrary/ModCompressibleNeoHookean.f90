@@ -583,7 +583,7 @@ module ModCompressibleNeoHookean
             real(8) , dimension(:)    :: Variable
 
             integer,parameter :: Scalar=1,Vector=2,Tensor=3
-            real (8) :: h , c(6), S(3,3), aux(9), J
+            real (8) :: h , c(6), S(3,3), aux(9), J, JdivV
 
             Name=''
 
@@ -619,22 +619,8 @@ module ModCompressibleNeoHookean
                     Variable(2) = aux(5)  !F22
                     Variable(4) = aux(4)  !F12
                     Variable(5) = aux(2)  !F21                    
-
+                   
                 case (3)
-                    !Name='von Mises Stress'
-                    !VariableType = Scalar
-                    !Length=1
-                    !associate(c => this%Stress)
-                    !c = this%Stress
-                    !h=( c(1) + c(2) + c(4))/3.0d0
-                    !Variable(1:Length)  = dsqrt( (3.0d0/2.0d0) * ((c(1)-h)**2.0d0 + (c(2)-h)**2.0d0 + (c(4)-h)**2.0d0 +2.0d0*c(3)*c(3) ) )
-
-                    !h=( c(1) + c(2) + c(3))/3.0d0
-                    !Variable(1:Length)  = dsqrt( (3.0d0/2.0d0) * ((c(1)-h)**2.0d0 + (c(2)-h)**2.0d0 + (c(3)-h)**2.0d0 +2.0d0*c(4)*c(4) +2.0d0*c(5)*c(5) +2.0d0*c(6)*c(6) ) )
-
-                    !end associate
-                    
-                case (4)
 
                     Name='Jacobian'
                     VariableType = Scalar
@@ -643,6 +629,10 @@ module ModCompressibleNeoHookean
                     J = det(this%F)
                     !-----------------------------------------------------------------
                     Variable(1:Length) = J
+
+                case (4)
+                    
+
                 case default
                     call Error("Error retrieving result :: GetResult_CompressibleNeoHookean")
             end select

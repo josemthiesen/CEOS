@@ -34,9 +34,9 @@ module ModReadInputFile
 
     type (ClassPreprocessors) , parameter :: PreProcessors = ClassPreprocessors()
 
-    integer,parameter :: iAnalysisSettings=1, iLinearSolver=2, iNonLinearSolver=3, iStaggeredSplittingScheme=4, iMaterial=5, &
-                         iPermeability=6, iMeshAndBC=7, iMacroscopicDispAndDeformationGradient=8, iMacroscopicPressureAndGradient=9, &
-                         nblocks=9
+    integer,parameter :: iAnalysisSettings=1, iLinearSolver=2, iNonLinearSolver=3,iLineSearchAlgorithm=4, iStaggeredSplittingScheme=5, iMaterial=6, &
+                         iPermeability=7, iMeshAndBC=8, iMacroscopicDispAndDeformationGradient=9, iMacroscopicPressureAndGradient=10, &
+                         nblocks=10
     logical,dimension(nblocks)::BlockFound=.false.
     character(len=100),dimension(nblocks)::BlockName
 
@@ -68,12 +68,13 @@ module ModReadInputFile
             BlockName(1)="Analysis Settings"
             BlockName(2)="Linear Solver"
             BlockName(3)="NonLinear Solver"
-            BlockName(4)="Staggered Splitting Scheme"
-            BlockName(5)="Material"
-            BlockName(6)="Permeability"
-            BlockName(7)="Mesh and Boundary Conditions"
-            BlockName(8)="Macroscopic Displacement And Deformation Gradient"
-            BlockName(9)="Macroscopic Pressure And Gradient"
+            BlockName(4)="Line Search Algorithm"
+            BlockName(5)="Staggered Splitting Scheme"
+            BlockName(6)="Material"
+            BlockName(7)="Permeability"
+            BlockName(8)="Mesh and Boundary Conditions"
+            BlockName(9)="Macroscopic Displacement And Deformation Gradient"
+            BlockName(10)="Macroscopic Pressure And Gradient"
 
             BlockFound=.false.
 
@@ -115,6 +116,10 @@ module ModReadInputFile
                     case (iNonLinearSolver)
                         if (.not.BlockFound(iLinearSolver)) call DataFile%RaiseError("Linear Solver must be specified before the NonLinear solver")
                         call ReadNonLinearSolver(DataFile,LinearSolver,NLSolver)
+        !---------------------------------------------------------------------------------------------------------------------------------------------------------
+                    case (iLineSearchAlgorithm)
+                        if (.not.BlockFound(iNonLinearSolver)) call DataFile%RaiseError("NonLinear Solver must be specified before the Line Search")
+                        call ReadLineSearchAlgorithm(DataFile,NLSolver)
         !---------------------------------------------------------------------------------------------------------------------------------------------------------
                     case (iStaggeredSplittingScheme)
                         if (.not.BlockFound(iNonLinearSolver)) call DataFile%RaiseError("Staggered Spliting Scheme must be specified after the NonLinear solver")
@@ -204,15 +209,15 @@ module ModReadInputFile
             type (ClassAnalysis) :: AnalysisSettings
             character(len=255)::string
 
-            character(len=100),dimension(13)::ListOfOptions,ListOfValues
-            logical,dimension(13)::FoundOption
+            character(len=100),dimension(14)::ListOfOptions,ListOfValues
+            logical,dimension(14)::FoundOption
             integer :: i
 
 
             ListOfOptions=["Problem Type","Analysis Type","Nonlinear Analysis","Hypothesis of Analysis", &
                             "Element Technology","Maximum Cut Backs","Multiscale Analysis","Multiscale Model", &
                             "Multiscale Model Fluid", "Fiber Reinforced Analysis", "Fiber Data File", "Solution Scheme",&
-                            "Multiscale Epsilon Parameter"]
+                            "Multiscale Epsilon Parameter","Multiscale Model Fiber Axial Direction"]
 
 
             call DataFile%FillListOfOptions(ListOfOptions,ListOfValues,FoundOption)
@@ -305,10 +310,23 @@ module ModReadInputFile
                 AnalysisSettings%MultiscaleModel = MultiscaleModels%MinimalLinearD1
             elseif (DataFile%CompareStrings(ListOfValues(8),"MinimalLinearD3")) then
                 AnalysisSettings%MultiscaleModel = MultiscaleModels%MinimalLinearD3   
-             else
+            else
                 call Error( "Multiscale Model for Solid not identified" )
             endif
         
+             
+            ! Option Multiscale Model Fiber Axial Direction for solid
+            if (DataFile%CompareStrings(ListOfValues(14),"X")) then
+                AnalysisSettings%FiberAxialDirection = 1
+            elseif (DataFile%CompareStrings(ListOfValues(14),"Y")) then
+                AnalysisSettings%FiberAxialDirection = 2
+            elseif (DataFile%CompareStrings(ListOfValues(14),"Z")) then
+                AnalysisSettings%FiberAxialDirection = 3   
+            else
+                call Error( "Multiscale Model Axial Direction for solid not identified" )
+            endif
+        
+             
         
             ! Option Multiscale Model for fluid phase in biphasic model
             if (DataFile%CompareStrings(ListOfValues(9),"Taylor")) then
@@ -1021,6 +1039,61 @@ module ModReadInputFile
         end subroutine
         !=======================================================================================================================
 
+        !=======================================================================================================================
+        subroutine ReadLineSearchAlgorithm(DataFile,NLSolver)
+            implicit none
+
+            type(ClassParser)::DataFile
+            class(ClassNonlinearSolver) , pointer  :: NLSolver
+
+            character(len=100) :: string
+            !integer::SolverID
+            logical :: Active
+
+            !call DataFile%GetNextString(Stype)
+            !call DataFile%CheckError
+            
+            character(len=100),dimension(1)::ListOfOptions,ListOfValues
+            logical,dimension(1)::FoundOption
+            integer :: i
+
+            ListOfOptions=["Active"]
+
+            call DataFile%FillListOfOptions(ListOfOptions,ListOfValues,FoundOption)
+
+            if (DataFile%ERROR) then
+                write(*,*) "Error was found in the ReadLineSearchAlgorithm."
+            endif
+            call DataFile%CheckError
+
+            do i=1,size(FoundOption)
+                if (.not.FoundOption(i)) then
+                    write(*,*) "ReadLineSearchAlgorithm :: Option not found ["//trim(ListOfOptions(i))//"]"
+                    stop
+                endif
+            enddo
+             
+            ! Option Line Search
+            if (DataFile%CompareStrings(ListOfValues(1),"True")) then
+                Active=.true.
+            elseif (DataFile%CompareStrings(ListOfValues(1),"False")) then
+                Active=.false.
+            else
+                call Error( "Line Search Active not indentified" )
+            endif
+      
+            call AllocateLineSearch( NLSolver%LineSearch , Active )
+            call NLSolver%LineSearch%ReadLineSearchParameters(DataFile)
+    
+            BlockFound(iLineSearchAlgorithm)=.true.
+            call DataFile%GetNextString(string)
+            if (.not.DataFile%CompareStrings(string,'end'//trim(BlockName(iLineSearchAlgorithm)))) then
+                call DataFile%RaiseError("End of block was expected. BlockName="//trim(BlockName(iLineSearchAlgorithm)))
+            endif
+
+        end subroutine
+        !=======================================================================================================================
+        
         !=======================================================================================================================
         subroutine ReadMaterialModel(AnalysisSettings,MaterialList,DataFile)
             implicit none

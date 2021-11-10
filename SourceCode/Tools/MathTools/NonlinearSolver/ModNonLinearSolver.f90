@@ -19,6 +19,7 @@ module ModNonlinearSolver
 	! --------------------------------------------------------------------------------------------
     use ModLinearSolverLibrary
     use ModNonLinearSystemOfEquations
+    use ModLineSearch
     use ModStatus
 
 	!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -31,7 +32,9 @@ module ModNonlinearSolver
         !class(ClassSparseLinearSolver) , pointer :: LinearSolver => null()
         integer :: NumberOfIterations
         class(ClassLinearSolver) , pointer :: LinearSolver => null()
-        type(ClassStatus) :: Status
+        type(ClassStatus)                  :: Status
+        class(ClassLineSearch) , pointer   :: LineSearch
+        
 
         contains
 

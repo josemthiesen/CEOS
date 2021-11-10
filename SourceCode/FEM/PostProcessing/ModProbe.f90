@@ -31,8 +31,8 @@ module ModProbe
     type ClassVariableNames
         integer  :: Displacements=1 , Temperature=2, CauchyStress=3, LogarithmicStrain=4, &
                     DeformationGradient=5 , FirstPiolaStress=6, UserDefined=7, Pressure = 8, &
-                    RelativeVelocity=9, Total_Volume = 10, GradientPressure = 11, BiphasicTotalCauchyStress = 12, &
-                    MacroscopicJacobian = 13,MacroscopicJacobianRate = 14, SolidVelocityDivergent = 15
+                    SpatialRelativeVelocity=9, ReferentialRelativeVelocity=10, Total_Volume = 11, GradientPressure = 12, BiphasicTotalCauchyStress = 12, &
+                    MacroscopicJacobian = 14,MacroscopicJacobianRate = 15, JdivV = 16
     end type
     type (ClassVariableNames), parameter :: VariableNames = ClassVariableNames()
 
@@ -176,16 +176,18 @@ module ModProbe
                 enu = VariableNames%GradientPressure
             ELSEIF ( Comp%CompareStrings( Variable,'First Piola Stress') ) then
                 enu = VariableNames%FirstPiolaStress
-            ELSEIF ( Comp%CompareStrings( Variable,'Relative Velocity') ) then
-                enu = VariableNames%RelativeVelocity
+            ELSEIF ( Comp%CompareStrings( Variable,'Spatial Relative Velocity') ) then
+                enu = VariableNames%SpatialRelativeVelocity
+            ELSEIF ( Comp%CompareStrings( Variable,'Referential Relative Velocity') ) then
+                enu = VariableNames%ReferentialRelativeVelocity
             ELSEIF ( Comp%CompareStrings( Variable,'Total Volume') ) then
                 enu = VariableNames%Total_Volume
             ELSEIF ( Comp%CompareStrings( Variable,'Macroscopic Jacobian') ) then
                 enu = VariableNames%MacroscopicJacobian
             ELSEIF ( Comp%CompareStrings( Variable,'Macroscopic Jacobian Rate') ) then
                 enu = VariableNames%MacroscopicJacobianRate
-            ELSEIF ( Comp%CompareStrings( Variable,'Solid Velocity Divergent') ) then
-                enu = VariableNames%SolidVelocityDivergent
+            ELSEIF ( Comp%CompareStrings( Variable,'Jacobian Solid Velocity Divergent') ) then
+                enu = VariableNames%JdivV
             ELSE
                 enu = VariableNames%UserDefined
             ENDIF
@@ -1296,7 +1298,7 @@ module ModProbe
             real(8)                                 :: HomogenizedPressureGradient(3), HomogenizedwX(3)
             real(8)                                 :: HomogenizedJacobian, HomogenizedJacobianWrite(1)
             real(8)                                 :: HomogenizedJacobianRate, HomogenizedJacobianRateWrite(1)
-            real(8)                                 :: HomogenizeddivV, HomogenizeddivVWrite(1)
+            real(8)                                 :: HomogenizedJdivV, HomogenizedJdivVWrite(1)
             real(8)                                 :: HomogenizedU(3)
             !************************************************************************************
             ! Test if the probe is active
@@ -1410,10 +1412,10 @@ module ModProbe
                                     call this%WriteOnFile(FEA%Time , HomogenizedPressureGradient)
                                 
                                 ! Writing Relative Velocity wX
-                                case (VariableNames%RelativeVelocity)
+                                case (VariableNames%ReferentialRelativeVelocity)
 
                                     ! Computing Homogenized wX
-                                    call GetHomogenizedRelativeVelocitywXBiphasic(FEA%AnalysisSettings, FEA%ElementList, FEA%VSolid, HomogenizedwX )
+                                    call GetHomogenizedReferentialRelativeVelocitywXBiphasic(FEA%AnalysisSettings, FEA%ElementList, FEA%VSolid, HomogenizedwX )
                                     
                                     call this%WriteOnFile(FEA%Time , HomogenizedwX)
                                 
@@ -1435,13 +1437,13 @@ module ModProbe
 
                                     call this%WriteOnFile(FEA%Time , HomogenizedJacobianRateWrite)    
                                 ! Writing Homogeneized Solid Velocity Divergent
-                                case (VariableNames%SolidVelocityDivergent)
+                                case (VariableNames%JdivV)
 
                                     ! Computing Homogenized Jacobian
-                                    call GetHomogenizedSolidVelocityDivergent(FEA%AnalysisSettings, FEA%ElementList, FEA%VSolid, HomogenizeddivV)
-                                    HomogenizeddivVWrite(1) = HomogenizeddivV
+                                    call GetHomogenizedJacobianSolidVelocityDivergent(FEA%AnalysisSettings, FEA%ElementList, FEA%VSolid, HomogenizedJdivV)
+                                    HomogenizedJdivVWrite(1) = HomogenizedJdivV
 
-                                    call this%WriteOnFile(FEA%Time , HomogenizeddivVWrite)
+                                    call this%WriteOnFile(FEA%Time , HomogenizedJdivVWrite)
  
                                 case default
                                 stop 'Error in ModProbe - WriteProbeResult_MicroStructureBiphasic - VariableNameID - not identified'

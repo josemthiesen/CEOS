@@ -8,7 +8,7 @@
 !           Paulo Bastos de Castro
 !!------------------------------------------------------------------------------------------------
 ! Modifications:
-! Date:         Author:
+! Date: 2021        Author: Bruno Klahr / José L. Thiesen
 !##################################################################################################
 module ModMultiscaleBoundaryConditions
 
@@ -120,6 +120,7 @@ module ModMultiscaleBoundaryConditions
         integer                                         :: i,j,k, nActive
         real(8) , dimension(3,3)                        :: MacroscopicF_Initial, MacroscopicF_Final
         integer                                         :: NDOFTaylorandLinear
+        integer                                         :: InitialDOFMultiscaleModel ! Define de Initial DOF of prescribed U (1 is the default)
         real(8) , dimension(3)                          :: MacroscopicU_Initial, MacroscopicU_Final
         !************************************************************************************
         Fext      = 0.0d0    ! Values of External Force       - Not used in Multiscale Analysis
@@ -143,12 +144,13 @@ module ModMultiscaleBoundaryConditions
         ! Calculating the prescribed displacement for the multiscale BC model
         NDOFTaylorandLinear = AnalysisSettings%NDOFnode ! Number of prescribed GDL/node in Taylor and Linear model
                                                         ! Applying BC to all degrees of freedom of the nodes
+        InitialDOFMultiscaleModel = 1 ! Define de Initial DOF of prescribed U (1 is the default)
         ! Allocating the NodalDispDOF
         if (associated(NodalDispDOF))          deallocate(NodalDispDOF)
         nActive = size(this%NodalMultiscaleDispBC)*NDOFTaylorandLinear 
         Allocate( NodalDispDOF(nActive))
         call GetNodalMultiscaleDispBCandDeltaU(AnalysisSettings, GlobalNodesList, MacroscopicF_Initial, MacroscopicF_Final, &
-                                               MacroscopicU_Initial, MacroscopicU_Final, NDOFTaylorandLinear, &
+                                               MacroscopicU_Initial, MacroscopicU_Final, NDOFTaylorandLinear, InitialDOFMultiscaleModel,  &
                                                this%NodalMultiscaleDispBC, NodalDispDOF, U, DeltaUPresc)      
         !************************************************************************************
     end subroutine
@@ -245,6 +247,7 @@ module ModMultiscaleBoundaryConditions
         integer                                         :: i,j,k, nActive
         real(8) , dimension(3,3)                        :: MacroscopicF_Initial, MacroscopicF_Final
         integer                                         :: NDOFMinimalLinearD1
+        integer                                         :: InitialDOFMultiscaleModel ! Define de Initial DOF of prescribed U (1 is the default)
         real(8) , dimension(3)                          :: MacroscopicU_Initial, MacroscopicU_Final
         !************************************************************************************
         Fext      = 0.0d0    ! Values of External Force       - Not used in Multiscale Analysis
@@ -266,13 +269,15 @@ module ModMultiscaleBoundaryConditions
         !************************************************************************************ 
         ! Calculating the prescribed displacement for the multiscale BC model
         NDOFMinimalLinearD1 = 1 ! Number of prescribed GDL/node in Minimal D1 model
-                                ! Applying BC only in x - (1) direction
+                                ! Applying BC only in fiber axial direction
+        InitialDOFMultiscaleModel = AnalysisSettings%FiberAxialDirection ! Define de Initial DOF of prescribed U (1 is the default)
+                                                                         ! Use the Fiber Axial direction
         ! Allocating the NodalDispDOF
         if (associated(NodalDispDOF))          deallocate(NodalDispDOF)
         nActive = size(this%NodalMultiscaleDispBC)*NDOFMinimalLinearD1 
         Allocate( NodalDispDOF(nActive))
         call GetNodalMultiscaleDispBCandDeltaU(AnalysisSettings, GlobalNodesList, MacroscopicF_Initial, MacroscopicF_Final, &
-                                               MacroscopicU_Initial, MacroscopicU_Final, NDOFMinimalLinearD1, &
+                                               MacroscopicU_Initial, MacroscopicU_Final, NDOFMinimalLinearD1,InitialDOFMultiscaleModel,  &
                                                this%NodalMultiscaleDispBC, NodalDispDOF, U, DeltaUPresc)          
         !************************************************************************************
     end subroutine
@@ -308,6 +313,7 @@ module ModMultiscaleBoundaryConditions
         integer                                         :: i,j,k, nActive
         real(8) , dimension(3,3)                        :: MacroscopicF_Initial, MacroscopicF_Final
         integer                                         :: NDOFMinimalLinearD3
+        integer                                         :: InitialDOFMultiscaleModel  ! Define de Initial DOF of prescribed U (1 is the default)
         real(8) , dimension(3)                          :: MacroscopicU_Initial, MacroscopicU_Final
         !************************************************************************************
         Fext      = 0.0d0    ! Values of External Force       - Not used in Multiscale Analysis
@@ -330,12 +336,13 @@ module ModMultiscaleBoundaryConditions
         ! Calculating the prescribed displacement for the multiscale BC model
         NDOFMinimalLinearD3 = AnalysisSettings%NDOFnode ! Number of prescribed GDL/node in Minimal D3 model
                                                         ! Applying BC to all degrees of freedom of the nodes
+        InitialDOFMultiscaleModel = 1                   ! Define de Initial DOF of prescribed U (1 is the default)
         ! Allocating the NodalDispDOF
         if (associated(NodalDispDOF))          deallocate(NodalDispDOF)
         nActive = size(this%NodalMultiscaleDispBC)*NDOFMinimalLinearD3 
         Allocate( NodalDispDOF(nActive))
         call GetNodalMultiscaleDispBCandDeltaU(AnalysisSettings, GlobalNodesList, MacroscopicF_Initial, MacroscopicF_Final, &
-                                               MacroscopicU_Initial, MacroscopicU_Final, NDOFMinimalLinearD3, &
+                                               MacroscopicU_Initial, MacroscopicU_Final, NDOFMinimalLinearD3,InitialDOFMultiscaleModel, &
                                                this%NodalMultiscaleDispBC, NodalDispDOF, U, DeltaUPresc)           
         !************************************************************************************
     end subroutine
@@ -343,7 +350,7 @@ module ModMultiscaleBoundaryConditions
     
     !=================================================================================================
     subroutine GetNodalMultiscaleDispBCandDeltaU(AnalysisSettings, GlobalNodesList, MacroscopicF_Initial, MacroscopicF_Final, &
-                                                 MacroscopicU_Initial, MacroscopicU_Final, NDOFMultiscaleModel, &
+                                                 MacroscopicU_Initial, MacroscopicU_Final, NDOFMultiscaleModel, InitialDOFMultiscaleModel, &
                                                  NodalMultiscaleDispBC, NodalDispDOF, U, DeltaUPresc)
         !************************************************************************************
         ! DECLARATIONS OF VARIABLES
@@ -361,7 +368,7 @@ module ModMultiscaleBoundaryConditions
         ! -----------------------------------------------------------------------------------
         real(8) , dimension(3,3)                                :: MacroscopicF_Initial, MacroscopicF_Final
         real(8) , dimension(3)                                  :: MacroscopicU_Initial, MacroscopicU_Final
-        integer                                                 :: NDOFMultiscaleModel
+        integer                                                 :: NDOFMultiscaleModel, InitialDOFMultiscaleModel
         type (ClassMultiscaleNodalBC), dimension(:)             :: NodalMultiscaleDispBC
         
         ! Output variables
@@ -392,12 +399,20 @@ module ModMultiscaleBoundaryConditions
             UmicroYFinal   = MacroscopicU_Final   +  matmul((MacroscopicF_Final   - IdentityMatrix(3)),Y)
 
             ! Assembling the vector NodalDispDOF and its respective prescribed micro displacements
-            do i = 1,NDOFMultiscaleModel
-                j = NDOFMultiscaleModel*(k -1 ) + i
+            do i = InitialDOFMultiscaleModel,NDOFMultiscaleModel+(InitialDOFMultiscaleModel-1)
+                j = NDOFMultiscaleModel*(k -1 ) + i - (InitialDOFMultiscaleModel-1)
                 NodalDispDOF(j) = AnalysisSettings%NDOFnode*(NodalMultiscaleDispBC(k)%Node%ID -1 ) + i
                 ActiveInitialValue(j) = UmicroYInitial(i)
                 ActiveFinalValue(j)   = UmicroYFinal(i)
             enddo
+           
+            
+            ! do i = 1,NDOFMultiscaleModel
+           !     j = NDOFMultiscaleModel*(k -1 ) + i 
+           !     NodalDispDOF(j) = AnalysisSettings%NDOFnode*(NodalMultiscaleDispBC(k)%Node%ID -1 ) + i
+           !     ActiveInitialValue(j) = UmicroYInitial(i)
+           !     ActiveFinalValue(j)   = UmicroYFinal(i)
+           ! enddo
         enddo
         
         ! Assembling the global vector U e DeltaUPresc used in ApplyBC

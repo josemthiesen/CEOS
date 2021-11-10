@@ -15,8 +15,9 @@
 ANALYSIS SETTINGS
 
 	Multiscale Analysis =  False
-	Multiscale Model = Linear !MinimalLinearD1 !Linear !Taylor !Minimal  
-	Problem Type = Biphasic !Biphasic!Mechanical !
+	Multiscale Model = Linear !MinimalLinearD1 !Linear !Taylor !Minimal 
+	Multiscale Model Fiber Axial Direction = X !Z Y	
+	Problem Type = Biphasic!Mechanical !
 	Solution Scheme = Monolithic !Sequential
 	Multiscale Model Fluid = Linear !Linear !Taylor
 	Fiber Reinforced Analysis = False !True!False
@@ -26,7 +27,7 @@ ANALYSIS SETTINGS
 	Hypothesis of Analysis = 3D ! Axisymmetric ! Plane Strain !  
 	Element Technology = Full Integration !Mean Dilatation ! Reduced Integration
 	Maximum Cut Backs = 100
-	Multiscale Epsilon Parameter  = 1.0d-15
+	Multiscale Epsilon Parameter  = 1.0d-14
 	
 END ANALYSIS SETTINGS
 
@@ -45,17 +46,25 @@ NONLINEAR SOLVER
 	Newton_Raphson_Full
 	
 	Tol_Force_Mechanical = 1e-6
-	Tol_Flux_Biphasic    = 1e-6
+	Tol_Flux_Biphasic = 1e-6
 	MaxIter = 500
 
+
 END NONLINEAR SOLVER
+
+LINE SEARCH ALGORITHM
+	
+	Active = True ! False
+	Line_Search_Parameter = 0.9
+
+END LINE SEARCH ALGORITHM
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 STAGGERED SPLITTING SCHEME
 
-	Splitting Scheme 	 = Fixed Stress !Fixed Strain! Undrained! Fixed Stress
-	Stability Constant 	 = 0.5 ! Depende do modelo ! 1.0d4 rodou o k = 0.76e-3
+	Splitting Scheme 	 = Undrained !Fixed Stress !Fixed Strain! Undrained! Fixed Stress
+	Stability Constant 	 = 800 ! Depende do modelo ! 1.0d4 rodou o k = 0.76e-3
 	Mechanical Staggered Tolerance    = 1.0d-3
 	Flux Staggered Tolerance 		  = 1.0d-3 ! com 1.0d-1 rodou, mas o resultado nao deu boa
 	
@@ -64,45 +73,37 @@ END STAGGERED SPLITTING SCHEME
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 MATERIAL
-
+	
 	Number of Materials = 1
 	
 	Material ID = 1
-	Compressible_Neo_Hookean
-	Mu = 10.0 !1.10e-3
-	Lambda = 15.0 !110.0e-3
-
-
-	!Material ID = 1
-	!Matrix_Viscoelastic
-	!K_inf = 1.0e0
-	!Mu_inf = 10.0       !14e0  E = 35MPa e v = 0,25
-	!Lambda_inf = 15.0    !14e0
-	!K_e = 1.0e0
-	!Mu_e = 50.0
-	!Ni_v = 1500.0 
+	Matrix_Viscoelastic
+	K_inf = 1.0e0
+	Mu_inf = 10.0e-2        !14e0  E = 35MPa e v = 0,25
+	Lambda_inf = 15.0e-2    !14e0
+	K_e = 1.0e0
+	Mu_e = 50.0e-2 
+	Ni_v = 1500.0e-2 
 
 	 	
 END MATERIAL 
 
-
 PERMEABILITY
 
-	Number of Materials = 1	
-	
-	Material ID = 1
-	Spatial_Isotropic_Exponential_Permeability
-	k0 = 1.0e-2 !Modificado
-	Phi0 = 0.3
-	M = 4.0 ! 0.5 2.0   4.0  
+	Number of Materials = 1
 
-
+	 Material ID = 1
+	 Spatial_Isotropic_Constant_Permeability
+	 k =  	1.0e-3
+	 
 END PERMEABILITY
+	
+
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 MESH AND BOUNDARY CONDITIONS
 
-	Mesh File =   unconfined_3d_quarter_d2xh2_5000.cdb
+	Mesh File = confined_3d_mesh_quarter_d2xh2_ref2_11000.cdb !unconfined_3d_quarter_d2xh2_5000.cdb !unconfined_3d_quarter_d2xh2_ref2_10000.cdb !confined_3d_mesh_quarter_d2xh2_ref1.cdb !Quarto_cilindro_Hexa_Confi_refino.cdb ! Quarto_cilindro_Hexa_menor_d_confi.cdb !quarto_cilindro_cartilagem_u20p8_grosseiro.cdb ! Quarto_cilindro_Hexa_SemiConfi_grosseiro.cdb !Quarto_cilindro_Hexa_SemiConfi.cdb !Quarto_cilindro_Hexa_Confi.cdb   !quarto_cilindro_cartilagem_u20p8_grosseiro.cdb !!Quarto_Cilindro_Cartilagem_tetra.cdb!
 	Preprocessor = HyperMesh 
 	Time Discretization File = Time_Discretization.dat
 		
@@ -116,16 +117,18 @@ MACROSCOPIC DISPLACEMENT AND DEFORMATION GRADIENT
 	U2  = U2.dat !Zero 
 	U3  = U3.dat !Zero 
 	F11 = F11.dat !One !
-	F12 = F12.dat !Zero !F12.dat !  
-	F13 = F13.dat !Zero 
-	F21 = F21.dat !Zero
+	F12 = Zero !F12.dat !  
+	F13 = Zero 
+	F21 = Zero
 	F22 = F22.dat  !One !
-	F23 = F23.dat !Zero
-	F31 = F31.dat !Zero
-	F32 = F32.dat !Zero
+	F23 = Zero
+	F31 = Zero
+	F32 = Zero
 	F33 = F33.dat !One !One	
 		
 END MACROSCOPIC DISPLACEMENT AND DEFORMATION GRADIENT
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 

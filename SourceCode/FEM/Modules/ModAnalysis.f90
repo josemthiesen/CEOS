@@ -198,6 +198,7 @@ module ModAnalysis
         integer ::  Hypothesis
         integer ::  ElementTech
         integer ::  MultiscaleModel
+        integer ::  FiberAxialDirection
         integer ::  MultiscaleModelFluid
         integer ::  SplittingScheme
         integer ::  SolutionScheme

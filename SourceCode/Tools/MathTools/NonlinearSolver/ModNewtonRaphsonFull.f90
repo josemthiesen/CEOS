@@ -29,6 +29,7 @@ module ModNewtonRaphsonFull
     contains
         procedure :: Solve => NewtonRaphsonFull_Solve
         procedure :: ReadSolverParameters => NewtonRaphsonFull_ReadSolverParameters
+        procedure :: UpdateX
     end type
 
     type ClassNewtonRaphsonFullErrors
@@ -56,7 +57,7 @@ module ModNewtonRaphsonFull
     contains
     !-----------------------------------------------------------------
     
-        !==========================================================================================
+    !==========================================================================================
         subroutine NewtonRaphsonFull_Solve(this,SOE,Xguess,X, Phase)
 
             use ModGlobalSparseMatrix
@@ -71,6 +72,12 @@ module ModNewtonRaphsonFull
             integer :: it, i
             real(8) :: normR , normR_solid, normR_fluid, R(size(X)) , DX(size(X)), norma, tol, tol_fluid
             integer :: Phase ! Indicates the material phase (1 = Solid; 2 = Fluid)
+            
+            !For Line Search
+            real(8) :: R_scalar_0, R_scalar_eta, eta, eta_old, rho_LS, criteria_LS, alpha
+            real(8) :: R_new_LS(size(X)), X_new_LS(size(X))
+            integer :: count_LS
+            logical :: Divergence_LS
 
             real(8),dimension(:,:),pointer :: GFull
             class(ClassGlobalSparseMatrix),pointer :: GSparse
@@ -188,27 +195,8 @@ module ModNewtonRaphsonFull
                     call this%Status%SetError(NewtonRaphsonFull_Errors%LinearSystemError,'Error Solving Linear System')
                     return
                 endif
-                !---------------------------------------------------------------------------------------------------------------
-    
-                    
-                !-------------------------------------------------------------------
-                ! Atkin Method Block - Active
-                !-------------------------------------------------------------------
-                 X_atkin = X + DX    
-                 if (it == 1) then
-                     w_atkin = this%w_atkin
-                 else
-                     w_atkin = -w_atkin*(dot_product(DX_atkin_previous, DX - DX_atkin_previous)/norm(DX-DX_atkin_previous)**2)    
-                 end if
-                 DX_atkin_previous = DX                
-                 X = (1.0d0 - w_atkin)*X + w_atkin*X_atkin
-                !-------------------------------------------------------------------
-               
-                ! Classical Update - Active
-                !---------------------------------------------------------------------------------------------------------------
-                ! Update Unknown Variable and Additional Variables
-                !---------------------------------------------------------------------------------------------------------------
-                !X = X + DX
+                                
+                call this%LineSearch%UpdateX(SOE, R, DX, X)
 
                 call SOE%PostUpdate(X)
                 !---------------------------------------------------------------------------------------------------------------
@@ -219,7 +207,51 @@ module ModNewtonRaphsonFull
             
         end subroutine
         !==========================================================================================
+        
+        !==========================================================================================
+        subroutine UpdateX(this, SOE, R, DX, X)
+            !************************************************************************************           
+            ! DECLARATIONS OF VARIABLES
+		    !************************************************************************************
+            ! Object
+            ! ---------------------------------------------------------------------------------
+            class(ClassNewtonRaphsonFull)               :: this
+            class(ClassNonLinearSystemOfEquations)      :: SOE
 
+
+            ! Input variables
+            ! ---------------------------------------------------------------------------------
+            real(8),dimension(:)                        :: R , DX
+             
+            ! Output variables
+            real(8),dimension(:)                        :: X          
+
+            
+            !!-------------------------------------------------------------------
+            !! Atkin Method Block - Active
+            !!-------------------------------------------------------------------
+            ! X_atkin = X + DX    
+            ! if (it == 1) then
+            !     w_atkin = this%w_atkin
+            ! else
+            !     w_atkin = -w_atkin*(dot_product(DX_atkin_previous, DX - DX_atkin_previous)/norm(DX-DX_atkin_previous)**2)    
+            ! end if
+            ! DX_atkin_previous = DX                
+            ! X = (1.0d0 - w_atkin)*X + w_atkin*X_atkin
+                 
+            !-------------------------------------------------------------------
+               
+            ! Classical Update - Active
+            !---------------------------------------------------------------------------------------------------------------
+            ! Update Unknown Variable and Additional Variables
+            !---------------------------------------------------------------------------------------------------------------
+            X = X + DX
+        
+        
+        endsubroutine
+        !==========================================================================================
+        
+        
         !==========================================================================================
         subroutine NewtonRaphsonFull_ReadSolverParameters(this,DataFile)
             !************************************************************************************        
