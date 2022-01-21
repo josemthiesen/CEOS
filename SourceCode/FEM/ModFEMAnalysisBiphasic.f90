@@ -750,29 +750,43 @@ module ModFEMAnalysisBiphasic
             MultiscaleModel = AnalysisSettings%MultiscaleModel
             MultiscaleModelFluid = AnalysisSettings%MultiscaleModelFluid
         
-            if (MultiscaleModel == MultiscaleModels%Minimal .or. &
-                MultiscaleModel == MultiscaleModels%MinimalLinearD1 .or. &
-                MultiscaleModel == MultiscaleModels%MinimalLinearD3) then
-                allocate( ClassFEMSystemOfEquationsSolidMinimal :: FEMSoESolid)
-                select type(FEMSoESolid)
-                    class is(ClassFEMSystemOfEquationsSolidMinimal)
-                        AdditionalMinimalDoFSolid = size(FEMSoESolid%FMacro_current) + size(FEMSoESolid%uMacro_current)
-                endselect
+            if(AnalysisSettings%MultiscaleAnalysis == .True.) then
+            
+                if (MultiscaleModel == MultiscaleModels%Minimal .or. &
+                    MultiscaleModel == MultiscaleModels%MinimalLinearD1 .or. &
+                    MultiscaleModel == MultiscaleModels%MinimalLinearD3) then
+                    allocate( ClassFEMSystemOfEquationsSolidMinimal :: FEMSoESolid)
+                    select type(FEMSoESolid)
+                        class is(ClassFEMSystemOfEquationsSolidMinimal)
+                            AdditionalMinimalDoFSolid = size(FEMSoESolid%FMacro_current) + size(FEMSoESolid%uMacro_current)
+                    endselect
+                elseif(MultiscaleModel == MultiscaleModels%Linear .or. &
+                       MultiscaleModel == MultiscaleModels%Taylor) then
+                    allocate( ClassFEMSystemOfEquationsSolid :: FEMSoESolid)  
+                else
+                    stop 'Error: Solid Multiscale model not defined. QuasiStaticAnalysis_Biphasic_SolidFLuid'
+                endif
+                    
+                if (MultiscaleModelFluid == MultiscaleModels%Minimal .or. &
+                    MultiscaleModelFluid == MultiscaleModels%MinimalLinearD1 .or. &
+                    MultiscaleModelFluid == MultiscaleModels%MinimalLinearD3) then
+                    allocate( ClassFEMSystemOfEquationsFluidMinimal :: FEMSoEFluid)
+                    select type(FEMSoEFluid)
+                        class is(ClassFEMSystemOfEquationsFluidMinimal)
+                            AdditionalMinimalDoFFluid = size(FEMSoEFluid%PMacro_current) + size(FEMSoEFluid%GradPMacro_current) 
+                    endselect
+                elseif(MultiscaleModelFluid == MultiscaleModels%Linear .or. &
+                       MultiscaleModelFluid == MultiscaleModels%Taylor) then
+                    allocate( ClassFEMSystemOfEquationsFluid :: FEMSoEFluid)    
+                else
+                    stop 'Error: Fluid Multiscale model not defined. QuasiStaticAnalysis_Biphasic_SolidFLuid'      
+                endif 
+            
             else
                 allocate( ClassFEMSystemOfEquationsSolid :: FEMSoESolid)
-            endif
-                    
-            if (MultiscaleModelFluid == MultiscaleModels%Minimal .or. &
-                MultiscaleModelFluid == MultiscaleModels%MinimalLinearD1 .or. &
-                MultiscaleModelFluid == MultiscaleModels%MinimalLinearD3) then
-                allocate( ClassFEMSystemOfEquationsFluidMinimal :: FEMSoEFluid)
-                select type(FEMSoEFluid)
-                    class is(ClassFEMSystemOfEquationsFluidMinimal)
-                        AdditionalMinimalDoFFluid = size(FEMSoEFluid%PMacro_current) + size(FEMSoEFluid%GradPMacro_current) 
-                endselect
-            else
-                allocate( ClassFEMSystemOfEquationsFluid :: FEMSoEFluid)     
-            endif           
+                allocate( ClassFEMSystemOfEquationsFluid :: FEMSoEFluid)
+            endif 
+            
 
             FileID_FEMAnalysisResultsSolid = 42
             open (FileID_FEMAnalysisResultsSolid,file='FEMAnalysisSolid.result',status='unknown')
@@ -1204,30 +1218,44 @@ module ModFEMAnalysisBiphasic
             
             MultiscaleModel = AnalysisSettings%MultiscaleModel
             MultiscaleModelFluid = AnalysisSettings%MultiscaleModelFluid
-        
-            if (MultiscaleModel == MultiscaleModels%Minimal .or. &
-                MultiscaleModel == MultiscaleModels%MinimalLinearD1 .or. &
-                MultiscaleModel == MultiscaleModels%MinimalLinearD3) then
-                allocate( ClassFEMSystemOfEquationsSolidMinimal :: FEMSoESolid)
-                select type(FEMSoESolid)
-                    class is(ClassFEMSystemOfEquationsSolidMinimal)
-                        AdditionalMinimalDoFSolid = size(FEMSoESolid%FMacro_current) + size(FEMSoESolid%uMacro_current)
-                endselect
+            
+            if(AnalysisSettings%MultiscaleAnalysis == .True.) then
+            
+                if (MultiscaleModel == MultiscaleModels%Minimal .or. &
+                    MultiscaleModel == MultiscaleModels%MinimalLinearD1 .or. &
+                    MultiscaleModel == MultiscaleModels%MinimalLinearD3) then
+                    allocate( ClassFEMSystemOfEquationsSolidMinimal :: FEMSoESolid)
+                    select type(FEMSoESolid)
+                        class is(ClassFEMSystemOfEquationsSolidMinimal)
+                            AdditionalMinimalDoFSolid = size(FEMSoESolid%FMacro_current) + size(FEMSoESolid%uMacro_current)
+                    endselect
+                elseif(MultiscaleModel == MultiscaleModels%Linear .or. &
+                       MultiscaleModel == MultiscaleModels%Taylor) then
+                    allocate( ClassFEMSystemOfEquationsSolid :: FEMSoESolid)  
+                else
+                    stop 'Error: Solid Multiscale model not defined. QuasiStaticAnalysis_Biphasic_FluidSolid'
+                endif
+                    
+                if (MultiscaleModelFluid == MultiscaleModels%Minimal .or. &
+                    MultiscaleModelFluid == MultiscaleModels%MinimalLinearD1 .or. &
+                    MultiscaleModelFluid == MultiscaleModels%MinimalLinearD3) then
+                    allocate( ClassFEMSystemOfEquationsFluidMinimal :: FEMSoEFluid)
+                    select type(FEMSoEFluid)
+                        class is(ClassFEMSystemOfEquationsFluidMinimal)
+                            AdditionalMinimalDoFFluid = size(FEMSoEFluid%PMacro_current) + size(FEMSoEFluid%GradPMacro_current) 
+                    endselect
+                elseif(MultiscaleModelFluid == MultiscaleModels%Linear .or. &
+                       MultiscaleModelFluid == MultiscaleModels%Taylor) then
+                    allocate( ClassFEMSystemOfEquationsFluid :: FEMSoEFluid)    
+                else
+                    stop 'Error: Fluid Multiscale model not defined. QuasiStaticAnalysis_Biphasic_FluidSolid'      
+                endif 
+            
             else
                 allocate( ClassFEMSystemOfEquationsSolid :: FEMSoESolid)
-            endif
-                    
-            if (MultiscaleModelFluid == MultiscaleModels%Minimal .or. &
-                MultiscaleModelFluid == MultiscaleModels%MinimalLinearD1 .or. &
-                MultiscaleModelFluid == MultiscaleModels%MinimalLinearD3) then
-                allocate( ClassFEMSystemOfEquationsFluidMinimal :: FEMSoEFluid)
-                select type(FEMSoEFluid)
-                    class is(ClassFEMSystemOfEquationsFluidMinimal)
-                        AdditionalMinimalDoFFluid = size(FEMSoEFluid%PMacro_current) + size(FEMSoEFluid%GradPMacro_current) 
-                endselect
-            else
-                allocate( ClassFEMSystemOfEquationsFluid :: FEMSoEFluid)     
+                allocate( ClassFEMSystemOfEquationsFluid :: FEMSoEFluid)
             endif 
+            
 
             FileID_FEMAnalysisResultsSolid = 42
             open (FileID_FEMAnalysisResultsSolid,file='FEMAnalysisSolid.result',status='unknown')
