@@ -1,0 +1,15 @@
+1) ModReadInputFile
+	Preparar leitura.
+
+2) Correction on ModAnlysisManager
+
+3) Boundary Conditions
+	Create 2 BCFluid and CLass BCFluid
+
+4) Correction on matrices allocation Multiscale - Biphasic - Sequential
+
+5) Fixed Quasi-Static Multiscale Minimal Biphasic
+
+6) Create FEMSOESolidMinimal and FEMSOEFLuidMinimal
+
+7) Create ModGlobalFEMMultiscaleBiphasic
