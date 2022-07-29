@@ -14,10 +14,10 @@
 
 ANALYSIS SETTINGS
 
-	Multiscale Analysis =  False
+	Multiscale Analysis =  True
 	Multiscale Model = Linear !MinimalLinearD1 !Linear !Taylor !Minimal 
 	Multiscale Model Fiber Axial Direction = X !Z Y	
-	Problem Type = Biphasic!Mechanical !
+	Problem Type = Mechanical !
 	Solution Scheme = Monolithic !Sequential
 	Multiscale Model Fluid = Linear !Linear !Taylor
 	Fiber Reinforced Analysis = False !True!False
@@ -54,7 +54,7 @@ END NONLINEAR SOLVER
 
 LINE SEARCH ALGORITHM
 	
-	Active = True ! False
+	Active = False
 	Line_Search_Parameter = 0.9
 
 END LINE SEARCH ALGORITHM
@@ -77,13 +77,9 @@ MATERIAL
 	Number of Materials = 1
 	
 	Material ID = 1
-	Matrix_Viscoelastic
-	K_inf = 1.0e0
-	Mu_inf = 10.0e-2        !14e0  E = 35MPa e v = 0,25
-	Lambda_inf = 15.0e-2    !14e0
-	K_e = 1.0e0
-	Mu_e = 50.0e-2 
-	Ni_v = 1500.0e-2 
+	neo_hookean_fiber_recruit
+	Gm = 1.608e-2
+	Km = 1.608e0
 
 	 	
 END MATERIAL 
@@ -103,7 +99,7 @@ END PERMEABILITY
 
 MESH AND BOUNDARY CONDITIONS
 
-	Mesh File = confined_3d_mesh_quarter_d2xh2_ref2_11000.cdb !unconfined_3d_quarter_d2xh2_5000.cdb !unconfined_3d_quarter_d2xh2_ref2_10000.cdb !confined_3d_mesh_quarter_d2xh2_ref1.cdb !Quarto_cilindro_Hexa_Confi_refino.cdb ! Quarto_cilindro_Hexa_menor_d_confi.cdb !quarto_cilindro_cartilagem_u20p8_grosseiro.cdb ! Quarto_cilindro_Hexa_SemiConfi_grosseiro.cdb !Quarto_cilindro_Hexa_SemiConfi.cdb !Quarto_cilindro_Hexa_Confi.cdb   !quarto_cilindro_cartilagem_u20p8_grosseiro.cdb !!Quarto_Cilindro_Cartilagem_tetra.cdb!
+	Mesh File = rve0.cdb !unconfined_3d_quarter_d2xh2_5000.cdb !unconfined_3d_quarter_d2xh2_ref2_10000.cdb !confined_3d_mesh_quarter_d2xh2_ref1.cdb !Quarto_cilindro_Hexa_Confi_refino.cdb ! Quarto_cilindro_Hexa_menor_d_confi.cdb !quarto_cilindro_cartilagem_u20p8_grosseiro.cdb ! Quarto_cilindro_Hexa_SemiConfi_grosseiro.cdb !Quarto_cilindro_Hexa_SemiConfi.cdb !Quarto_cilindro_Hexa_Confi.cdb   !quarto_cilindro_cartilagem_u20p8_grosseiro.cdb !!Quarto_Cilindro_Cartilagem_tetra.cdb!
 	Preprocessor = HyperMesh 
 	Time Discretization File = Time_Discretization.dat
 		
@@ -113,9 +109,9 @@ END MESH AND BOUNDARY CONDITIONS
 
 MACROSCOPIC DISPLACEMENT AND DEFORMATION GRADIENT
 
-	U1  = U1.dat !Zero 
-	U2  = U2.dat !Zero 
-	U3  = U3.dat !Zero 
+	U1  = Zero 
+	U2  = Zero 
+	U3  = Zero 
 	F11 = F11.dat !One !
 	F12 = Zero !F12.dat !  
 	F13 = Zero 

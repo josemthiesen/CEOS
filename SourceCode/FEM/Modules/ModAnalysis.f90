@@ -204,6 +204,7 @@ module ModAnalysis
         integer ::  SolutionScheme
         logical ::  NLAnalysis
         logical ::  MultiscaleAnalysis
+        logical ::  EmbeddedElements
         
         logical             :: FiberReinforcedAnalysis
         character(len=100)  :: FiberDataFileName

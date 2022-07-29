@@ -60,6 +60,7 @@
 		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModHyperIsotropicBiphasicSpilker.f90"/>
 		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModJ2Plasticity.f90"/>
 		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModNeoHookean.f90"/>
+		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModNeoHookeanFiberRecruit.f90"/>
 		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModNeoHookeanIsochoric.f90"/>
 		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModNeoHookeanQ1P0.f90"/>
 		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModStVenantKirchhoff.f90"/>
@@ -138,8 +139,8 @@
 		<File RelativePath="..\..\SourceCode\Tools\MathTools\LinearSolver\ModLinearSolverLibrary.f90"/>
 		<File RelativePath="..\..\SourceCode\Tools\MathTools\LinearSolver\ModPardisoSolver.f90"/></Filter>
 		<Filter Name="NonLinearSolver">
-		<File RelativePath="..\..\SourceCode\Tools\MathTools\NonlinearSolver\ModNewtonRaphsonFull.f90"/>
 		<File RelativePath="..\..\SourceCode\Tools\MathTools\NonlinearSolver\ModLineSearch.f90"/>
+		<File RelativePath="..\..\SourceCode\Tools\MathTools\NonlinearSolver\ModNewtonRaphsonFull.f90"/>
 		<File RelativePath="..\..\SourceCode\Tools\MathTools\NonlinearSolver\ModNonLinearSolver.f90"/>
 		<File RelativePath="..\..\SourceCode\Tools\MathTools\NonlinearSolver\ModNonLinearSolverLibrary.f90"/></Filter>
 		<Filter Name="SparseMatrixRoutines">

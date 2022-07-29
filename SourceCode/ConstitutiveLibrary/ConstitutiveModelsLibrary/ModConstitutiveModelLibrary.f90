@@ -35,6 +35,7 @@ module ModConstitutiveModelLibrary
     use ModVVHW
     use ModVarViscoHydrolysis
     use ModHyperBiphasicSpilker
+    use NeoHookeanFiberRecruit
    
 
     ! Constitutive Models ID registered:
@@ -56,6 +57,7 @@ module ModConstitutiveModelLibrary
         integer   :: Glassy                                         = 15
         integer   :: VarViscoHydrolysisModel                        = 16
         integer   :: HyperIsotropicBiphasicSpilkerModel             = 17
+        integer   :: NeoHookeanFiberRecruitModel                    = 18
         
     end type
 
@@ -137,7 +139,9 @@ module ModConstitutiveModelLibrary
             type(ClassGlassy_AXI)  , pointer , dimension(:) :: Glassy_AXI
             
             type(ClassHyperIsotropicBiphasicSpilker_3D)          , pointer , dimension(:) :: CHISBiphasic_3D
-            type(ClassHyperIsotropicBiphasicSpilker_PlaneStrain) , pointer , dimension(:) :: CHISBiphasic_PlaneStrain          
+            type(ClassHyperIsotropicBiphasicSpilker_PlaneStrain) , pointer , dimension(:) :: CHISBiphasic_PlaneStrain     
+            
+            type(ClassNeoHookeanFiberRecruit_3D)       , pointer , dimension(:) :: NHFREC_3D
             
 		    !************************************************************************************
 
@@ -483,7 +487,21 @@ module ModConstitutiveModelLibrary
                     call Error("Error: Glassy Model analysis type not available.")
 
                 endif                    
-                    
+                
+                ! -------------------------------------------------------------------------------
+                ! Neo-Hookean matrix reinforced with fibers with recruitment stretch
+                ! -------------------------------------------------------------------------------
+                case (ConstitutiveModels % NeoHookeanFiberRecruitModel)
+
+                    if ( AnalysisSettings%Hypothesis == HypothesisOfAnalysis%ThreeDimensional ) then
+
+                            allocate( NHFREC_3D(nGP) )
+                            GaussPoints => NHFREC_3D
+
+                    else
+                            call Error("Error: Neo Hookean Fiber Recruitment Model - analysis type not available.")
+
+                    endif
                 ! -------------------------------------------------------------------------------
                 
                 case default
@@ -599,6 +617,10 @@ module ModConstitutiveModelLibrary
             elseif ( Comp%CompareStrings('ViscoElasticoJan', model).and. (AnalysisSettings%ElementTech == ElementTechnologies%Full_Integration) ) then
             
                 modelID = ConstitutiveModels % Glassy   
+                
+            elseif ( Comp%CompareStrings('neo_hookean_fiber_recruit', model) .and. (AnalysisSettings%ElementTech == ElementTechnologies%Full_Integration) ) then
+
+                modelID = ConstitutiveModels%NeoHookeanFiberRecruitModel
                 
             ! -----------------------------------------------------------------------------------    
             else

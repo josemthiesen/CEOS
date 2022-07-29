@@ -1104,6 +1104,7 @@ module ModReadInputFile
 
             integer :: NumberOfMaterials , i , MaterialID, ModelEnumerator
             character(len=100):: ModelName, string , OptionName , OptionValue
+            logical :: Fiber_info_exists
 
 
             call DataFile%GetNextOption(OptionName , OptionValue)
@@ -1140,6 +1141,22 @@ module ModReadInputFile
                 call ConstitutiveModelIdentifier( ModelName, AnalysisSettings, ModelEnumerator )
 
                 MaterialList(i)%ModelEnumerator= ModelEnumerator
+                
+                if (ModelEnumerator==18) then !Check if simulation with embedded elements
+                    inquire(file='Fiber_info.dat',exist=Fiber_info_exists)                 
+                    if (Fiber_info_exists) then
+                        write(*,*) ''
+                        write(*,*) '** Simulation with embedded elements! **'
+                        AnalysisSettings%EmbeddedElements = .TRUE.
+                    else
+                        write(*,*) ''
+                        write(*,*) '** ERROR: no Fiber_info.dat found! **'
+                        write(*,*) ''
+                        STOP
+                    endif
+                else
+                    AnalysisSettings%EmbeddedElements = .FALSE.
+                endif
 
                 call AllocateConstitutiveModel( ModelEnumerator , AnalysisSettings , 1 , MaterialList(i)%Mat )
 
@@ -1593,7 +1610,7 @@ module ModReadInputFile
                 ElementList(i)%El%Material = ElementMaterialID(i)
                 
                 ! Creating the constitutive models in elements ( Creating the gauss points)
-                call MaterialConstructor( ElementList(i)%El, ElementList, GlobalNodesList, Material, AnalysisSettings )
+                call MaterialConstructor( ElementList(i)%El, ElementList, GlobalNodesList, Material, AnalysisSettings, i )
                 if (AnalysisSettings%ProblemType .eq. ProblemTypes%Biphasic) then
                     call ConvertElementToElementBiphasic(ElementList(i)%El, ElementBiphasic)
                     ! Creating the constitutive models in elements ( Creating the fluid gauss points - used on the quadratures)
@@ -2069,7 +2086,7 @@ module ModReadInputFile
                     call DataFile%RaiseError("Element's Material was not found")
                 endif
 
-                call MaterialConstructor( ElementList(i)%El, ElementList, GlobalNodesList, Material, AnalysisSettings )
+                call MaterialConstructor( ElementList(i)%El, ElementList, GlobalNodesList, Material, AnalysisSettings, i )
 
             enddo
 

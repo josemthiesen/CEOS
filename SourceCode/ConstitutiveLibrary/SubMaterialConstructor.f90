@@ -10,7 +10,7 @@
 ! Modifications:
 ! Date:         Author:
 !##################################################################################################
-subroutine MaterialConstructor( Element, ElementList, GlobalNodesList, Material, AnalysisSettings )
+subroutine MaterialConstructor( Element, ElementList, GlobalNodesList, Material, AnalysisSettings, e )
 
 	!************************************************************************************
 	! DECLARATIONS OF VARIABLES
@@ -34,7 +34,7 @@ subroutine MaterialConstructor( Element, ElementList, GlobalNodesList, Material,
 
 	! Internal variables
 	! -----------------------------------------------------------------------------------
-	integer :: i, nNodes, nGP, gp
+	integer :: i, nNodes, nGP, gp, nGPe, e
 
 	!************************************************************************************
 
@@ -76,6 +76,50 @@ subroutine MaterialConstructor( Element, ElementList, GlobalNodesList, Material,
 
 
 	!************************************************************************************
+    
+    
+    !************************************************************************************
+	! CONSTRUCT OF MATERIALS - EXTRA GAUSS POINTS
+	!************************************************************************************
+    
+    if (AnalysisSettings%EmbeddedElements) then
+        
+        if (e==1) then
+             
+            write(*,*) 'Allocating fiber Gauss points...'
+            write(*,*) ''
+             
+            open(87,file='Fiber_info.dat',status='old')
+            read(87,*)
+
+        endif
+        
+        read(87,*) nGPe
+        
+        if (nGPe>0) then
+        
+            ! Allocate the constitutive model for extra Gauss point
+            ! -----------------------------------------------------------------------------------
+            call AllocateConstitutiveModel( Material%ModelEnumerator , AnalysisSettings , nGPe ,  Element%ExtraGaussPoints )
+        
+            ! Copy material properties from reference material (read in the settings file) to extra Gauss points
+            ! --------------------------------------------------------------------------------------------------
+            do gp = 1,nGPe
+                call Element%ExtraGaussPoints(gp)%CopyProperties(Material%Mat(1))
+            enddo
+        
+            ! Construct the Constitutive Model
+            ! -----------------------------------------------------------------------------------
+            do gp=1,nGPe
+                allocate( Element%ExtraGaussPoints(gp)%Stress( AnalysisSettings%StressSize ) )
+                Element%ExtraGaussPoints(gp)%Stress = 0.0d0
+                call Element%ExtraGaussPoints(gp)%ConstitutiveModelDestructor()
+                call Element%ExtraGaussPoints(gp)%ConstitutiveModelConstructor(AnalysisSettings)
+            enddo
+        
+        endif
+                
+    endif
 
 
 

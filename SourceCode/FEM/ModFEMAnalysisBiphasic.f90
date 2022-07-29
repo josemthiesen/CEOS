@@ -259,6 +259,13 @@ module ModFEMAnalysisBiphasic
                 write(*,*) "Calling the Additional Material Routine in order to define the fiber direction."
                 call this%AdditionalMaterialModelRoutine()
             endif
+            
+            ! Calling the additional material routine to read information for the embedded elements
+            !************************************************************************************
+            if(this%AnalysisSettings%EmbeddedElements) then
+                call this%AdditionalMaterialModelRoutine()
+            endif
+
 
             ! Calling the quasi-static analysis routine
             !************************************************************************************

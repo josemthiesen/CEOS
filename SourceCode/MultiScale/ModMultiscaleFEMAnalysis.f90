@@ -146,6 +146,13 @@ module ModMultiscaleFEMAnalysis
                 call this%AdditionalMaterialModelRoutine()
             endif
             
+            ! Calling the additional material routine to read information for the embedded elements
+            !************************************************************************************
+            if(this%AnalysisSettings%EmbeddedElements) then
+                call this%AdditionalMaterialModelRoutine()
+            endif
+
+            
             ! Setting the origin of the coordinate system at the centroid of the mesh
             !************************************************************************************  
             call TranslateCentroidToOrigin(this%ElementList, this%AnalysisSettings, this%GlobalNodesList )

@@ -21,6 +21,12 @@ module ModConstitutiveModel
         real(8) :: w(3)             ! Spatial Relative velocity on biphasic model
         real(8) :: JdivV=0.0d0      ! Jacobian * Divergent velocity on biphasic model
         real(8) :: Jn=1.0d0         ! Jacobian in time tn, used to compute the rate of J
+        real(8) :: A0               ! Undeformed area of embedded truss
+        real(8) :: L0               ! Undeformed length of embedded truss
+        real(8) :: I4r              ! Square of fiber recruitment stretch
+        real(8) :: Ef               ! Fiber stiffness
+        real(8) :: NaturalCoord(3)  ! Coordinates of extra Gauss point
+        real(8) :: Weight           ! Weight of extra Gauss point
 
     endtype
     
