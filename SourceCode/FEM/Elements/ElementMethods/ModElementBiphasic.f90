@@ -207,6 +207,7 @@ module ModElementBiphasic
             real(8) , pointer , dimension(:,:)  :: bs
             real(8)                             :: StabilityConst, J_CurrentStaggered, J_PreviousStaggered, P_CurrentStaggered, P_PreviousStaggered, alpha
             integer                             :: UndrainedActivator
+            real(8)                             :: NaturalCoordFiber(3), WeightFiber, A0f, L0f, dV0f, dVf
 		    !************************************************************************************
 
 		    !************************************************************************************
@@ -255,7 +256,52 @@ module ModElementBiphasic
             ! Retrieving gauss points parameters for numerical integration
             call this%GetGaussPoints(NaturalCoord,Weight)
 
-            !Loop over gauss points
+            !Loop over extra gauss points from embedded elements
+            
+            if (AnalysisSettings%EmbeddedElements) then !embedded elements - calculate in extra gauss points
+                
+                !Loop over fiber gauss points
+                do gp = 1, size(this%ExtraGaussPoints)
+
+                    !Get natural coordinates and weight
+                    NaturalCoordFiber = this%ExtraGaussPoints(gp)%AdditionalVariables%NaturalCoord
+                    WeightFiber = this%ExtraGaussPoints(gp)%AdditionalVariables%Weight
+
+                    !Get tangent modulus
+                    call this%ExtraGaussPoints(gp)%GetTangentModulus(D)
+
+                    !Get matrix B, G and the Jacobian determinant
+                    call this%Matrix_B_and_G(AnalysisSettings, NaturalCoordFiber, B, G , detJ , FactorAxi )
+
+                    !Get Matrix of Stresses
+                    call this%ExtraGaussPoints(gp)%GetMatrixOfStresses(AnalysisSettings,S)
+
+                    !Element stiffness matrix
+                    !---------------------------------------------------------------------------------------------------
+
+                    !Get initial area and lenght
+                    A0f = this%ExtraGaussPoints(gp)%AdditionalVariables%A0
+                    L0f = this%ExtraGaussPoints(gp)%AdditionalVariables%L0
+
+                    ! Computes D*B
+                    call MatrixMatrixMultiply_Sym ( D, B, DB, 1.0d0, 0.0d0 ) ! C := alpha*A*B + beta*C - A=Sym and upper triangular
+
+                    ! Computes S*G
+                    call MatrixMatrixMultiply_Sym ( S, G, SG, 1.0d0, 0.0d0 ) ! C := alpha*A*B + beta*C - A=Sym and upper triangular
+
+                    dV0f = A0f*L0f
+                    dVf = det(this%ExtraGaussPoints(gp)%F)*dV0f
+                        
+                    ! Computes Ke = Kg + Km
+                    !Matrix Km
+                    call MatrixMatrixMultiply_Trans ( B, DB, Ke, 0.5d0*dVf*WeightFiber, 1.0d0 ) !C := alpha*(A^T)*B + beta*C
+
+                    !Matrix Kg
+                    call MatrixMatrixMultiply_Trans ( G, SG, Ke, 0.5d0*dVf*WeightFiber, 1.0d0 ) !C := alpha*(A^T)*B + beta*C
+
+                enddo
+                    
+            endif
             
             do gp = 1, size(NaturalCoord,dim=1)
             
@@ -764,6 +810,8 @@ module ModElementBiphasic
             real(8)                             :: FactorAxi
             real(8)                             :: alpha, StabilityConst, P_CurrentStaggered, J_CurrentStaggered, J_PreviousStaggered, P_PreviousStaggered
             integer                             :: UndrainedActivator
+            real(8) , pointer , dimension(:)    :: CauchyFiber
+            real(8)                             :: NaturalCoordFiber(3), WeightFiber, A0f, L0f, dV0f, dVf
 		    !************************************************************************************
             ! ELEMENT SOLID INTERNAL FORCE CALCULATION
 		    !************************************************************************************
@@ -793,7 +841,43 @@ module ModElementBiphasic
 
             ! Retrieving gauss points parameters for numerical integration
             call this%GetGaussPoints(NaturalCoord,Weight)
+            
+            !************************************************************************************
+            
+            if (AnalysisSettings%EmbeddedElements) then !embedded elements - calculate in extra gauss points
+            
+                !Loop over fiber gauss points
+                do gp = 1, size(this%ExtraGaussPoints)
+                    
+                    !Get Cauchy Stress
+                    CauchyFiber => this%ExtraGaussPoints(gp)%Stress
+                    
+                    !Get natural coordinates and weight
+                    NaturalCoordFiber = this%ExtraGaussPoints(gp)%AdditionalVariables%NaturalCoord
+                    WeightFiber = this%ExtraGaussPoints(gp)%AdditionalVariables%Weight
+                    
+                    !Get initial area and lenght
+                    A0f = this%ExtraGaussPoints(gp)%AdditionalVariables%A0
+                    L0f = this%ExtraGaussPoints(gp)%AdditionalVariables%L0
+                    
+                    !Get matrix B and the Jacobian determinant
+                    call this%Matrix_B_and_G(AnalysisSettings, NaturalCoordFiber , B, G, detJ , FactorAxi)
 
+                    if (detJ <= 1.0d-13) then
+                        call Status%SetError(-1, 'Subroutine ElementInternalForce in ModElement.f90. Error: Determinant of the Jacobian Matrix <= 0.0d0')
+                        return
+                    endif
+                    
+                    dV0f = A0f*L0f
+                    dVf = det(this%ExtraGaussPoints(gp)%F)*dV0f
+                   
+                    !Element internal force vector
+                    call MatrixVectorMultiply ( 'T', B, CauchyFiber( 1:size(B,1) ), Fe, 0.5d0*dVf*WeightFiber, 1.0d0 ) !y := alpha*op(A)*x + beta*y
+
+                enddo
+                
+            endif
+            
             !Loop over gauss points
             do gp = 1, size(NaturalCoord,dim=1)
 

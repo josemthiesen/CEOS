@@ -5,7 +5,7 @@
 POST PROCESSOR 
 
 	Post Processor = HyperView 12 !GiD 7 !
-	Results = Displacements , von Mises Logarithmic Strain
+	Results = Displacements , von Mises Logarithmic Strain, Pressure, Referential Relative Velocity, Jacobian Solid Velocity Divergent
 	File Name = hypermesh_results.hwascii
 	
 END POST PROCESSOR 
