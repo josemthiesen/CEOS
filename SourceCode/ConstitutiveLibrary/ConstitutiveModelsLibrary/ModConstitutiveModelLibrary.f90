@@ -35,7 +35,8 @@ module ModConstitutiveModelLibrary
     use ModVVHW
     use ModVarViscoHydrolysis
     use ModHyperBiphasicSpilker
-    use NeoHookeanFiberRecruit
+    use ModNeoHookeanFiberRecruit
+    use ModNeoHookeanFiberReinf
    
 
     ! Constitutive Models ID registered:
@@ -58,6 +59,7 @@ module ModConstitutiveModelLibrary
         integer   :: VarViscoHydrolysisModel                        = 16
         integer   :: HyperIsotropicBiphasicSpilkerModel             = 17
         integer   :: NeoHookeanFiberRecruitModel                    = 18
+        integer   :: NeoHookeanFiberReinfModel                      = 19
         
     end type
 
@@ -142,6 +144,7 @@ module ModConstitutiveModelLibrary
             type(ClassHyperIsotropicBiphasicSpilker_PlaneStrain) , pointer , dimension(:) :: CHISBiphasic_PlaneStrain     
             
             type(ClassNeoHookeanFiberRecruit_3D)       , pointer , dimension(:) :: NHFREC_3D
+            type(ClassNeoHookeanFiberReinf_3D)       , pointer , dimension(:)  :: NHFREF_3D
             
 		    !************************************************************************************
 
@@ -503,6 +506,23 @@ module ModConstitutiveModelLibrary
 
                     endif
                 ! -------------------------------------------------------------------------------
+                    
+                    
+                ! -------------------------------------------------------------------------------
+                ! Neo-Hookean matrix reinforced with neo-Hookean fiber
+                ! -------------------------------------------------------------------------------
+                case (ConstitutiveModels % NeoHookeanFiberReinfModel)
+
+                    if ( AnalysisSettings%Hypothesis == HypothesisOfAnalysis%ThreeDimensional ) then
+
+                            allocate( NHFREF_3D(nGP) )
+                            GaussPoints => NHFREF_3D
+
+                    else
+                            call Error("Error: Neo Hookean Fiber Reinforcement Model - analysis type not available.")
+
+                    endif
+                ! -------------------------------------------------------------------------------
                 
                 case default
 
@@ -621,6 +641,10 @@ module ModConstitutiveModelLibrary
             elseif ( Comp%CompareStrings('neo_hookean_fiber_recruit', model) .and. (AnalysisSettings%ElementTech == ElementTechnologies%Full_Integration) ) then
 
                 modelID = ConstitutiveModels%NeoHookeanFiberRecruitModel
+                
+            elseif ( Comp%CompareStrings('neo_hookean_fiber_reinf', model) .and. (AnalysisSettings%ElementTech == ElementTechnologies%Full_Integration) ) then
+
+                modelID = ConstitutiveModels%NeoHookeanFiberReinfModel
                 
             ! -----------------------------------------------------------------------------------    
             else
