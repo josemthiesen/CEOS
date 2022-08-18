@@ -31,7 +31,7 @@ module ModNeoHookeanFiberReinf
 
         ! Variables of material parameters
         !----------------------------------------------------------------------------------------------
-        real(8) :: Gm, Km, Gf
+        real(8) :: Gm, Km
 
     end type
 	!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -186,7 +186,7 @@ module ModNeoHookeanFiberReinf
 
             ! Internal variables
             ! ---------------------------------------------------------------------------------
-		    character(len=100), dimension(3) :: ListOfOptions, ListOfValues
+		    character(len=100), dimension(2) :: ListOfOptions, ListOfValues
 		    logical, dimension(2)            :: FoundOption
 		    integer                          :: i
 		    !************************************************************************************
@@ -202,7 +202,7 @@ module ModNeoHookeanFiberReinf
 
             ! Inform how the properties are shown in the "Settings" file.
             !------------------------------------------------------------------------------------
-            ListOfOptions=["Gm","Km","Gf"]
+            ListOfOptions=["Gm","Km"]
             !------------------------------------------------------------------------------------
 
 		    !___________________   WARNIG! DO NOT CHANGE OR ERASE THIS BLOCK    _________________
@@ -214,7 +214,6 @@ module ModNeoHookeanFiberReinf
             !------------------------------------------------------------------------------------
             this%Properties%Gm = ListOfValues(1)
             this%Properties%Km = ListOfValues(2)
-            this%Properties%Gf = ListOfValues(3)
             !------------------------------------------------------------------------------------
 
 
@@ -306,9 +305,9 @@ module ModNeoHookeanFiberReinf
             ! -----------------------------------------------------------------------------------
             Km = this%Properties%Km
             Gm = this%Properties%Gm
-            Gf = this%Properties%Gf
             F  = this%F
             mX = this%AdditionalVariables%mX
+            Gf = this%AdditionalVariables%Ef
             
             ! -----------------------------------------------------------------------------------
             ! Kinematic Variables - Calculated in 3D Tensorial Format
@@ -430,9 +429,9 @@ module ModNeoHookeanFiberReinf
             ! -----------------------------------------------------------------------------------
             Km = this%Properties%Km
             Gm = this%Properties%Gm
-            Gf = this%Properties%Gf
             F  = this%F
             mX = this%AdditionalVariables%mX
+            Gf = this%AdditionalVariables%Ef
             ! -----------------------------------------------------------------------------------
 
             ! Quantities calculated in 3D Tensorial Format
