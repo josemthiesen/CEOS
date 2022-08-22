@@ -61,6 +61,7 @@
 		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModJ2Plasticity.f90"/>
 		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModNeoHookean.f90"/>
 		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModNeoHookeanFiberRecruit.f90"/>
+		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModNeoHookeanFiberReinf.f90"/>
 		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModNeoHookeanIsochoric.f90"/>
 		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModNeoHookeanQ1P0.f90"/>
 		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModStVenantKirchhoff.f90"/>
@@ -105,6 +106,7 @@
 		<Filter Name="Modules">
 		<File RelativePath="..\..\SourceCode\FEM\Modules\ModAnalysis.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Modules\ModFEMSoEMultiscaleMinimal.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\Modules\ModFEMSoEMultiscalePeriodic.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Modules\ModFEMSystemOfEquations.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Modules\ModFEMSystemOfEquationsFluid.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Modules\ModFEMSystemOfEquationsFluidMinimal.f90"/>
