@@ -304,6 +304,8 @@ module ModReadInputFile
                 AnalysisSettings%MultiscaleModel = MultiscaleModels%Taylor
             elseif (DataFile%CompareStrings(ListOfValues(8),"Linear")) then
                 AnalysisSettings%MultiscaleModel = MultiscaleModels%Linear
+            elseif (DataFile%CompareStrings(ListOfValues(8),"Periodic")) then
+                AnalysisSettings%MultiscaleModel = MultiscaleModels%Periodic
             elseif (DataFile%CompareStrings(ListOfValues(8),"Minimal")) then
                 AnalysisSettings%MultiscaleModel = MultiscaleModels%Minimal
             elseif (DataFile%CompareStrings(ListOfValues(8),"MinimalLinearD1")) then
@@ -485,6 +487,8 @@ module ModReadInputFile
                     allocate(ClassMultiscaleBoundaryConditionsTaylorAndLinear:: BC)
                 elseif (AnalysisSettings%MultiscaleModel == MultiscaleModels%Linear) then
                     allocate(ClassMultiscaleBoundaryConditionsTaylorAndLinear:: BC)
+                elseif (AnalysisSettings%MultiscaleModel == MultiscaleModels%Periodic) then
+                    allocate(ClassMultiscaleBoundaryConditionsPeriodic:: BC)
                 elseif (AnalysisSettings%MultiscaleModel == MultiscaleModels%Minimal) then
                     allocate(ClassMultiscaleBoundaryConditionsMinimal:: BC)
                 elseif (AnalysisSettings%MultiscaleModel == MultiscaleModels%MinimalLinearD1) then
@@ -628,6 +632,8 @@ module ModReadInputFile
                             BC%TypeOfBC = MultiscaleBCType%Taylor
                         elseif (AnalysisSettings%MultiscaleModel == MultiscaleModels%Linear) then
                             BC%TypeOfBC = MultiscaleBCType%Linear
+                        elseif (AnalysisSettings%MultiscaleModel == MultiscaleBCType%Periodic) then
+                            BC%TypeOfBC = MultiscaleBCType%Periodic
                         elseif (AnalysisSettings%MultiscaleModel == MultiscaleBCType%Minimal) then
                             BC%TypeOfBC = MultiscaleBCType%Minimal
                         elseif (AnalysisSettings%MultiscaleModel == MultiscaleBCType%MinimalLinearD1) then
@@ -750,7 +756,7 @@ module ModReadInputFile
                 !Nothing to do
 
 
-            elseif (TypeOfBC == MultiscaleBCType%Linear .or. TypeOfBC == MultiscaleBCType%MinimalLinearD1 .or. TypeOfBC == MultiscaleBCType%MinimalLinearD3 ) then
+            elseif (TypeOfBC == MultiscaleBCType%Linear .or. TypeOfBC == MultiscaleBCType%Periodic .or. TypeOfBC == MultiscaleBCType%MinimalLinearD1 .or. TypeOfBC == MultiscaleBCType%MinimalLinearD3 ) then
 
                 ! Adding all the nodes of the boundary
                 cont = 0
@@ -1142,7 +1148,7 @@ module ModReadInputFile
 
                 MaterialList(i)%ModelEnumerator= ModelEnumerator
                 
-                if (ModelEnumerator==18) then !Check if simulation with embedded elements
+                if (ModelEnumerator==18 .OR. ModelEnumerator==19) then !Check if simulation with embedded elements
                     inquire(file='Fiber_info.dat',exist=Fiber_info_exists)                 
                     if (Fiber_info_exists) then
                         write(*,*) ''

@@ -55,6 +55,8 @@ module ModMultiscaleHomogenizations
             real(8) , dimension(AnalysisSettings%AnalysisDimension,AnalysisSettings%AnalysisDimension) :: JacobX
             real(8) , dimension(:)   , pointer :: ShapeFunctions
             integer                              :: NumberOfThreads
+            real(8) , pointer , dimension(:)    :: CauchyFiber
+            real(8)                             :: WeightFiber, A0f, L0f
             !************************************************************************************
 
             !************************************************************************************
@@ -88,6 +90,9 @@ module ModMultiscaleHomogenizations
 
                 ! Allocating memory for the Cauchy Stress (Plain States, Axisymmetric or 3D)
                 Cauchy => Stress_Memory( 1:AnalysisSettings%StressSize )
+                if (AnalysisSettings%EmbeddedElements) then
+                    CauchyFiber => Stress_Memory( 1:AnalysisSettings%StressSize )
+                endif
 
                 ! Number of degrees of freedom
                 call ElementList(e)%El%GetElementNumberDOF(AnalysisSettings,NDOFel)
@@ -129,6 +134,38 @@ module ModMultiscaleHomogenizations
                     HomogenizedStress = HomogenizedStress + (PiolaVoigt*Weight(gp)*detJX*FactorAxiX)/TotalVolX
                     !$OMP END CRITICAL
                 enddo
+                
+                
+                !----------------------------------------------------------------------------
+                ! Analysis with embedded elements
+                            
+                if (AnalysisSettings%EmbeddedElements) then
+                    do gp = 1 , size(ElementList(e)%El%ExtraGaussPoints)
+                        !Get Cauchy Stress
+                        CauchyFiber => ElementList(e)%El%ExtraGaussPoints(gp)%Stress
+                        CauchyTensor = VoigtSymToTensor2(CauchyFiber)
+                    
+                        !Get fiber weight
+                        WeightFiber = ElementList(e)%El%ExtraGaussPoints(gp)%AdditionalVariables%Weight
+                    
+                        !Get initial area and lenght
+                        A0f = ElementList(e)%El%ExtraGaussPoints(gp)%AdditionalVariables%A0
+                        L0f = ElementList(e)%El%ExtraGaussPoints(gp)%AdditionalVariables%L0
+
+                        !Compute First Piola
+                        PiolaTensor = StressTransformation(ElementList(e)%El%ExtraGaussPoints(gp)%F,CauchyTensor,StressMeasures%Cauchy,StressMeasures%FirstPiola)
+
+                        !To Voigt
+                        PiolaVoigt = Tensor2ToVoigt(PiolaTensor)
+
+                        !Homogenized Stress
+                        !$OMP CRITICAL
+                        HomogenizedStress = HomogenizedStress + (0.5*L0f*A0f*PiolaVoigt*WeightFiber)/TotalVolX
+                        !$OMP END CRITICAL
+                    enddo
+                endif
+                
+                
             enddo
             !$OMP END DO
             !$OMP END PARALLEL
@@ -176,7 +213,11 @@ module ModMultiscaleHomogenizations
             !************************************************************************************
             DimProb = AnalysisSettings%AnalysisDimension
 
-            TotalVolX = AnalysisSettings%TotalVolX
+            TotalVolX = 0.0d0
+            !Loop over Elements
+            do e = 1,size(ElementList)
+                TotalVolX = TotalVolX + ElementList(e)%El%VolumeX
+            enddo
 
             FactorAxiX = 1.0d0 ! 3D Analysis
         
@@ -508,7 +549,11 @@ module ModMultiscaleHomogenizations
             !************************************************************************************
             DimProb = AnalysisSettings%AnalysisDimension
 
-            TotalVolX =  AnalysisSettings%TotalVolX
+            TotalVolX = 0.0d0
+            !Loop over Elements
+            do e = 1,size(ElementList)
+                TotalVolX = TotalVolX + ElementList(e)%El%VolumeX
+            enddo
       
             HomogenizedU = 0.0d0
         

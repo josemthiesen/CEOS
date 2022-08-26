@@ -18,6 +18,8 @@ module ModNonLinearSystemOfEquations
     type ClassNonLinearSystemOfEquations
 
         type(ClassStatus) :: Status
+        integer           :: it, nDOF
+        logical           :: isPeriodic
 
     contains
 
@@ -26,6 +28,8 @@ module ModNonLinearSystemOfEquations
         procedure :: EvaluateGradientSparse => EvaluateGradientSparseBase
         generic   :: EvaluateGradient       => EvaluateGradientFull , EvaluateGradientSparse
         procedure :: PostUpdate             => PostUpdateBase
+        procedure :: ReduceSystem => ReduceSystemBase
+        procedure :: ExpandResult => ExpandResultBase
 
     end type
 
@@ -56,5 +60,19 @@ module ModNonLinearSystemOfEquations
         class(ClassNonLinearSystemOfEquations)::this
         real(8),dimension(:)::X
     end subroutine
+    !__________________________________________________________________________________________________
+    subroutine ReduceSystemBase(this,R,G) !For systems with periodicity
+        class(ClassNonLinearSystemOfEquations)::this
+        class(ClassGlobalSparseMatrix) , pointer :: G
+        real(8),dimension(:)::R
+        stop "ReduceSystem Not Implemented"
+    end subroutine
+    !__________________________________________________________________________________________________
+    subroutine ExpandResultBase(this,Rred,Rfull,it) !For systems with periodicity
+        class(ClassNonLinearSystemOfEquations)::this
+        real(8),dimension(:)::Rred,Rfull
+        integer::it
+        stop "ExpandResult Not Implemented"
+    end subroutine    
 
 end module

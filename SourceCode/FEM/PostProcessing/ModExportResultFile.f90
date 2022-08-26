@@ -332,6 +332,11 @@ module ModExportResultFile
         if(FEA%AnalysisSettings%FiberReinforcedAnalysis) then
             call FEA%AdditionalMaterialModelRoutine()
         endif
+        
+        ! Calling the additional material routine to read information for the embedded elements
+         if(FEA%AnalysisSettings%EmbeddedElements) then
+             call FEA%AdditionalMaterialModelRoutine()
+         endif
 
         ! Restart Constitutive Model
         ! -----------------------------------------------------------------------------------
@@ -550,6 +555,11 @@ module ModExportResultFile
         if(FEA%AnalysisSettings%FiberReinforcedAnalysis) then
             call FEA%AdditionalMaterialModelRoutine()
         endif
+        
+         ! Calling the additional material routine to read information for the embedded elements
+         if(FEA%AnalysisSettings%EmbeddedElements) then
+             call FEA%AdditionalMaterialModelRoutine()
+         endif
         
         FEA%AnalysisSettings%StaggeredParameters%StabilityConst = 0.0
         

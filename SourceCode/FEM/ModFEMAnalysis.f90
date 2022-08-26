@@ -40,6 +40,7 @@ module ModFEMAnalysis
         type  (ClassAnalysis)           , pointer                    :: AnalysisSettings
         class (ClassBoundaryConditions) , pointer                    :: BC
         type  (ClassGlobalSparseMatrix) , pointer                    :: Kg
+        type  (ClassGlobalSparseMatrix) , pointer                    :: KgRed !for periodic
         
         !----------------------------------------------------------------------------------------
         

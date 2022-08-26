@@ -70,7 +70,8 @@ module ModNewtonRaphsonFull
             real(8)                                     :: w_atkin = 1.0d0
 
             integer :: it, i
-            real(8) :: normR , normR_solid, normR_fluid, R(size(X)) , DX(size(X)), norma, tol, tol_fluid
+            real(8) :: normR , normR_solid, normR_fluid, norma, tol, tol_fluid
+            real(8),allocatable,dimension(:) :: R , DX, DXFull
             integer :: Phase ! Indicates the material phase (1 = Solid; 2 = Fluid)
             
             !For Line Search
@@ -87,8 +88,16 @@ module ModNewtonRaphsonFull
 
             it = 0
             X=Xguess
+            
+            if (SOE%isPeriodic) then
+                allocate(R(SOE%nDOF),DX(SOE%nDOF),DXFull(size(X))) !SOE%nDOF = DOF reduced system
+            else
+                allocate(R(size(X)),DX(size(X)))
+            endif
                                     
             LOOP: do while (.true.)
+                
+                SOE%it = it
                 
                 !---------------------------------------------------------------------------------------------------------------
                 ! Evaluating Residual - Nonlinear System of Equations
@@ -129,7 +138,7 @@ module ModNewtonRaphsonFull
                     case (NewtonRaphsonFull_NormTypes%MaximumAbsoluteValue)
                         if (Phase.eq.1) then
                             tol = this%tol_force_mechanical
-                            if (size(R,1).eq.this%sizeR_solid) then ! If it is not biphasic monolithic, then..
+                            if ((size(R,1).eq.this%sizeR_solid) .OR. (SOE%isPeriodic)) then ! If it is not biphasic monolithic, then..
                                 normR = maxval( dabs(R))
                                 if (this%ShowInfo) write(*,'(12x,a,i3,a,e16.9)') 'IT: ',IT ,'  NORM: ',normR
                                 if (normR<tol) then ! Converged by solid residual norm (normal or solid biphasic analysis)
@@ -195,9 +204,14 @@ module ModNewtonRaphsonFull
                     call this%Status%SetError(NewtonRaphsonFull_Errors%LinearSystemError,'Error Solving Linear System')
                     return
                 endif
-                                
-                call this%LineSearch%UpdateX(SOE, R, DX, X)
-
+                             
+                if (SOE%isPeriodic) then
+                    call SOE%ExpandResult(DX,DXFull,it)
+                    X = X + DXFull
+                else
+                    call this%LineSearch%UpdateX(SOE, R, DX, X)
+                endif
+                
                 call SOE%PostUpdate(X)
                 !---------------------------------------------------------------------------------------------------------------
 

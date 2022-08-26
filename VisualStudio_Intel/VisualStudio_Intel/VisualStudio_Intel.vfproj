@@ -106,6 +106,7 @@
 		<Filter Name="Modules">
 		<File RelativePath="..\..\SourceCode\FEM\Modules\ModAnalysis.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Modules\ModFEMSoEMultiscaleMinimal.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\Modules\ModFEMSoEMultiscalePeriodic.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Modules\ModFEMSystemOfEquations.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Modules\ModFEMSystemOfEquationsFluid.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Modules\ModFEMSystemOfEquationsFluidMinimal.f90"/>

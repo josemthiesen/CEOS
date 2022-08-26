@@ -1,11 +1,10 @@
-
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ! Post Processor Results
 !-----------------------------------------------------------------------------------------
 POST PROCESSOR 
 
-	Post Processor = HyperView 12 !GiD 7 !
-	Results = Displacements , von Mises Logarithmic Strain, Pressure, Referential Relative Velocity, Jacobian Solid Velocity Divergent
+	Post Processor = HyperView 12
+	Results = Displacements , von Mises Logarithmic Strain
 	File Name = hypermesh_results.hwascii
 	
 END POST PROCESSOR 
@@ -23,35 +22,31 @@ END POST PROCESSOR
 ! Variable Name: Cauchy Stress or Logarithmic Strain
 ! Components: 1=XX ; 2=YY ; 3=ZZ ; 4=XY ; 5=YZ; 6=XZ ; All
 !-----------------------------------------------------------------------------------------
-! Variable Name: Deformation Gradient:
+! Variable Name: Deformation Gradient
 ! Components: 1=XX ; 2=YX ; 3=ZX ; 4=XY ; 5=YY ; 6=ZY ; 7=XZ ; 8=YZ ; 9=ZZ ; All
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-
 NUMBER OF PROBES = 3
-
-!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-
 
 PROBE
 	Location = Micro Structure
 	File Name = Homogenized_F.probe
 	Variable Name = Deformation Gradient
-	Components = All !1 , 5 , 9 !
+	Components = All
 END PROBE
 
 PROBE
 	Location = Micro Structure
 	File Name = Homogenized_Cauchy_Stress.probe
 	Variable Name = Cauchy Stress 
-	Components = All !1 !All
+	Components = All
 END PROBE
 
 PROBE
 	Location = Micro Structure
 	File Name = Homogenized_First_Piola.probe
 	Variable Name = First Piola Stress 
-	Components = All !1 !All
+	Components = All
 END PROBE
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX

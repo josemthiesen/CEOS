@@ -48,6 +48,7 @@ module ModBoundaryConditions
         type (ClassNodalBC),        allocatable, dimension(:) :: NodalForceBC , NodalDispBC
         type (ClassNodalBC),        allocatable, dimension(:) :: NodalFluxBC , NodalPresBC
         type (ClassBoundaryNodes),  allocatable, dimension(:) :: BoundaryNodes
+        integer                                               :: it
 
         contains
 

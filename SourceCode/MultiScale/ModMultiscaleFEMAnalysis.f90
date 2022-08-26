@@ -170,6 +170,11 @@ module ModMultiscaleFEMAnalysis
                     
                         call QuasiStaticAnalysisFEM( this%ElementList, this%AnalysisSettings, this%GlobalNodesList , &
                                                         this%BC, this%Kg, this%NLSolver )
+                        
+                    elseif (this%AnalysisSettings%MultiscaleModel == MultiscaleModels%Periodic) then
+                            
+                            call QuasiStaticAnalysisMultiscalePeriodicFEM( this%ElementList, this%AnalysisSettings, this%GlobalNodesList , &
+                                                         this%BC, this%Kg, this%KgRed, this%NLSolver )
 
                     elseif (MultiscaleModel == MultiscaleModels%Minimal .or. &
                             MultiscaleModel == MultiscaleModels%MinimalLinearD1 .or. &
@@ -425,7 +430,240 @@ module ModMultiscaleFEMAnalysis
             !************************************************************************************   
         end subroutine
         !=================================================================================================                                                     
-                                                        
+         
+        !##################################################################################################
+        subroutine QuasiStaticAnalysisMultiscalePeriodicFEM( ElementList , AnalysisSettings , GlobalNodesList , BC  , &
+                                           Kg , KgRed, NLSolver )
+
+            !************************************************************************************
+            ! DECLARATIONS OF VARIABLES
+            !************************************************************************************
+            ! Modules and implicit declarations
+            ! -----------------------------------------------------------------------------------
+            use ModFEMSoEMultiscalePeriodic
+
+            implicit none
+
+            ! Input variables
+            ! -----------------------------------------------------------------------------------
+            type (ClassAnalysis)                                    :: AnalysisSettings
+            type (ClassElementsWrapper),     pointer, dimension(:)  :: ElementList
+            type (ClassNodes),               pointer, dimension(:)  :: GlobalNodesList
+            class (ClassBoundaryConditions),  pointer               :: BC
+            type (ClassGlobalSparseMatrix),  pointer                :: Kg
+            type (ClassGlobalSparseMatrix),  pointer                :: KgRed
+            class(ClassNonLinearSolver),     pointer                :: NLSolver
+
+            ! Internal variables
+            ! -----------------------------------------------------------------------------------
+            real(8), allocatable, dimension(:) :: U , R , DeltaUTay , UTay_alpha0, Uconverged, Fext , DeltaFext
+            real(8) , dimension(3)   :: UMacro , DeltaUMacro             ! Used only in multiscale analysis
+            real(8) , dimension(9)   :: FMacro , DeltaFMacro             ! Used only in multiscale analysis
+            real(8) :: DeltaTime , Time_alpha0
+            real(8) :: alpha, alpha_max, alpha_min, alpha_aux
+            integer :: LC , ST , nSteps, nLoadCases ,  CutBack, SubStep, e, gp, nDOF, FileID_FEMAnalysisResults, Flag_EndStep
+            real(8), parameter :: GR= (1.0d0 + dsqrt(5.0d0))/2.0d0
+
+            integer, allocatable, dimension(:) :: KgValZERO, KgValONE
+            integer :: contZERO, contONE
+            
+            type(ClassMultiscalePeriodicFEMSoE) :: FEMSoE
+
+            FileID_FEMAnalysisResults = 42
+            open (FileID_FEMAnalysisResults,file='FEMAnalysis.result',status='unknown')
+
+            !************************************************************************************
+
+            !************************************************************************************
+            ! QUASI-STATIC ANALYSIS
+            !***********************************************************************************
+            call AnalysisSettings%GetTotalNumberOfDOF (GlobalNodesList, nDOF)
+
+            write(FileID_FEMAnalysisResults,*) 'Total Number of DOF = ', nDOF
+
+            FEMSoE % ElementList => ElementList
+            FEMSoE % AnalysisSettings = AnalysisSettings
+            FEMSoE % GlobalNodesList => GlobalNodesList
+            FEMSoE % BC => BC
+            FEMSoE % Kg => Kg
+            FEMSoE % KgRed => KgRed
+
+            FEMSoE % isPeriodic = .TRUE.
+            
+            allocate( FEMSoE % Fint(nDOF) , FEMSoE % Fext(nDOF) , FEMSoE % UTay0(nDOF) , FEMSoE % UTay1(nDOF) )
+
+            ! Allocating arrays
+            allocate( R(nDOF), U(nDOF), DeltaUTay(nDOF), UTay_alpha0(nDOF), Uconverged(nDOF)  )
+
+            allocate(FEMSoE%TMat)
+            write(*,*) ''
+            write(*,*) 'Building periodicity matrix...'
+            call FEMSoE%BuildT
+            FEMSoE%TMatDescr(1) = 'G'
+            FEMSoE%TMatDescr(4) = 'F'
+            write(*,*) 'Done!'
+            write(*,*)            
+
+            U = 0.0d0
+            UTay_alpha0 = 0.0d0
+
+            nLoadCases = BC%GetNumberOfLoadCases()
+
+            ! Escrevendo os resultados para o tempo zero
+            ! NOTE (Thiago#1#11/19/15): OBS.: As condições de contorno iniciais devem sair do tempo zero.
+            Flag_EndStep = 1
+            call WriteFEMResults( U, 0.0d0, 1, 1, 0, 0, Flag_EndStep, FileID_FEMAnalysisResults, NumberOfIterations=0  )
+
+
+            !LOOP - LOAD CASES
+            LOAD_CASE:  do LC = 1 , nLoadCases
+
+                write(*,'(a,i3)')'Load Case: ',LC
+                write(*,*)''
+
+                nSteps = BC%GetNumberOfSteps(LC)
+
+               ! LOOP - STEPS
+                STEPS:  do ST = 1 , nSteps
+
+                    write(*,'(4x,a,i3,a,i3,a)')'Step: ',ST,' (LC: ',LC,')'
+                    write(*,*)''
+
+                    ! Mapeando os graus de liberdade da matrix esparsa para a aplicação
+                    ! da CC de deslocamento prescrito
+                    !-----------------------------------------------------------------------------------
+                    if ( (LC == 1) .and. (ST == 1) ) then
+
+                        allocate(BC%FixedSupport%dof(24))
+                        BC%FixedSupport%dof = FEMSoE%verticesDOF                       
+                        
+                        allocate( KgValZERO(size(FEMSoE%Kg%Val)), KgValONE(size(FEMSoE%Kg%Val)) )
+                        
+                        call BC%AllocateFixedSupportSparseMapping(FEMSoE%Kg, KgValZERO, KgValONE, contZERO, contONE)
+                        allocate( FEMSoE%FixedSupportSparseMapZERO(contZERO), FEMSoE%FixedSupportSparseMapONE(contONE) )
+                        FEMSoE%FixedSupportSparseMapZERO(:) = KgValZERO(1:contZERO)
+                        FEMSoE%FixedSupportSparseMapONE(:) = KgValONE(1:contONE)
+
+                        deallocate( KgValZERO, KgValONE )
+
+                    end if
+                    !-----------------------------------------------------------------------------------
+                    
+                    call BC%GetTimeInformation(LC,ST,Time_alpha0,DeltaTime)
+
+                    Uconverged = U
+
+                    alpha_max = 1.0d0 ; alpha_min = 0.0d0
+                    alpha = alpha_max
+
+                    CutBack = 0 ; SubStep = 0
+
+                    SUBSTEPS: do while(.true.)
+
+                        call BC%GetBoundaryConditions(AnalysisSettings, GlobalNodesList, LC, ST, Fext, DeltaFext, FEMSoE%DispDOF, UTay_alpha0, DeltaUTay, FMacro , DeltaFMacro, UMacro , DeltaUMacro)
+                        
+                        FEMSoE % UTay0 = UTay_alpha0
+                        
+                        FEMSoE % Time = Time_alpha0 + alpha*DeltaTime
+                        FEMSoE % UTay1 = FEMSoE%UTay0 + alpha*DeltaUTay
+
+                        call NLSolver%Solve( FEMSoE , XGuess = Uconverged , X = U , Phase = 1)
+
+                        IF (NLSolver%Status%Error) then
+
+                            write(*,'(12x,a)') 'Not Converged - '//Trim(NLSolver%Status%ErrorDescription)
+                            write(*,'(12x,a)') Trim(FEMSoE%Status%ErrorDescription)
+                            write(*,*)''
+
+                            alpha = alpha_min + (1.0d0-1.0d0/GR)*( alpha - alpha_min )
+
+                            U = Uconverged
+
+                            ! Update Mesh Coordinates
+                            if (AnalysisSettings%NLAnalysis == .true.) then
+                                call UpdateMeshCoordinates(GlobalNodesList,AnalysisSettings,U)
+                            endif
+
+                            CutBack = CutBack + 1
+                            SubStep = 1
+                            if ( CutBack .gt. AnalysisSettings%MaxCutBack ) then
+                                write(*,'(a,i3,a,i3,a,i3,a)') 'Load Case: ',LC,' Step: ', ST , ' did not converge with ', AnalysisSettings%MaxCutBack, ' cut backs.'
+                                stop
+                            endif
+                            
+                            write(*,'(8x,a,i3)') 'Cut Back: ',CutBack
+                            write(*,'(12x,a,i3,a,f7.4,a)') 'SubStep: ',SubStep,' (Alpha: ',alpha,')'
+
+                            !---------------------------------------------------------------------------
+                        ELSEIF (alpha==1.0d0) then
+
+                            SubStep = SubStep + 1
+
+                            Flag_EndStep = 1
+                            call WriteFEMResults( U, FEMSoE%Time, LC, ST, CutBack, SubStep, Flag_EndStep, &
+                                                  FileID_FEMAnalysisResults, NLSolver%NumberOfIterations )
+
+                            exit SUBSTEPS
+
+                            !---------------------------------------------------------------------------
+                        ELSE
+
+                            Uconverged = U
+                            
+                            SubStep = SubStep + 1
+
+                            alpha_aux = alpha_min
+
+                            alpha_min = alpha
+
+                            alpha = min(alpha + GR*(alpha - alpha_aux),1.0d0)
+
+                            write(*,'(12x,a,i3,a,f7.4,a)') 'SubStep: ',SubStep,' (Alpha: ',alpha,')'
+
+                            Flag_EndStep = 0
+                            call WriteFEMResults( U, FEMSoE%Time, LC, ST, CutBack, SubStep, Flag_EndStep, &
+                                                  FileID_FEMAnalysisResults,  NLSolver%NumberOfIterations  )
+
+                        ENDIF
+
+
+                    enddo SUBSTEPS
+
+
+
+                    ! -----------------------------------------------------------------------------------
+                    ! SWITCH THE CONVERGED STATE: StateVariable_n := StateVariable_n+1
+                    ! -----------------------------------------------------------------------------------
+                    do e=1,size(elementlist)
+                        do gp=1,size(elementlist(e)%el%GaussPoints)
+                            call ElementList(e)%el%GaussPoints(gp)%SwitchConvergedState()
+                        enddo
+                    enddo
+                    ! -----------------------------------------------------------------------------------
+
+
+
+
+                    write(*,'(4x,a,i3)')'End Step: ',ST
+                    write(*,*)''
+
+                enddo STEPS
+
+                write(*,'(a,i3)')'End Load Case: ',LC
+                write(*,*)''
+                write(*,*)''
+
+            enddo LOAD_CASE
+
+            close (FileID_FEMAnalysisResults)
+            !************************************************************************************
+
+
+        end subroutine
+        !##################################################################################################
+
+                                                            
+                                                            
         !=================================================================================================
         subroutine AllocateKgSparseMultiscale (this)
 
@@ -441,11 +679,15 @@ module ModMultiscaleFEMAnalysis
                 !************************************************************************************
                 select case (this%AnalysisSettings%MultiscaleModel) 
                     case (MultiscaleModels%Taylor)
-                        !call AllocateKgSparse(this)
+                        !call AllocateGlobalSparseStiffnessMatrix(this)
                         call AllocateKgSparseUpperTriangular(this)
                     case (MultiscaleModels%Linear)
-                        !call AllocateKgSparse(this)
+                        !call AllocateGlobalSparseStiffnessMatrix(this)
                         call AllocateKgSparseUpperTriangular(this)
+                    case (MultiscaleModels%Periodic) 
+                        call AllocateGlobalSparseStiffnessMatrix(this)
+                        !call AllocateKgSparseUpperTriangular
+                        allocate(this%KgRed)
                     case (MultiscaleModels%Minimal)
                         !call AllocateKgSparseMultiscaleMinimalFull(this)
                         call AllocateKgSparseMinimalUpperTriangular(this)                

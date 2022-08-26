@@ -15,9 +15,9 @@
 ANALYSIS SETTINGS
 
 	Multiscale Analysis =  True
-	Multiscale Model = Minimal !MinimalLinearD1 !Linear !Taylor !Minimal 
+	Multiscale Model = Periodic !MinimalLinearD1 !Linear !Taylor !Minimal 
 	Multiscale Model Fiber Axial Direction = X !Z Y	
-	Problem Type = Biphasic !
+	Problem Type = Mechanical !
 	Solution Scheme = Sequential !Sequential
 	Multiscale Model Fluid = Minimal !Linear !Taylor
 	Fiber Reinforced Analysis = False !True!False
@@ -45,7 +45,7 @@ NONLINEAR SOLVER
 
 	Newton_Raphson_Full
 	
-	Tol_Force_Mechanical = 1e-6
+	Tol_Force_Mechanical = 1e-2
 	Tol_Flux_Biphasic = 1e-6
 	MaxIter = 500
 
@@ -99,7 +99,7 @@ END PERMEABILITY
 
 MESH AND BOUNDARY CONDITIONS
 
-	Mesh File = rve0-poro.cdb !unconfined_3d_quarter_d2xh2_5000.cdb !unconfined_3d_quarter_d2xh2_ref2_10000.cdb !confined_3d_mesh_quarter_d2xh2_ref1.cdb !Quarto_cilindro_Hexa_Confi_refino.cdb ! Quarto_cilindro_Hexa_menor_d_confi.cdb !quarto_cilindro_cartilagem_u20p8_grosseiro.cdb ! Quarto_cilindro_Hexa_SemiConfi_grosseiro.cdb !Quarto_cilindro_Hexa_SemiConfi.cdb !Quarto_cilindro_Hexa_Confi.cdb   !quarto_cilindro_cartilagem_u20p8_grosseiro.cdb !!Quarto_Cilindro_Cartilagem_tetra.cdb!
+	Mesh File = rve3.cdb !unconfined_3d_quarter_d2xh2_5000.cdb !unconfined_3d_quarter_d2xh2_ref2_10000.cdb !confined_3d_mesh_quarter_d2xh2_ref1.cdb !Quarto_cilindro_Hexa_Confi_refino.cdb ! Quarto_cilindro_Hexa_menor_d_confi.cdb !quarto_cilindro_cartilagem_u20p8_grosseiro.cdb ! Quarto_cilindro_Hexa_SemiConfi_grosseiro.cdb !Quarto_cilindro_Hexa_SemiConfi.cdb !Quarto_cilindro_Hexa_Confi.cdb   !quarto_cilindro_cartilagem_u20p8_grosseiro.cdb !!Quarto_Cilindro_Cartilagem_tetra.cdb!
 	Preprocessor = HyperMesh 
 	Time Discretization File = Time_Discretization.dat
 		

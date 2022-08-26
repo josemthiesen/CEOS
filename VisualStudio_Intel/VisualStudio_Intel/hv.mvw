@@ -1,5 +1,5 @@
 { safe_quotes_on }
-{ GRAPHIC_FILE_1 = "rve0.cdb"}
+{ GRAPHIC_FILE_1 = "rve3.cdb"}
 { RESULT_FILE_1 = "hypermesh_results.hwascii"}
 *Id("HyperWorks", "13.*")
 *BeginPalette()
@@ -13,10 +13,10 @@
     *BeginAnimator(Transient)
         *CurrentTime(1,0)
         *StartTime(0,0)
-        *EndTime(1,500000000)
+        *EndTime(1,299999952)
         *Increment(Forward, Frame, 1, BounceOff)
     *EndAnimator()
-    *WindowIDs(1)
+    *WindowIDs(3)
     *BeginWindow(Animation)         // Window 1
         *IsActive()
         *ExportFormat("PNG")
@@ -30,7 +30,7 @@
                     *CurrentSubcase(1)
                 *EndResult()
                 *BeginPart(2, "Part", "PART", 0)
-                    *Attribute(On, IdOff, 26, Opa, Sha, NoL, InFit, InCut, InIso)
+                    *Attribute(On, IdOff, 26, Opa, Sha, Ftl, InFit, InCut, InIso)
                 *EndPart()
                 *BeginGroup("3D Set", "Off", "Off", "255 255   0", 1, "wire")
                     *BeginSelection(Part, SelectAll, "User_Set", 1)
@@ -48,12 +48,12 @@
                     *ResolvedInSystem(0)
                     *AveragingMethod("Simple", -0.01)
                     *DiscreteColor(yes)
-                    *LegendMaxThreshold("On", 0.2937)
-                    *LegendMinThreshold(On, 0.2825)
+                    *LegendMaxThreshold("On", 0.4066)
+                    *LegendMinThreshold(On, 0.2683)
                     *BeginLegend()
                         *LegendType("static")
                         *NumCols(10)
-                        *MinMax(0.260963, 0.427321)
+                        *MinMax(0.170449, 1.44439)
                         *ColorRGB("0 0 200", 
                                   "14 144 244", 
                                   "8 210 213", 
@@ -80,15 +80,15 @@
                         *EntityLabel("show")
                         *LegendPosition("UpperLeft")
                         *NumOverriddenValues(9)
-                        *OverriddenValues(1, 0.2825, 
-                                          2, 0.2842, 
-                                          3, 0.2851, 
-                                          4, 0.2858, 
-                                          5, 0.2863, 
-                                          6, 0.2869, 
-                                          7, 0.2878, 
-                                          8, 0.2892, 
-                                          9, 0.2937)
+                        *OverriddenValues(1, 0.2683, 
+                                          2, 0.283, 
+                                          3, 0.2929, 
+                                          4, 0.3015, 
+                                          5, 0.3107, 
+                                          6, 0.3222, 
+                                          7, 0.3377, 
+                                          8, 0.3609, 
+                                          9, 0.4066)
                         *BackGroundColor(" 44  85 126")
                         *Transparency("On")
                         *Filter("LINEAR")
@@ -126,14 +126,14 @@
                 *TitleFlag("Yes")
             *EndNote()
             *BeginMeasures(1, "Static MinMax Result", "ResultStaticMinMax", "Off")
-                *ReferenceStep(1.50000000)
+                *ReferenceStep(1.00000000)
                 *Attribute("IDOn", "ScalarOn", "MinOn", "ScalarOn", "MaxOn", "AutoHideOff")
                 *NumericFormat("Fixed", 3)
                 *Font("Arial", "regular", "regular", 10)
                 *Color(1)
             *EndMeasures()
             *BeginMeasures(2, "Dynamic MinMax Result", "ResultDynamicMinMax", "Off")
-                *ReferenceStep(1.50000000)
+                *ReferenceStep(1.00000000)
                 *Attribute("IDOn", "ScalarOn", "MinOn", "ScalarOn", "MaxOn", "AutoHideOff")
                 *NumericFormat("Fixed", 3)
                 *Font("Arial", "regular", "regular", 10)
@@ -145,7 +145,7 @@
                   -0.707107, 0.353553, -0.612372, 0, 
                   -3.60866e-012, 0.866025, 0.5, 0, 
                   0, 0, 0, 1)
-            *ClippingRegion(-23.3345, 23.3345, -18.812, 18.812, -22.1212, 22.1212)
+            *ClippingRegion(-107.003, 108.348, -78.49, 77.8898, -97.4902, 97.6179)
         *EndGraphic()
     *EndWindow()
     *TimeScales(1)
@@ -154,3 +154,9 @@
     *SyncTolerance(2e-008)
     *SyncTableGenerationPolicy(ALL_BLOCKS)
 *EndPage()
+*BeginEntityTagTable()
+    *BeginEntityTag("Animation_1_1", "Window", hwIWindow:p1w1)
+    *EndEntityTag()
+    *BeginEntityTag("Page_1", "Text", hwIPage:p1)
+    *EndEntityTag()
+*EndEntityTagTable()
