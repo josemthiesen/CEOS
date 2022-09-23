@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <VisualStudioUserFile ProjectCreator="Intel Fortran" Keyword="Console Application" Version="11.0" ProjectIdGuid="{D211A0AD-499F-41B0-B387-12D13869BD5D}">
 	<Configurations>
-		<Configuration Name="Debug|Win32" CommandArguments="/settings Settings.dat /postprocess Post_Processing.post"/>
-		<Configuration Name="Release|Win32" CommandArguments="/settings Settings.dat /postprocess Post_Processing.post"/>
-		<Configuration Name="Debug|x64" CommandArguments="/settings Settings.dat /postprocess Post_Processing.post"/>
-		<Configuration Name="Release|x64" CommandArguments="/settings Settings.dat /postprocess Post_Processing.post"/></Configurations></VisualStudioUserFile>
+		<Configuration Name="Debug|Win32" CommandArguments="/settings Settings.dat /solve /postprocess Post_Processing.post"/>
+		<Configuration Name="Release|Win32" CommandArguments="/settings Settings.dat /solve /postprocess Post_Processing.post"/>
+		<Configuration Name="Debug|x64" CommandArguments="/settings Settings.dat /solve /postprocess Post_Processing.post"/>
+		<Configuration Name="Release|x64" CommandArguments="/settings Settings.dat /solve /postprocess Post_Processing.post"/></Configurations></VisualStudioUserFile>

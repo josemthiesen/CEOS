@@ -113,6 +113,7 @@
 		<File RelativePath="..\..\SourceCode\FEM\Modules\ModFEMSystemOfEquationsMonolithicBiphasic.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Modules\ModFEMSystemOfEquationsSolid.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Modules\ModFEMSystemOfEquationsSolidMinimal.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\Modules\ModFEMSystemOfEquationsSolidPeriodic.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Modules\ModGlobalFEM.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Modules\ModGlobalFEMBiphasic.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Modules\ModInterfaces.f90"/>

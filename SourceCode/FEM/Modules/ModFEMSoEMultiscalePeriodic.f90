@@ -41,7 +41,7 @@ module ModFEMSoEMultiscalePeriodic
         procedure :: EvaluateSystem => EvaluateR
         procedure :: EvaluateGradientSparse => EvaluateKt
         procedure :: PostUpdate => FEMUpdateMesh
-        procedure :: ExpandResult => ExpandFluctuation
+        procedure :: ExpandPeriodicVector => ExpandVector
         procedure :: BuildT
 
     end type
@@ -79,6 +79,7 @@ module ModFEMSoEMultiscalePeriodic
 
         use ModInterfaces
         use ModMathRoutines
+        
         class(ClassMultiscalePeriodicFEMSoE)       :: this
         class(ClassGlobalSparseMatrix),pointer     :: G
         type(ClassGlobalSparseMatrix)              :: KgAux,KgRed
@@ -105,15 +106,16 @@ module ModFEMSoEMultiscalePeriodic
         allocate(RFull(nDOF))
         
         call TangentStiffnessMatrixPeriodic(this%AnalysisSettings , this%ElementList , nDOF, this%Kg) !Calculate full stiffness matrix
-
-        this%BC%it = this%it
+        this%BC%NewtonIteration = this%NewtonIteration
+        this%BC%StaggeredIteration = 0 ! Not biphasic
+        
         ! As CC de deslocamento prescrito estão sendo aplicadas no sistema Kx=R e não em Kx=-R!!!
         RFull = this%Fint
         RFull = -RFull
         call this%BC%ApplyBoundaryConditions(  this%Kg , RFull , this%DispDOF, this%UTay1 , this%UTay0, this%PrescDispSparseMapZERO, this%PrescDispSparseMapONE, this%FixedSupportSparseMapZERO, this%FixedSupportSparseMapONE )
         RFull = -RFull
         !Print for checking at first iteration
-        if ((this%it==0) .AND. (this%PrintMats)) call OutputSparseMatrix(this%Kg,'Kg.txt',nDOF,nDOF)
+        if ((this%NewtonIteration==0) .AND. (this%PrintMats)) call OutputSparseMatrix(this%Kg,'Kg.txt',nDOF,nDOF)
                 
         allocate(KgAux%RowMap(nDOFRed+1))
                
@@ -128,7 +130,7 @@ module ModFEMSoEMultiscalePeriodic
         !Calculate KgAux = Tmat'*Kg
         call mkl_dcsrmultcsr('T', 2, 0, nDOF, nDOFRed, nDOF, this%TMat%Val, this%TMat%Col, this%TMat%RowMap, this%Kg%Val, this%Kg%Col, this%Kg%RowMap, KgAux%Val, KgAux%Col, KgAux%RowMap, nzmax, info)
         !Print for checking at first iteration
-        if ((this%it==0) .AND. (this%PrintMats)) call OutputSparseMatrix(KgAux,'KgAux.txt',nDOFRed,nDOF)
+        if ((this%NewtonIteration==0) .AND. (this%PrintMats)) call OutputSparseMatrix(KgAux,'KgAux.txt',nDOFRed,nDOF)
         
         allocate(KgRed%RowMap(nDOFRed+1))
         !Calculate length of KgRed = KgAux*TMat
@@ -141,7 +143,7 @@ module ModFEMSoEMultiscalePeriodic
         !Calculate KgRed = KgAux*TMat
         call mkl_dcsrmultcsr('N', 2, 0, nDOFRed, nDOF, nDOFRed, KgAux%Val, KgAux%Col, KgAux%RowMap, this%TMat%Val, this%TMat%Col, this%TMat%RowMap, KgRed%Val, KgRed%Col, KgRed%RowMap, nzmax, info)
         !Print for checking  at first iteration
-        if ((this%it==0) .AND. (this%PrintMats)) call OutputSparseMatrix(KgRed,'KgRedFull.txt',nDOFRed,nDOFRed)
+        if ((this%NewtonIteration==0) .AND. (this%PrintMats)) call OutputSparseMatrix(KgRed,'KgRedFull.txt',nDOFRed,nDOFRed)
         
         deallocate(KgAux%RowMap,KgAux%Val,KgAux%Col)
         
@@ -164,7 +166,7 @@ module ModFEMSoEMultiscalePeriodic
 
         call ConvertToCoordinateFormatUpperTriangular( KgRedSparse , this%KgRed%Row , this%KgRed%Col , this%KgRed%Val , this%KgRed%RowMap)
         !Print for checking  at first iteration
-        if ((this%it==0) .AND. (this%PrintMats)) call OutputSparseMatrix(this%KgRed,'KgRedFinal.txt',nDOFRed,nDOFRed)
+        if ((this%NewtonIteration==0) .AND. (this%PrintMats)) call OutputSparseMatrix(this%KgRed,'KgRedFinal.txt',nDOFRed,nDOFRed)
         
         call SparseMatrixKill(KgRedSparse)
         
@@ -191,28 +193,28 @@ module ModFEMSoEMultiscalePeriodic
 
 !--------------------------------------------------------------------------------------------------
     
-    subroutine ExpandFluctuation(this,Rred,Rfull,it)
+    subroutine ExpandVector(this,Vred,Vfull,variable)
 
         class(ClassMultiscalePeriodicFEMSoE) :: this
-        real(8),dimension(:)                 :: Rred,Rfull !DX, DXFull
-        real(8),allocatable,dimension(:)     :: RfullAux
-        integer :: nDOF, nDOFRed, it
-        
+        real(8),dimension(:)                 :: Vred,Vfull !Rred, Rfull, DX, DXfull
+        real(8),allocatable,dimension(:)     :: VfullAux
+        integer :: nDOF, nDOFRed
+        character (len=*) :: variable
         call this%AnalysisSettings%GetTotalNumberOfDOF (this%GlobalNodesList, nDOF)
         
         nDOFRed = this%nDOF !DOF reduced system
         
-        allocate(RfullAux(nDOF))
-        RfullAux = 0.0d0 !Calculates full fluctuations
-        call mkl_dcsrmv('N', nDOF, nDOFRed, 1.0d0, this%TMatDescr, this%TMat%Val, this%TMat%Col, this%TMat%RowMap(1:(size(this%TMat%RowMap)-1)), this%TMat%RowMap(2:size(this%TMat%RowMap)), Rred, 0.0d0, RfullAux) 
+        allocate(VfullAux(nDOF))
+        VfullAux = 0.0d0 !Calculates full fluctuations
+        call mkl_dcsrmv('N', nDOF, nDOFRed, 1.0d0, this%TMatDescr, this%TMat%Val, this%TMat%Col, this%TMat%RowMap(1:(size(this%TMat%RowMap)-1)), this%TMat%RowMap(2:size(this%TMat%RowMap)), Vred, 0.0d0, VfullAux) 
         
-        if (it==1) then
-            Rfull = (this%UTay1-this%UTay0) + RfullAux  !Sums with Taylor step
+        if (this%NewtonIteration .eq. 0 .and. this%StaggeredIteration .eq. 0  .and. variable == 'dx') then !not biphasic
+            Vfull = (this%UTay1-this%UTay0) + VfullAux  !Sums displacement fluctuation with Taylor step
         else
-            Rfull = RfullAux
+            Vfull = VfullAux
         endif
         
-        deallocate(RfullAux)
+        deallocate(VfullAux)
         
     end subroutine    
     

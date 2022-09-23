@@ -19,7 +19,6 @@ module ModMultiscaleHomogenizations
     
     contains
     
-        
         !=================================================================================================
         subroutine GetHomogenizedStress( AnalysisSettings, ElementList, HomogenizedStress )
             ! NOTE (Thiago#1#): A Homogeneização das tensões e do gradiente de deformação são funcionam para RVEs sem furos. 
@@ -1234,6 +1233,9 @@ module ModMultiscaleHomogenizations
             integer , pointer , dimension(:)     :: GM_fluid
             integer                              :: nDOFel_fluid, nNodesFluid
             integer                              :: NumberOfThreads
+            
+            real(8) , pointer , dimension(:)    :: CauchyFiber
+            real(8)                             :: WeightFiber, A0f, L0f
     
             !************************************************************************************
             ! Identity
@@ -1332,6 +1334,36 @@ module ModMultiscaleHomogenizations
                     HomogenizedTotalStress = HomogenizedTotalStress + (PiolaVoigt*Weight(gp)*detJX*FactorAxiX)/TotalVolX
                     !$OMP END CRITICAL
                 enddo
+                
+                !----------------------------------------------------------------------------
+                ! Analysis with embedded elements
+                            
+                if (AnalysisSettings%EmbeddedElements) then
+                    
+                    do gp = 1 , size(ElBiphasic%ExtraGaussPoints)
+                        !Get Cauchy Stress
+                        CauchyFiber => ElBiphasic%ExtraGaussPoints(gp)%Stress
+                        CauchyTensor = VoigtSymToTensor2(CauchyFiber)
+                    
+                        !Get fiber weight
+                        WeightFiber = ElBiphasic%ExtraGaussPoints(gp)%AdditionalVariables%Weight
+                    
+                        !Get initial area and lenght
+                        A0f = ElBiphasic%ExtraGaussPoints(gp)%AdditionalVariables%A0
+                        L0f = ElBiphasic%ExtraGaussPoints(gp)%AdditionalVariables%L0
+
+                        !Compute First Piola
+                        PiolaTensor = StressTransformation(ElBiphasic%ExtraGaussPoints(gp)%F,CauchyTensor,StressMeasures%Cauchy,StressMeasures%FirstPiola)
+
+                        !To Voigt
+                        PiolaVoigt = Tensor2ToVoigt(PiolaTensor)
+
+                        !Homogenized Stress
+                        !$OMP CRITICAL
+                        HomogenizedTotalStress = HomogenizedTotalStress + (0.5*L0f*A0f*PiolaVoigt*WeightFiber)/TotalVolX
+                        !$OMP END CRITICAL
+                    enddo
+                endif
             enddo
             !$OMP END DO
             !$OMP END PARALLEL

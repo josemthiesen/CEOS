@@ -540,7 +540,7 @@ module ModMultiscaleBoundaryConditions
         integer :: i , n , dof
         real(8) :: penaliza
         real(8) , allocatable, dimension(:) ::  Udirichlet, Rmod
-
+        
         !************************************************************************************
 
         !************************************************************************************
@@ -553,36 +553,38 @@ module ModMultiscaleBoundaryConditions
 
         ! Applying prescribed boundary conditions
         if ( size(Presc_Disp_DOF) .ne. 0 ) then
-
-            if (this%it==0) then
-
-            ! Loop over the prescribed degrees of freedom
-            do n=1,size(Presc_Disp_DOF)
-                dof=Presc_Disp_DOF(n)
-                ! Assembly the Dirichlet displacement BC
-                Udirichlet(dof) = ( Ubar(dof) - U(dof) )
-            enddo
-
-            ! Multiplicação esparsa - Vetor Força para montagem da condição de contorno de rearranjo
-            call mkl_dcsrgemv('N', size(U), Kg%Val, Kg%RowMap, Kg%Col, Udirichlet, Rmod)
-            !call mkl_dcsrsymv('U', size(U), Kg%Val, Kg%RowMap, Kg%Col, Udirichlet, Rmod)
-
-            !Resíduo Modificado
-            R = R - Rmod
             
-            endif
+            if (this%NewtonIteration .eq. 0 .and. this%StaggeredIteration .eq. 1) then ! Staggered iteration == 1 -> First iteration of biphasic staggered problem
+                ! Loop over the prescribed degrees of freedom
+                do n=1,size(Presc_Disp_DOF)
+                    dof=Presc_Disp_DOF(n)
+                    ! Assembly the Dirichlet displacement BC
+                    Udirichlet(dof) = ( Ubar(dof) - U(dof) )
+                enddo
 
-            !**************************************************************
-            ! Zerando linhas e colunas
-            !Kg%Val(PrescDispSparseMapZERO) = 0.0d0
+                ! Multiplicação esparsa - Vetor Força para montagem da condição de contorno de rearranjo
+                call mkl_dcsrgemv('N', size(U), Kg%Val, Kg%RowMap, Kg%Col, Udirichlet, Rmod)
+                !call mkl_dcsrsymv('U', size(U), Kg%Val, Kg%RowMap, Kg%Col, Udirichlet, Rmod)
+
+                !Resíduo Modificado
+                R = R - Rmod
             
-            ! Adicionando 1 na diagonal principal
-            !Kg%Val(PrescDispSparseMapONE) = 1.0d0
+            elseif (this%NewtonIteration .eq. 0 .and. this%StaggeredIteration .eq. 0) then ! Staggered iteration == 0 -> Not biphasic
+                ! Loop over the prescribed degrees of freedom
+                do n=1,size(Presc_Disp_DOF)
+                    dof=Presc_Disp_DOF(n)
+                    ! Assembly the Dirichlet displacement BC
+                    Udirichlet(dof) = ( Ubar(dof) - U(dof) )
+                enddo
 
-            ! Corrigindo resíduo por rearranjo de equações
-            !R(Presc_Disp_DOF) = Udirichlet(Presc_Disp_DOF)
+                ! Multiplicação esparsa - Vetor Força para montagem da condição de contorno de rearranjo
+                call mkl_dcsrgemv('N', size(U), Kg%Val, Kg%RowMap, Kg%Col, Udirichlet, Rmod)
+                !call mkl_dcsrsymv('U', size(U), Kg%Val, Kg%RowMap, Kg%Col, Udirichlet, Rmod)
 
-            !**************************************************************
+                !Resíduo Modificado
+                R = R - Rmod
+            
+            end if
 
         end if
 
@@ -641,6 +643,8 @@ module ModMultiscaleBoundaryConditions
         integer                                         :: NDOFTaylorandLinear
         integer                                         :: InitialDOFMultiscaleModel ! Define de Initial DOF of prescribed U (1 is the default)
         real(8) , dimension(3)                          :: MacroscopicU_Initial, MacroscopicU_Final
+        real(8), dimension(size(U))                     :: UDummy
+                
         !************************************************************************************
         Fext      = 0.0d0    ! Values of External Force       - Not used in Multiscale Analysis
         DeltaFext = 0.0d0    ! Values of Delta External Force - Not used in Multiscale Analysis
@@ -670,7 +674,8 @@ module ModMultiscaleBoundaryConditions
         Allocate( NodalDispDOF(nActive))
         call GetNodalMultiscaleDispBCandDeltaU(AnalysisSettings, GlobalNodesList, MacroscopicF_Initial, MacroscopicF_Final, &
                                                MacroscopicU_Initial, MacroscopicU_Final, NDOFTaylorandLinear, InitialDOFMultiscaleModel,  &
-                                               this%NodalMultiscaleDispBC, NodalDispDOF, U, DeltaUPresc)      
+                                               this%NodalMultiscaleDispBC, NodalDispDOF, UDummy, DeltaUPresc)    
+
         !************************************************************************************
     end subroutine
     !=================================================================================================

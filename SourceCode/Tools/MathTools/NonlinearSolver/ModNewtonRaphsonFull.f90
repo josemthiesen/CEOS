@@ -71,7 +71,7 @@ module ModNewtonRaphsonFull
 
             integer :: it, i
             real(8) :: normR , normR_solid, normR_fluid, norma, tol, tol_fluid
-            real(8),allocatable,dimension(:) :: R , DX, DXFull
+            real(8),allocatable,dimension(:) :: R , RFull, DX, DXFull
             integer :: Phase ! Indicates the material phase (1 = Solid; 2 = Fluid)
             
             !For Line Search
@@ -90,14 +90,14 @@ module ModNewtonRaphsonFull
             X=Xguess
             
             if (SOE%isPeriodic) then
-                allocate(R(SOE%nDOF),DX(SOE%nDOF),DXFull(size(X))) !SOE%nDOF = DOF reduced system
+                allocate(R(SOE%nDOF), RFull(size(X)), DX(SOE%nDOF),DXFull(size(X))) !SOE%nDOF = DOF reduced system
             else
                 allocate(R(size(X)),DX(size(X)))
             endif
                                     
             LOOP: do while (.true.)
                 
-                SOE%it = it
+                SOE%NewtonIteration = it
                 
                 !---------------------------------------------------------------------------------------------------------------
                 ! Evaluating Residual - Nonlinear System of Equations
@@ -206,8 +206,9 @@ module ModNewtonRaphsonFull
                 endif
                              
                 if (SOE%isPeriodic) then
-                    call SOE%ExpandResult(DX,DXFull,it)
-                    X = X + DXFull
+                    call SOE%ExpandPeriodicVector(DX,DXFull,'dx')
+                    call SOE%ExpandPeriodicVector(R,RFull,'residual')
+                    call this%LineSearch%UpdateX(SOE, RFull, DXFull, X)
                 else
                     call this%LineSearch%UpdateX(SOE, R, DX, X)
                 endif
