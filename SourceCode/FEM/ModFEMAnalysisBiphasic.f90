@@ -1406,6 +1406,12 @@ module ModFEMAnalysisBiphasic
             P = 0.0d0
             Pbar_alpha0 = 0.0d0
             
+            select type(FEMSoESolid)
+                class is(ClassFEMSystemOfEquationsSolidPeriodic)
+                    FEMSoESolid%UTay0 = 0.0d0
+            endselect
+                            
+            
             ! Staggered variables
             NormStagSolid       = 0.0d0
             NormStagFluid       = 0.0d0
