@@ -94,10 +94,10 @@ module ModNewtonRaphsonFull
             else
                 allocate(R(size(X)),DX(size(X)))
             endif
-                                    
+                     
+            SOE%NewtonIteration = it
+            
             LOOP: do while (.true.)
-                
-                SOE%NewtonIteration = it
                 
                 !---------------------------------------------------------------------------------------------------------------
                 ! Evaluating Residual - Nonlinear System of Equations
@@ -186,6 +186,7 @@ module ModNewtonRaphsonFull
                 !---------------------------------------------------------------------------------------------------------------
                 it=it+1
                 this%NumberOfIterations = it
+                SOE%NewtonIteration = it
                 !---------------------------------------------------------------------------------------------------------------
 
                 !---------------------------------------------------------------------------------------------------------------
@@ -208,9 +209,9 @@ module ModNewtonRaphsonFull
                 if (SOE%isPeriodic) then
                     call SOE%ExpandPeriodicVector(DX,DXFull,'dx')
                     call SOE%ExpandPeriodicVector(R,RFull,'residual')
-                    call this%LineSearch%UpdateX(SOE, RFull, DXFull, X)
+                    call this%LineSearch%UpdateX(SOE, RFull, GSparse, DXFull, X)
                 else
-                    call this%LineSearch%UpdateX(SOE, R, DX, X)
+                    call this%LineSearch%UpdateX(SOE, R, GSparse, DX, X)
                 endif
                 
                 call SOE%PostUpdate(X)
@@ -224,8 +225,11 @@ module ModNewtonRaphsonFull
         !==========================================================================================
         
         !==========================================================================================
-        subroutine UpdateX(this, SOE, R, DX, X)
-            !************************************************************************************           
+        subroutine UpdateX(this, SOE, R, GSparse, DX, X)
+        
+            use ModGlobalSparseMatrix
+
+        !************************************************************************************           
             ! DECLARATIONS OF VARIABLES
 		    !************************************************************************************
             ! Object
@@ -237,7 +241,8 @@ module ModNewtonRaphsonFull
             ! Input variables
             ! ---------------------------------------------------------------------------------
             real(8),dimension(:)                        :: R , DX
-             
+            class(ClassGlobalSparseMatrix),pointer      :: GSparse
+ 
             ! Output variables
             real(8),dimension(:)                        :: X          
 

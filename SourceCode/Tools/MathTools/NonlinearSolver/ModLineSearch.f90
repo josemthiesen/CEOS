@@ -85,8 +85,11 @@ module ModLineSearch
         !==========================================================================================
     
         !==========================================================================================
-        subroutine UpdateXBase(this, SOE, R, DX, X)
-        !************************************************************************************           
+        subroutine UpdateXBase(this, SOE, R, GSparse, DX, X)
+
+            use ModGlobalSparseMatrix
+
+            !************************************************************************************           
             ! DECLARATIONS OF VARIABLES
 		    !************************************************************************************
             ! Object
@@ -96,6 +99,7 @@ module ModLineSearch
             ! Input variables
             ! ---------------------------------------------------------------------------------
             real(8),dimension(:)                        :: R , DX
+            class(ClassGlobalSparseMatrix),pointer      :: GSparse
             ! Output variables
             real(8),dimension(:)                        :: X 
             stop "Error: UpdateXBase"
@@ -121,17 +125,22 @@ module ModLineSearch
         !==========================================================================================
         
         !==========================================================================================
-        subroutine UpdateXDefault(this, SOE, R, DX, X)
-        !************************************************************************************           
+        subroutine UpdateXDefault(this, SOE, R, GSparse, DX, X)
+
+            use ModGlobalSparseMatrix
+
+            !************************************************************************************           
             ! DECLARATIONS OF VARIABLES
 		    !************************************************************************************
             ! Object
             ! ---------------------------------------------------------------------------------
-            class(ClassLineSearch_NotActive)                      :: this
+            class(ClassLineSearch_NotActive)            :: this
             class(ClassNonLinearSystemOfEquations)      :: SOE
             ! Input variables
             ! ---------------------------------------------------------------------------------
             real(8),dimension(:)                        :: R , DX
+            class(ClassGlobalSparseMatrix),pointer      :: GSparse
+
             ! Output variables
             real(8),dimension(:)                        :: X 
             
@@ -180,23 +189,29 @@ module ModLineSearch
     
         
         !==========================================================================================
-        subroutine UpdateX_with_LineSearch(this, SOE, R, DX, X)
-        !************************************************************************************           
+        subroutine UpdateX_with_LineSearch(this, SOE, R, GSparse, DX, X)
+        
+            use ModGlobalSparseMatrix
+
+            !************************************************************************************           
             ! DECLARATIONS OF VARIABLES
 		    !************************************************************************************
             ! Object
             ! ---------------------------------------------------------------------------------
-            class(ClassLineSearch_Active)                      :: this
+            class(ClassLineSearch_Active)               :: this
             class(ClassNonLinearSystemOfEquations)      :: SOE
             ! Input variables
             ! ---------------------------------------------------------------------------------
             real(8),dimension(:)                        :: R , DX
+            class(ClassGlobalSparseMatrix),pointer      :: GSparse
+
             ! Output variables
             real(8),dimension(:)                        :: X 
             
             !For Line Search
             real(8) :: R_scalar_0, R_scalar_eta, eta, eta_old, rho_LS, criteria_LS, alpha
             real(8) :: R_new_LS(size(X)), X_new_LS(size(X))
+            real(8), allocatable, dimension(:) :: R_new_LS_Red
             integer :: count_LS
             logical :: Divergence_LS
            
@@ -209,7 +224,9 @@ module ModLineSearch
             rho_LS = this%Line_Search_Parameter
             Divergence_LS = .true.
             count_LS = 0
-                
+            
+            allocate(R_new_LS_Red(SOE%nDOF))
+            
             LS: do while (Divergence_LS)
                     
                 count_LS = count_LS + 1
@@ -218,6 +235,13 @@ module ModLineSearch
                 X_new_LS = X + eta*DX 
                 call SOE%PostUpdate(X_new_LS)
                 call SOE%EvaluateSystem(X_new_LS,R_new_LS)
+                
+                if (SOE%isPeriodic) then
+                    call SOE%EvaluateGradient(X_new_LS,R_new_LS_Red,GSparse)
+                    call SOE%ExpandPeriodicVector(R_new_LS_Red,R_new_LS,'residual')
+                else
+                    call SOE%EvaluateGradient(X_new_LS,R_new_LS,GSparse)
+                endif
                 
                 R_scalar_eta = dot_product(DX, R_new_LS)
                     

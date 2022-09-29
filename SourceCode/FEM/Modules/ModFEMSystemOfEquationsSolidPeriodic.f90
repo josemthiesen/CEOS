@@ -204,7 +204,7 @@ module ModFEMSystemOfEquationsSolidPeriodic
         VfullAux = 0.0d0 !Calculates full fluctuations
         call mkl_dcsrmv('N', nDOF, nDOFRed, 1.0d0, this%TMatDescr, this%TMat%Val, this%TMat%Col, this%TMat%RowMap(1:(size(this%TMat%RowMap)-1)), this%TMat%RowMap(2:size(this%TMat%RowMap)), Vred, 0.0d0, VfullAux) 
         
-        if (this%NewtonIteration .eq. 0 .and. this%StaggeredIteration .eq. 1  .and. variable == 'dx') then
+        if (this%NewtonIteration .eq. 1 .and. this%StaggeredIteration .eq. 1  .and. variable == 'dx') then
             Vfull = (this%UTay1-this%UTay0) + VfullAux  !Sums displacement fluctuation with Taylor step
         else
             Vfull = VfullAux

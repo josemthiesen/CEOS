@@ -883,9 +883,9 @@ module ModReadInputFile
             ! Reading the macroscopic pressure gradient components
             do k=1,3
                 call MacroscopicPresGrad(k)%ReadTimeDiscretization(TimeFileName)
-                    if (DataFile%CompareStrings(ListOfValues(k),"Zero")) then
+                    if (DataFile%CompareStrings(ListOfValues(k+1),"Zero")) then
                         call MacroscopicPresGrad(k)%CreateConstantLoadHistory(0.0d0)
-                    elseif (DataFile%CompareStrings(ListOfValues(k),"One")) then
+                    elseif (DataFile%CompareStrings(ListOfValues(k+1),"One")) then
                         call MacroscopicPresGrad(k)%CreateConstantLoadHistory(1.0d0)
                     else
                         call MacroscopicPresGrad(k)%ReadValueDiscretization(ListOfValues(k+1))
