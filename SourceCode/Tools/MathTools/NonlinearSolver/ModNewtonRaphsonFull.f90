@@ -96,6 +96,7 @@ module ModNewtonRaphsonFull
             endif
                      
             SOE%NewtonIteration = it
+            this%NumberOfIterations = 0
             
             LOOP: do while (.true.)
                 

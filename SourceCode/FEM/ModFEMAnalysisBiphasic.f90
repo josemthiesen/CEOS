@@ -886,7 +886,13 @@ module ModFEMAnalysisBiphasic
             ASolid = 0.0d0
             P = 0.0d0
             Pbar_alpha0 = 0.0d0
-
+            
+            select type(FEMSoESolid)
+                class is(ClassFEMSystemOfEquationsSolidPeriodic)
+                    FEMSoESolid%UTay0 = 0.0d0
+            endselect
+                          
+            
             ! Staggered variables
             NormStagSolid       = 0.0d0
             NormStagFluid       = 0.0d0
@@ -917,6 +923,7 @@ module ModFEMAnalysisBiphasic
 
                     call BCSolid%GetBoundaryConditions(AnalysisSettings, GlobalNodesList,  LC, ST, Fext_alpha0, DeltaFext,FEMSoESolid%DispDOF, &
                                                        U, DeltaUPresc, FMacro , DeltaFMacro, UMacro , DeltaUMacro )
+                    
                     call BCFluid%GetBoundaryConditions(AnalysisSettings, GlobalNodesList,  LC, ST, FluxExt_alpha0, DeltaFluxExt,FEMSoEFluid%PresDOF, P, DeltaPPresc, &
                                                         PMacro , DeltaPMacro, GradPMacro , DeltaGradPMacro )
 
@@ -1438,6 +1445,18 @@ module ModFEMAnalysisBiphasic
                 enddo
             enddo            
             
+            if (AnalysisSettings%EmbeddedElements) then !embedded elements - calculate in extra gauss points
+            
+            do e=1,size(elementlist)
+                do gp=1,size(elementlist(e)%el%ExtraGaussPoints)
+                    do i = 1, 3
+                        ElementList(e)%el%ExtraGaussPoints(gp)%F(i,i) = 1.0d0
+                    enddo
+                enddo
+            enddo  
+                
+            endif
+            
             !LOOP - LOAD CASES
             LOAD_CASE:  do LC = 1 , nLoadCases
 
@@ -1569,11 +1588,7 @@ module ModFEMAnalysisBiphasic
                         !write(*,'(8x,a,i3)') 'Cut Back: ',CutBack
                         !write(*,'(12x,a,i3,a,f7.4,a)') 'SubStep: ',SubStep,' (Alpha: ',alpha,')'
                         write(*,'(12x,a,i3)') 'SubStep: ',SubStep
-                        
-                        ! -----------------------------------------------------------------------------------
-                        ! Update the Solid Velocity via finite differences
-                        call ComputeVelocity(DeltaTime, Uconverged(1:nDOFSolid), U(1:nDOFSolid), VSolidconverged, VSolid, ASolidconverged, ASolid)
-                        
+                    
                         ! -----------------------------------------------------------------------------------
                         ! Solve the Fluid System of Equations
                         FEMSoEFluid % Time = Time_alpha0 + alpha*DeltaTime
@@ -1616,6 +1631,10 @@ module ModFEMAnalysisBiphasic
                         
                         write(*,'(12x,a)') 'Solve the Solid system of equations '
                         call NLSolver%Solve( FEMSoESolid , XGuess = Ustaggered , X = U, Phase = 1 )
+                        
+                        ! -----------------------------------------------------------------------------------
+                        ! Update the Solid Velocity via finite differences
+                        call ComputeVelocity(DeltaTime, Uconverged(1:nDOFSolid), U(1:nDOFSolid), VSolidconverged, VSolid, ASolidconverged, ASolid)
                         
                         NumberOfSolidNewtonIterations = NumberOfSolidNewtonIterations + NLSolver%NumberOfIterations
 
@@ -1824,6 +1843,25 @@ module ModFEMAnalysisBiphasic
                     Kd = Kd + (1.0d0/9.0d0)*(dot_product(Id_voigt,DdotI))
                 enddo
                 
+                if (AnalysisSettings%EmbeddedElements) then !embedded elements - calculate in extra gauss points
+                
+                    !Loop over fiber gauss points
+                    do gp = 1, size(ElBiphasic%ExtraGaussPoints)
+                                                
+                        !Get tangent modulus
+                        call ElBiphasic%ExtraGaussPoints(gp)%GetTangentModulus(D)
+                        
+                        DdotI = 0.0d0
+                        call MatrixVectorMultiply( 'N', D, Id_voigt, DdotI, 1.0d0, 0.0d0 )
+                    
+                        ! Kd = (1/9) I: D : I (D -> fourth order linearized elasticity tensor; I -> Identity matrix)
+                    
+                        Kd = Kd + (1.0d0/9.0d0)*(dot_product(Id_voigt,DdotI))
+
+                    enddo
+                    
+                endif
+                
                 Kd = Kd/size(NaturalCoord_solid,dim=1)
 
                 !Loop over fluid gauss points
@@ -1877,8 +1915,8 @@ module ModFEMAnalysisBiphasic
             Id_voigt(2) = 1.0d0
             Id_voigt(3) = 1.0d0
             
-            !$OMP PARALLEL DEFAULT(PRIVATE) SHARED(AnalysisSettings, ElementList, Id_voigt, Time_alpha0, DeltaTime)
-            !$OMP DO          
+            !!$OMP PARALLEL DEFAULT(PRIVATE) SHARED(AnalysisSettings, ElementList, Id_voigt, Time_alpha0, DeltaTime)
+            !!$OMP DO          
             do e = 1, size(ElementList)
                 
                 call ConvertElementToElementBiphasic(ElementList(e)%el,  ElBiphasic) ! Aponta o objeto ElBiphasic para o ElementList(e)%El mas com o type correto ClassElementBiphasic        
@@ -1913,6 +1951,29 @@ module ModFEMAnalysisBiphasic
                     Kd = Kd + (1.0d0/9.0d0)*(dot_product(Id_voigt,DdotI))
                 enddo
                 
+                !Loop over extra gauss points from embedded elements
+                                
+                if (AnalysisSettings%EmbeddedElements) then !embedded elements - calculate in extra gauss points
+                
+                    !Loop over fiber gauss points
+                    do gp = 1, size(ElBiphasic%ExtraGaussPoints)
+                        
+                        ElBiphasic%ExtraGaussPoints(gp)%Time = Time_alpha0 + DeltaTime
+                        
+                        !Get tangent modulus
+                        call ElBiphasic%ExtraGaussPoints(gp)%GetTangentModulus(D)
+                        
+                        DdotI = 0.0d0
+                        call MatrixVectorMultiply( 'N', D, Id_voigt, DdotI, 1.0d0, 0.0d0 )
+                    
+                        ! Kd = (1/9) I: D : I (D -> fourth order linearized elasticity tensor; I -> Identity matrix)
+                    
+                        Kd = Kd + (1.0d0/9.0d0)*(dot_product(Id_voigt,DdotI))
+
+                    enddo
+                    
+                endif
+                
                 Kd = Kd/size(NaturalCoord_solid,dim=1)
 
                 !Loop over fluid gauss points
@@ -1921,8 +1982,8 @@ module ModFEMAnalysisBiphasic
                 enddo                
                 
             enddo
-            !$OMP END DO
-            !$OMP END PARALLEL
+            !!$OMP END DO
+            !!$OMP END PARALLEL
             !************************************************************************************
         end subroutine
         !==========================================================================================

@@ -439,7 +439,7 @@ module ModNeoHookeanFiberRecruit
             ! -----------------------------------------------------------------------------------
             Km = this%Properties%Km
             Gm = this%Properties%Gm
-            F  = this%F
+            F = this%F
             mX = this%AdditionalVariables%mX
             I4r = this%AdditionalVariables%I4r
             Ef = this%AdditionalVariables%Ef

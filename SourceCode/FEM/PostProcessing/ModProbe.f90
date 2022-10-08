@@ -31,7 +31,7 @@ module ModProbe
     type ClassVariableNames
         integer  :: Displacements=1 , Temperature=2, CauchyStress=3, LogarithmicStrain=4, &
                     DeformationGradient=5 , FirstPiolaStress=6, UserDefined=7, Pressure = 8, &
-                    SpatialRelativeVelocity=9, ReferentialRelativeVelocity=10, Total_Volume = 11, GradientPressure = 12, BiphasicTotalCauchyStress = 12, &
+                    SpatialRelativeVelocity=9, ReferentialRelativeVelocity=10, Total_Volume = 11, GradientPressure = 12, BiphasicTotalCauchyStress = 13, &
                     MacroscopicJacobian = 14,MacroscopicJacobianRate = 15, JdivV = 16
     end type
     type (ClassVariableNames), parameter :: VariableNames = ClassVariableNames()

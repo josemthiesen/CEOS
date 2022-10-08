@@ -93,6 +93,17 @@ module ModFEMSystemOfEquationsSolidPeriodic
         endif
         allocate(this%KgRed)
         
+        !Clean KgRed (in case number of elements changes)
+        !if (associated(this%KgRed%RowMap)) then
+        !    deallocate(this%KgRed%RowMap)
+        !endif
+        !if (associated(this%KgRed%Val)) then
+        !    deallocate(this%KgRed%Val)
+        !endif
+        !if (associated(this%KgRed%Col)) then
+        !    deallocate(this%KgRed%Col)
+        !endif   
+        
         call this%AnalysisSettings%GetTotalNumberOfDOF(this%GlobalNodesList, nDOFSolid)
 
         nDOFRed = this%nDOF !DOF reduced system
