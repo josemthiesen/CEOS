@@ -277,21 +277,21 @@ module ModFEMAnalysisBiphasic
                                 case (SplittingScheme%Drained)
 
                                     call QuasiStaticAnalysisFEM_biphasic_SolidFluid( this%ElementList, this%AnalysisSettings, this%GlobalNodesList , &
-                                                          this%BC, this%BCFluid, this%Kg, this%KgFluid, this%NLSolver )
+                                                          this%BC, this%BCFluid, this%Kg, this%KgRed, this%KgFluid, this%NLSolver )
                                 case (SplittingScheme%Undrained)
                             
                                     call QuasiStaticAnalysisFEM_biphasic_SolidFluid( this%ElementList, this%AnalysisSettings, this%GlobalNodesList , &
-                                                          this%BC, this%BCFluid, this%Kg, this%KgFluid, this%NLSolver )
+                                                          this%BC, this%BCFluid, this%Kg, this%KgRed, this%KgFluid, this%NLSolver )
                             
                                 case(SplittingScheme%FixedStress)
                             
                                     call QuasiStaticAnalysisFEM_biphasic_FluidSolid( this%ElementList, this%AnalysisSettings, this%GlobalNodesList , &
-                                                          this%BC, this%BCFluid, this%Kg, this%KgFluid, this%NLSolver )
+                                                          this%BC, this%BCFluid, this%Kg, this%KgRed, this%KgFluid, this%NLSolver )
                             
                                 case(SplittingScheme%FixedStrain)
                             
                                     call QuasiStaticAnalysisFEM_biphasic_FluidSolid( this%ElementList, this%AnalysisSettings, this%GlobalNodesList , &
-                                                          this%BC, this%BCFluid, this%Kg, this%KgFluid, this%NLSolver )
+                                                          this%BC, this%BCFluid, this%Kg, this%KgRed, this%KgFluid, this%NLSolver )
                             
                                 case default    
                                     stop "Error in SplittingScheme - ModFEMAnalysisBiphasic"
@@ -686,7 +686,7 @@ module ModFEMAnalysisBiphasic
         ! iterative approach for the biphasic model. Biphasic Analysis - Sequential Solution Solid -Fluid
         !==========================================================================================
         subroutine QuasiStaticAnalysisFEM_biphasic_SolidFluid( ElementList , AnalysisSettings , GlobalNodesList , BCSolid  , &
-                                            BCFluid, KgSolid , KgFluid, NLSolver )
+                                            BCFluid, KgSolid , KgSolidRed, KgFluid, NLSolver )
             !************************************************************************************
             ! DECLARATIONS OF VARIABLES
             !************************************************************************************
@@ -709,7 +709,7 @@ module ModFEMAnalysisBiphasic
             class(ClassNonLinearSolver),     pointer                :: NLSolver
             
             !************************************************************************************
-            type (ClassGlobalSparseMatrix),  pointer                :: KgSolid        !  Kg Solid
+            type (ClassGlobalSparseMatrix),  pointer                :: KgSolid, KgSolidRed        !  Kg Solid
             type (ClassGlobalSparseMatrix),  pointer                :: KgFluid        !  Kg Fluid
             !************************************************************************************
 
@@ -842,7 +842,9 @@ module ModFEMAnalysisBiphasic
              select type(FEMSoESolid)
                 class is(ClassFEMSystemOfEquationsSolidPeriodic)
                     FEMSoESolid % isPeriodic = .TRUE.
-
+                    
+                    FEMSoESolid % KgRed => KgSolidRed
+                    
                     allocate( FEMSoESolid%UTay0(nDOFSolid) , FEMSoESolid%UTay1(nDOFSolid) )
                     allocate( DeltaUTay(nDOFSolid), UTay_alpha0(nDOFSolid) )
                                         
@@ -926,7 +928,8 @@ module ModFEMAnalysisBiphasic
                     
                     call BCFluid%GetBoundaryConditions(AnalysisSettings, GlobalNodesList,  LC, ST, FluxExt_alpha0, DeltaFluxExt,FEMSoEFluid%PresDOF, P, DeltaPPresc, &
                                                         PMacro , DeltaPMacro, GradPMacro , DeltaGradPMacro )
-
+                    
+                    write(*,*)''
                     !-----------------------------------------------------------------------------------
                     ! Mapeando os graus de liberdade da matrix esparsa para a aplicação das CC de Dirichlet
                     
@@ -934,8 +937,8 @@ module ModFEMAnalysisBiphasic
                         !-----------------------------------------------------------------------------------
                         ! Condição de contorno de deslocamento prescrito
                         allocate( KgSolidValZERO(size(FEMSoESolid%Kg%Val)), KgSolidValONE(size(FEMSoESolid%Kg%Val)) )
-                        
-                         if(MultiscaleModel== MultiscaleModels%Periodic) then
+                           
+                         if(AnalysisSettings%MultiscaleAnalysis == .True. .and. MultiscaleModel== MultiscaleModels%Periodic) then
                         
                             select type(FEMSoESolid)
                                 class is(ClassFEMSystemOfEquationsSolidPeriodic)
@@ -945,14 +948,13 @@ module ModFEMAnalysisBiphasic
                                 endselect
                         else
                             call BCSolid%AllocatePrescDispSparseMapping(FEMSoESolid%Kg, FEMSoESolid%DispDOF, KgSolidValZERO, KgSolidValONE, contZEROSolid, contONESolid)
+                            
+                            allocate( FEMSoESolid%PrescDispSparseMapZERO(contZEROSolid), FEMSoESolid%PrescDispSparseMapONE(contONESolid) ) !
+
+                            FEMSoESolid%PrescDispSparseMapZERO(:) = KgSolidValZERO(1:contZEROSolid) !
+                            FEMSoESolid%PrescDispSparseMapONE(:)  = KgSolidValONE(1:contONESolid)   !
                         endif
                         
-
-                        allocate( FEMSoESolid%PrescDispSparseMapZERO(contZEROSolid), FEMSoESolid%PrescDispSparseMapONE(contONESolid) )
-
-                        FEMSoESolid%PrescDispSparseMapZERO(:) = KgSolidValZERO(1:contZEROSolid)
-                        FEMSoESolid%PrescDispSparseMapONE(:)  = KgSolidValONE(1:contONESolid)
-
                         call BCSolid%AllocateFixedSupportSparseMapping(FEMSoESolid%Kg, KgSolidValZERO, KgSolidValONE, contZEROSolid, contONESolid)
 
                         allocate( FEMSoESolid%FixedSupportSparseMapZERO(contZEROSolid), FEMSoESolid%FixedSupportSparseMapONE(contONESolid) )
@@ -1207,7 +1209,7 @@ module ModFEMAnalysisBiphasic
         ! iterative approach - Biphasic Analysis - Sequential Solution Fluid - Solid.
         !==========================================================================================
         subroutine QuasiStaticAnalysisFEM_biphasic_FluidSolid( ElementList , AnalysisSettings , GlobalNodesList , BCSolid  , &
-                                                                    BCFluid, KgSolid , KgFluid, NLSolver )
+                                                                    BCFluid, KgSolid , KgRed, KgFluid, NLSolver )
             !************************************************************************************
             ! DECLARATIONS OF VARIABLES
             !************************************************************************************
@@ -1229,7 +1231,7 @@ module ModFEMAnalysisBiphasic
             class(ClassNonLinearSolver),     pointer                :: NLSolver
             
             !************************************************************************************
-            type (ClassGlobalSparseMatrix),  pointer                :: KgSolid        !  Kg Solid
+            type (ClassGlobalSparseMatrix),  pointer                :: KgSolid, KgRed        !  Kg Solid
             type (ClassGlobalSparseMatrix),  pointer                :: KgFluid        !  Kg Fluid
             !************************************************************************************
 
@@ -1305,7 +1307,6 @@ module ModFEMAnalysisBiphasic
                     
                     allocate( ClassFEMSystemOfEquationsSolidPeriodic :: FEMSoESolid)    
                     
-            
                 else
                     stop 'Error: Solid Multiscale model not defined. QuasiStaticAnalysis_Biphasic_FluidSolid'
                 endif
@@ -1372,6 +1373,8 @@ module ModFEMAnalysisBiphasic
                 class is(ClassFEMSystemOfEquationsSolidPeriodic)
                     FEMSoESolid % isPeriodic = .TRUE.
 
+                    FEMSoESolid % KgRed => KgRed
+                    
                     allocate( FEMSoESolid%UTay0(nDOFSolid) , FEMSoESolid%UTay1(nDOFSolid) )
                     allocate( DeltaUTay(nDOFSolid), UTay_alpha0(nDOFSolid) )
 
@@ -1468,15 +1471,15 @@ module ModFEMAnalysisBiphasic
                ! LOOP - STEPS
                 STEPS:  do ST = 1 , nSteps
 
-                    write(*,'(4x,a,i3,a,i3,a)')'Step: ',ST,' (LC: ',LC,')'
-                    write(*,*)''
+                    !write(*,'(4x,a,i3,a,i3,a)')'Step: ',ST,' (LC: ',LC,')'
+                    !write(*,*)''
                     
-
                     call BCSolid%GetBoundaryConditions(AnalysisSettings, GlobalNodesList,  LC, ST, Fext_alpha0, DeltaFext,FEMSoESolid%DispDOF, &
                                                            U, DeltaUPresc, FMacro , DeltaFMacro, UMacro , DeltaUMacro )
 
                     call BCFluid%GetBoundaryConditions(AnalysisSettings, GlobalNodesList,  LC, ST, FluxExt_alpha0, DeltaFluxExt,FEMSoEFluid%PresDOF, P, DeltaPPresc, &
                                                             PMacro , DeltaPMacro, GradPMacro , DeltaGradPMacro)
+                    
                     !-----------------------------------------------------------------------------------
                     ! Mapeando os graus de liberdade da matrix esparsa para a aplicação das CC de Dirichlet
                     
@@ -1486,7 +1489,7 @@ module ModFEMAnalysisBiphasic
                         ! Condição de contorno de deslocamento prescrito
                         allocate( KgSolidValZERO(size(FEMSoESolid%Kg%Val)), KgSolidValONE(size(FEMSoESolid%Kg%Val)) )
                         
-                        if(MultiscaleModel== MultiscaleModels%Periodic) then
+                        if(AnalysisSettings%MultiscaleAnalysis == .True. .and. MultiscaleModel== MultiscaleModels%Periodic) then
                         
                             select type(FEMSoESolid)
                                 class is(ClassFEMSystemOfEquationsSolidPeriodic)

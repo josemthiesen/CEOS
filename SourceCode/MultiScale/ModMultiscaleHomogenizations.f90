@@ -1261,9 +1261,9 @@ module ModMultiscaleHomogenizations
                 
             call omp_set_num_threads( NumberOfThreads )
            
-            !$OMP PARALLEL DEFAULT(PRIVATE)                                &
-                    Shared( AnalysisSettings,  ElementList, TotalVolX, HomogenizedTotalStress, DimProb, FactorAxiX)         
-            !$OMP DO
+            !!$OMP PARALLEL DEFAULT(PRIVATE)                                &
+             !       Shared( AnalysisSettings,  ElementList, TotalVolX, HomogenizedTotalStress, DimProb, FactorAxiX)         
+            !!$OMP DO
             !Loop over Elements
             do e = 1,size(ElementList)
             
@@ -1330,9 +1330,9 @@ module ModMultiscaleHomogenizations
                     PiolaVoigt = Tensor2ToVoigt(PiolaTensor)
 
                     !Homogenized Total Stress
-                    !$OMP CRITICAL
+                    !!$OMP CRITICAL
                     HomogenizedTotalStress = HomogenizedTotalStress + (PiolaVoigt*Weight(gp)*detJX*FactorAxiX)/TotalVolX
-                    !$OMP END CRITICAL
+                    !!$OMP END CRITICAL
                 enddo
                 
                 !----------------------------------------------------------------------------
@@ -1359,14 +1359,14 @@ module ModMultiscaleHomogenizations
                         PiolaVoigt = Tensor2ToVoigt(PiolaTensor)
 
                         !Homogenized Stress
-                        !$OMP CRITICAL
+                        !!$OMP CRITICAL
                         HomogenizedTotalStress = HomogenizedTotalStress + (0.5*L0f*A0f*PiolaVoigt*WeightFiber)/TotalVolX
-                        !$OMP END CRITICAL
+                        !!$OMP END CRITICAL
                     enddo
                 endif
             enddo
-            !$OMP END DO
-            !$OMP END PARALLEL
+            !!$OMP END DO
+            !!$OMP END PARALLEL
             !************************************************************************************
         end subroutine
         !=================================================================================================

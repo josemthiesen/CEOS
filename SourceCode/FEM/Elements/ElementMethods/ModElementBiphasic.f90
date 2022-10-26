@@ -179,8 +179,10 @@ module ModElementBiphasic
 		    !************************************************************************************
             ! Modules and implicit declarations
             ! -----------------------------------------------------------------------------------
+            use ModMathRoutines    
+        
             implicit none
-
+            
             ! Object
             ! -----------------------------------------------------------------------------------
             class(ClassElementBiphasic) :: this
@@ -201,13 +203,14 @@ module ModElementBiphasic
             real(8)							    :: detJ
             real(8) , pointer , dimension(:)    :: Weight
             real(8) , pointer , dimension(:,:)  :: NaturalCoord
-            real(8) , pointer , dimension(:,:)  :: B , G , S , D, DB, SG, Bdiv, SfG
+            real(8) , pointer , dimension(:,:)  :: B , G , S , D, DP, DPB, DB, SG, Bdiv, SfG
             real(8)                             :: FactorAxi
             real(8) , pointer , dimension(:)    :: Nf
             real(8) , pointer , dimension(:,:)  :: bs
             real(8)                             :: StabilityConst, J_CurrentStaggered, J_PreviousStaggered, P_CurrentStaggered, P_PreviousStaggered, alpha
             integer                             :: UndrainedActivator
             real(8)                             :: NaturalCoordFiber(3), WeightFiber, A0f, L0f, dV0f, dVf
+            real(8), dimension(6)               :: Ivoigt
 		    !************************************************************************************
 
 		    !************************************************************************************
@@ -234,9 +237,14 @@ module ModElementBiphasic
 
             ! Allocating tangent modulus
             D => D_Memory(  1:AnalysisSettings%DSize, 1:AnalysisSettings%DSize )
+            
+            DP => DP_Memory(  1:AnalysisSettings%DSize, 1:AnalysisSettings%DSize )
 
             ! Allocating matrix D*B
             DB => DB_Memory(  1:AnalysisSettings%BrowSize , 1:NDOFel_solid )
+            
+            ! Allocating matrix D*B
+            DPB => DPB_Memory(  1:AnalysisSettings%BrowSize , 1:NDOFel_solid )
 
             ! Allocating matrix Sf*G
             SG => SG_Memory(  1:AnalysisSettings%GrowSize , 1:NDOFel_solid )
@@ -390,6 +398,18 @@ module ModElementBiphasic
                 !******************************************
                 !Ke = Ke + matmul(bs,transpose(bs))*StabilityConst*J_currentStaggered*Weight(gp)*detJ*FactorAxi                
                 call MatrixMatrixMultiply_TransB (bs, bs, Ke, UndrainedActivator*alpha*J_CurrentStaggered*Weight(gp)*detJ*FactorAxi, 1.0d0 ) !C := alpha*(A)*B^T + beta*C
+                
+                Ivoigt = 0.0d0
+                Ivoigt(1:3) = 1.0d0
+                
+                !DP = Ball_Voigt(Ivoigt, Ivoigt)
+                DP = Square_Voigt(Ivoigt, Ivoigt)
+                
+                !Element stiffness matrix
+                !---------------------------------------------------------------------------------------------------
+                ! Computes D*B
+                call MatrixMatrixMultiply_Sym ( DP, B, DPB, 1.0d0, 0.0d0 ) ! C := alpha*A*B + beta*C - A=Sym and upper triangular
+                call MatrixMatrixMultiply_Trans ( B, DPB, Ke, 2.0d0*P_CurrentStaggered*Weight(gp)*detJ*FactorAxi, 1.0d0 ) !C := alpha*(A^T)*B + beta*C
                 
             enddo                    
 		    !************************************************************************************
