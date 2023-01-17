@@ -37,6 +37,7 @@ program MAIN
     use ModProbe
     use ModPostProcessors
     use ModExportResultFile
+    use ModExportSampleResultsFromMacroBiphasic
     use ModTools
     use ModTimer
     use ModParser
@@ -167,7 +168,11 @@ program MAIN
             class is (ClassFEMAnalysis)
                 call PostProcessingResults(ProbeList,PostProcessor,Analysis)
             class is (ClassFEMAnalysisBiphasic) ! -> (ProblemTypes%Biphasic)
-                call PostProcessingResultsBiphasic(ProbeList,PostProcessor,Analysis)
+                if (PostProcessor%HomogenizeSample) then
+                    call PostProcessingResultsOfSampleBiphasic(ProbeList,PostProcessor,Analysis)    
+                else
+                    call PostProcessingResultsBiphasic(ProbeList,PostProcessor,Analysis)
+                endif
             class default
                     stop 'Error: Analysis Type not identified in Main'
         end select

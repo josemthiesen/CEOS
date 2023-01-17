@@ -1,0 +1,19 @@
+        !COMPILER-GENERATED INTERFACE MODULE: Mon Jan 16 14:06:59 2023
+        ! This source file is for reference only and may not completely
+        ! represent the generated interface used by the compiler.
+        MODULE MATERIALCONSTRUCTOR__genmod
+          INTERFACE 
+            SUBROUTINE MATERIALCONSTRUCTOR(ELEMENT,ELEMENTLIST,         &
+     &GLOBALNODESLIST,MATERIAL,ANALYSISSETTINGS,E)
+              USE MODANALYSIS
+              USE MODNODES
+              USE MODELEMENTLIBRARY
+              CLASS (CLASSELEMENT) ,POINTER :: ELEMENT
+              TYPE (CLASSELEMENTSWRAPPER) ,POINTER :: ELEMENTLIST(:)
+              TYPE (CLASSNODES) ,POINTER :: GLOBALNODESLIST(:)
+              CLASS (CLASSCONSTITUTIVEMODELWRAPPER) ,POINTER :: MATERIAL
+              TYPE (CLASSANALYSIS) :: ANALYSISSETTINGS
+              INTEGER(KIND=4) :: E
+            END SUBROUTINE MATERIALCONSTRUCTOR
+          END INTERFACE 
+        END MODULE MATERIALCONSTRUCTOR__genmod

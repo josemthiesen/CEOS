@@ -16,7 +16,7 @@ module ModInterfaces
     interface
     
         !==============================================================================================
-        subroutine MaterialConstructor( Element, ElementList, GlobalNodesList, Material, AnalysisSettings )
+        subroutine MaterialConstructor( Element, ElementList, GlobalNodesList, Material, AnalysisSettings, e )
       
            !************************************************************************************
            ! DECLARATIONS OF VARIABLES
@@ -36,7 +36,8 @@ module ModInterfaces
            type (ClassElementsWrapper) , pointer , dimension(:)  :: ElementList
            type(ClassAnalysis)                                   :: AnalysisSettings
            type(ClassNodes) , dimension(:) , pointer             :: GlobalNodesList
-           class(ClassConstitutiveModelWrapper)  , pointer :: Material
+           class(ClassConstitutiveModelWrapper)  , pointer       :: Material
+           integer                                               :: e
       
        end subroutine
         !==============================================================================================

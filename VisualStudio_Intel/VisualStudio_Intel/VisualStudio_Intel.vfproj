@@ -25,7 +25,7 @@
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
 		<Configuration Name="Debug|x64">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" MultiProcessorCompilation="true" Optimization="optimizeFull" Parallelization="true" FixedFormLineLength="fixedLength132" OpenMP="OpenMPParallelCode" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDLL" UseMkl="mklParallel"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" MultiProcessorCompilation="true" Optimization="optimizeFull" Parallelization="true" FixedFormLineLength="fixedLength132" OpenMP="OpenMPParallelCode" WarnInterfaces="true" Traceback="true" BoundsCheck="true" RuntimeLibrary="rtMultiThreadedDLL" UseMkl="mklParallel"/>
 				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateDebugInformation="true" SubSystem="subSystemConsole" StackReserveSize="100000000"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -54,12 +54,15 @@
 		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModConstitutiveModelLibrary.f90"/>
 		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModGeneralizedHookesLaw .f90"/>
 		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModGlassy.f90"/>
+		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModHyperelasticGOH_FiberDispersion.f90"/>
 		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModHyperelasticQ1P0.f90"/>
 		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModHyperelasticTransIso.f90"/>
 		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModHyperelasticTransIsoComp.f90"/>
 		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModHyperIsotropicBiphasicSpilker.f90"/>
 		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModJ2Plasticity.f90"/>
 		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModNeoHookean.f90"/>
+		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModNeoHookeanFiberRecruit.f90"/>
+		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModNeoHookeanFiberReinf.f90"/>
 		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModNeoHookeanIsochoric.f90"/>
 		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModNeoHookeanQ1P0.f90"/>
 		<File RelativePath="..\..\SourceCode\ConstitutiveLibrary\ConstitutiveModelsLibrary\ModStVenantKirchhoff.f90"/>
@@ -104,12 +107,14 @@
 		<Filter Name="Modules">
 		<File RelativePath="..\..\SourceCode\FEM\Modules\ModAnalysis.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Modules\ModFEMSoEMultiscaleMinimal.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\Modules\ModFEMSoEMultiscalePeriodic.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Modules\ModFEMSystemOfEquations.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Modules\ModFEMSystemOfEquationsFluid.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Modules\ModFEMSystemOfEquationsFluidMinimal.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Modules\ModFEMSystemOfEquationsMonolithicBiphasic.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Modules\ModFEMSystemOfEquationsSolid.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Modules\ModFEMSystemOfEquationsSolidMinimal.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\Modules\ModFEMSystemOfEquationsSolidPeriodic.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Modules\ModGlobalFEM.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Modules\ModGlobalFEMBiphasic.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\Modules\ModInterfaces.f90"/>
@@ -126,7 +131,9 @@
 		<File RelativePath="..\..\SourceCode\MultiScale\ModMultiscaleHomogenizations.f90"/></Filter>
 		<Filter Name="PostProcessing">
 		<File RelativePath="..\..\SourceCode\FEM\PostProcessing\ModExportResultFile.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\PostProcessing\ModExportSampleResultsFromMacro.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\PostProcessing\ModGiD.f90"/>
+		<File RelativePath="..\..\SourceCode\FEM\PostProcessing\ModHomogenizeSample.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\PostProcessing\ModHyperView.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\PostProcessing\ModPostProcessors.f90"/>
 		<File RelativePath="..\..\SourceCode\FEM\PostProcessing\ModProbe.f90"/></Filter>
@@ -138,8 +145,8 @@
 		<File RelativePath="..\..\SourceCode\Tools\MathTools\LinearSolver\ModLinearSolverLibrary.f90"/>
 		<File RelativePath="..\..\SourceCode\Tools\MathTools\LinearSolver\ModPardisoSolver.f90"/></Filter>
 		<Filter Name="NonLinearSolver">
-		<File RelativePath="..\..\SourceCode\Tools\MathTools\NonlinearSolver\ModNewtonRaphsonFull.f90"/>
 		<File RelativePath="..\..\SourceCode\Tools\MathTools\NonlinearSolver\ModLineSearch.f90"/>
+		<File RelativePath="..\..\SourceCode\Tools\MathTools\NonlinearSolver\ModNewtonRaphsonFull.f90"/>
 		<File RelativePath="..\..\SourceCode\Tools\MathTools\NonlinearSolver\ModNonLinearSolver.f90"/>
 		<File RelativePath="..\..\SourceCode\Tools\MathTools\NonlinearSolver\ModNonLinearSolverLibrary.f90"/></Filter>
 		<Filter Name="SparseMatrixRoutines">

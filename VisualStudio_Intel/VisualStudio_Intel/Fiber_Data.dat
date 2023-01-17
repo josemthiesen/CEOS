@@ -1,12 +1,22 @@
 ! Dados da Fibra
 
+TypeofFiber =  helicoidal !straight
+
+! Parâmetros fibra reta
+ThetaX = 0.0d0
+
 ! Parâmetros da Hélice
-Radius = 2.30d-3     !0.1d0            !1 fibra de 3 voltas: 2.30d-3 mm
-Length = 99.3d-3     !1.00d0           !1 fibra de 3 voltas: 297.90d-3 / 1 volta: 99.3d-3 mm
+Radius = 2.30d-0     !0.1d0            !3 fibras de 1 voltas: 2.30d-3 mm
+Length = 99.3d-0     !1.00d0           !3 fibras de 1 voltas: 297.90d-3 / 1 volta: 99.3d-3 mm
 Pitch =  1.0d0
-Hand  = -1.0d0
+Hand  =  -1.0d0
 Theta =  0.0d0   !CUIDAR A ORDEM DO DESENHO NO SOLIDWORKS!!!!!   !1 fibra de 3 voltas: 0.0d0
 
 ! Elemento e Nó de Referência
-ElemRef = 77      
-NodeRef = 1334
+ElemRef = 211     
+NodeRef = 1064
+
+
+!RVE_3_fibras_ElemRef=166 - NodeRef=110
+!RVE_12_fibras_ElemRef=211- NodeRef=1064
+!RVE_27_fibras_ElemRef=45271- NodeRef=289

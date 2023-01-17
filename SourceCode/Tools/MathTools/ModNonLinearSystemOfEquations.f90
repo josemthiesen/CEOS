@@ -18,6 +18,9 @@ module ModNonLinearSystemOfEquations
     type ClassNonLinearSystemOfEquations
 
         type(ClassStatus) :: Status
+        integer           :: nDOF
+        logical           :: isPeriodic
+        integer           :: NewtonIteration, StaggeredIteration
 
     contains
 
@@ -26,6 +29,8 @@ module ModNonLinearSystemOfEquations
         procedure :: EvaluateGradientSparse => EvaluateGradientSparseBase
         generic   :: EvaluateGradient       => EvaluateGradientFull , EvaluateGradientSparse
         procedure :: PostUpdate             => PostUpdateBase
+        procedure :: ReduceSystem => ReduceSystemBase
+        procedure :: ExpandPeriodicVector => ExpandPeriodicVectorBase
 
     end type
 
@@ -56,5 +61,19 @@ module ModNonLinearSystemOfEquations
         class(ClassNonLinearSystemOfEquations)::this
         real(8),dimension(:)::X
     end subroutine
+    !__________________________________________________________________________________________________
+    subroutine ReduceSystemBase(this,R,G) !For systems with periodicity
+        class(ClassNonLinearSystemOfEquations)::this
+        class(ClassGlobalSparseMatrix) , pointer :: G
+        real(8),dimension(:)::R
+        stop "ReduceSystem Not Implemented"
+    end subroutine
+    !__________________________________________________________________________________________________
+    subroutine ExpandPeriodicVectorBase(this,Vred,Vfull,variable) !For systems with periodicity
+        class(ClassNonLinearSystemOfEquations)::this
+        real(8),dimension(:)::Vred,Vfull
+        character(len=*) :: variable
+        stop "ExpandResult Not Implemented"
+    end subroutine    
 
 end module

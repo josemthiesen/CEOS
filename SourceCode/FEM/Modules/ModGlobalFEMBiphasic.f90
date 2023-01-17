@@ -407,8 +407,8 @@ module ModGlobalFEMBiphasic
             !************************************************************************************
             Kg%Val = 0.0d0
 
-            !!$OMP PARALLEL DEFAULT(PRIVATE) SHARED(Kg, ElementList, AnalysisSettings, P, VS, DeltaT)
-            !!$OMP DO
+            !$OMP PARALLEL DEFAULT(PRIVATE) SHARED(Kg, ElementList, AnalysisSettings, P, VS, DeltaT)
+            !$OMP DO
             do  e = 1, size( ElementList )
         
                 ! Aponta o objeto ElBiphasic para o ElementList(e)%El mas com o type correto ClassElementBiphasic
@@ -442,15 +442,15 @@ module ModGlobalFEMBiphasic
                 call ElBiphasic%ElementStiffnessMatrix_Kpu(DeltaT, Pe, Vse, Kpu, AnalysisSettings )
                 call ElBiphasic%ElementStiffnessMatrix_Kpp(Kpp, AnalysisSettings )
         
-                !!$OMP CRITICAL
+                !$OMP CRITICAL
                 call AssembleGlobalMatrixMonolithicBiphasic( GM_solid , GM_solid,  Kuu, Kg ) 
                 call AssembleGlobalMatrixMonolithicBiphasic( GM_solid , GM_fluid,  Kup, Kg )
                 call AssembleGlobalMatrixMonolithicBiphasic( GM_fluid , GM_solid,  Kpu, Kg ) 
                 call AssembleGlobalMatrixMonolithicBiphasic( GM_fluid , GM_fluid,  Kpp, Kg )
-                !!$OMP END CRITICAL
+                !$OMP END CRITICAL
             enddo
-            !!$OMP END DO
-            !!$OMP END PARALLEL
+            !$OMP END DO
+            !$OMP END PARALLEL
             !************************************************************************************
         end subroutine      
         !--------------------------------------------------------------------------------------------------

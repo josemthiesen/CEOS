@@ -21,6 +21,7 @@ module ModExportResultFile
     use ModPostProcessors
     use ModGid
     use ModHyperView
+    use ModHomogenizeSample
     use ModParser
     use ModStatus
     use OMP_LIB
@@ -131,6 +132,35 @@ module ModExportResultFile
                     call File%RaiseError('Expecting Word END POST PROCESSOR in '//trim(FileName))
                 end if
 
+                
+            ! HomogenizeSample
+            !========================================================================================
+            elseif ( File%CompareStrings(OptionValue,'homogenizesample') ) then
+
+                call File%GetNextOption(OptionName,OptionValue)
+                if ( .not. File%CompareStrings(OptionName,'Results') ) then
+                    call File%RaiseError('Expecting Word Results in '//trim(FileName))
+                end if
+
+                call Split( OptionValue , PostProcessorResults , ",")
+
+                call File%GetNextOption(OptionName,OptionValue)
+                if ( .not. File%CompareStrings(OptionName,'File Name') ) then
+                    call File%RaiseError('Expecting Word File Name in '//trim(FileName))
+                end if
+                PostProcessorFileName = OptionValue
+                
+                ! Constructing the Homogenize Sample Post Processor
+                !------------------------------------------------------------------------------------
+                call Constructor_HomogenizeSample( PostProcessor, PostProcessorResults, PostProcessorFileName )
+
+                call File%GetNextString(String)
+
+                if ( .not. File%CompareStrings(String,'END POST PROCESSOR') ) then
+                    call File%RaiseError('Expecting Word END POST PROCESSOR in '//trim(FileName))
+                end if
+    
+        
             ! None pos processor
             !========================================================================================
             elseif ( File%CompareStrings(OptionValue,'None') ) then
@@ -332,6 +362,11 @@ module ModExportResultFile
         if(FEA%AnalysisSettings%FiberReinforcedAnalysis) then
             call FEA%AdditionalMaterialModelRoutine()
         endif
+        
+        ! Calling the additional material routine to read information for the embedded elements
+         if(FEA%AnalysisSettings%EmbeddedElements) then
+             call FEA%AdditionalMaterialModelRoutine()
+         endif
 
         ! Restart Constitutive Model
         ! -----------------------------------------------------------------------------------
@@ -550,6 +585,11 @@ module ModExportResultFile
         if(FEA%AnalysisSettings%FiberReinforcedAnalysis) then
             call FEA%AdditionalMaterialModelRoutine()
         endif
+        
+         ! Calling the additional material routine to read information for the embedded elements
+         if(FEA%AnalysisSettings%EmbeddedElements) then
+             call FEA%AdditionalMaterialModelRoutine()
+         endif
         
         FEA%AnalysisSettings%StaggeredParameters%StabilityConst = 0.0
         
@@ -1265,135 +1305,6 @@ module ModExportResultFile
     end subroutine
     !==========================================================================================
     
+
     !==========================================================================================
-    subroutine HomogenizeSomeElements( ElementListMaterial , AnalysisSettings, Time, U,  P, VSolid, Status)
-
-        !************************************************************************************
-        ! DECLARATIONS OF VARIABLES
-        !************************************************************************************
-        ! Modules and implicit declarations
-        use ModMultiscaleHomogenizations
-        ! -----------------------------------------------------------------------------------
-        implicit none
-
-        ! Input variables
-        ! -----------------------------------------------------------------------------------
-        type (ClassElementsWrapper), pointer , dimension(:) :: ElementListMaterial
-        type(ClassAnalysis)                        :: AnalysisSettings
-        type(ClassStatus)                          :: Status
-        real(8)                    , dimension(:)  :: U
-        real(8)                    , dimension(:)  :: P
-        real(8)                    , dimension(:)  :: VSolid
-        real(8)                                    :: Time
-       
-        ! Internal variables
-        ! -----------------------------------------------------------------------------------
-        integer                                                 :: TotalElements
-        integer                                                 :: e, elem
-        
-        character(len=255)                                      :: FileNameU = ''
-        character(len=255)                                      :: FileNameF = ''
-        character(len=255)                                      :: FileNameP = ''
-        character(len=255)                                      :: FileNameGP = ''
-        character(len=255)                                      :: FileNamewX = ''
-        character(len=255)                                      :: FileNameJdivV = ''
-        character(len=255)                                      :: FileNameStress = ''
-        real(8), dimension(3)                                   :: HomogenizedU
-        real(8), dimension(3,3)                                 :: HomogenizedF
-        real(8), dimension(9)                                   :: HomogenizedF_voigt
-        real(8), dimension(1)                                   :: HomogenizedPressure
-        real(8), dimension(3)                                   :: HomogenizedPressureGradient
-        real(8), dimension(3)                                   :: HomogenizedwX
-        real(8), dimension(1)                                   :: HomogenizedJdivV
-        real(8), dimension(9)                                   :: HomogenizedTotalStress
-  
-        !************************************************************************************
-        ! COMPUTING THE HOMOGENIZATIONS
-        !************************************************************************************
-        call GetHomogenizedDisplacement(AnalysisSettings, ElementListMaterial, U, HomogenizedU )
-        call GetHomogenizedDeformationGradient(AnalysisSettings, ElementListMaterial , HomogenizedF)
-        call GetHomogenizedPressureBiphasic( AnalysisSettings, ElementListMaterial, P, HomogenizedPressure(1) )
-        call GetHomogenizedPressureGradientBiphasic( AnalysisSettings, ElementListMaterial, P, HomogenizedPressureGradient ) 
-        call GetHomogenizedReferentialRelativeVelocitywXBiphasic( AnalysisSettings, ElementListMaterial, VSolid, HomogenizedwX)
-        call GetHomogenizedJacobianSolidVelocityDivergent( AnalysisSettings, ElementListMaterial, VSolid, HomogenizedJdivV(1) )
-        call GetHomogenizedTotalStressBiphasic( AnalysisSettings, ElementListMaterial, P, HomogenizedTotalStress )
-        
-        !************************************************************************************
-        ! Writing the homogenizations
-        !************************************************************************************
-        FileNameU  = 'ElementMaterialMesh_HomogenizedU.dat'
-        FileNameF  = 'ElementMaterialMesh_HomogenizedF.dat'
-        FileNameP  = 'ElementMaterialMesh_HomogenizedPressure.dat'
-        FileNameGP = 'ElementMaterialMesh_HomogenizedGradientPressure.dat'
-        FileNamewX = 'ElementMaterialMesh_HomogenizedReferentilRelativeVelocity.dat'
-        FileNameJdivV = 'ElementMaterialMesh_HomogenizedJacobianDivergentVelocity.dat'
-        FileNameStress = 'ElementMaterialMesh_HomogenizedTotalPiolaStress.dat'
-        if(Time .eq. 0.0d0) then
-            call InitializeHomogenizationFile(FileNameU)
-            call InitializeHomogenizationFile(FileNameF)
-            call InitializeHomogenizationFile(FileNameP)
-            call InitializeHomogenizationFile(FileNameGP)
-            call InitializeHomogenizationFile(FileNamewX)
-            call InitializeHomogenizationFile(FileNameJdivV)
-            call InitializeHomogenizationFile(FileNameStress)
-        endif
-        call HomogenizationWriteOnFile(FileNameU, Time , HomogenizedU)
-        HomogenizedF_voigt = Convert_to_Voigt_3D(HomogenizedF)
-        call HomogenizationWriteOnFile(FileNameF, Time , HomogenizedF_voigt)
-        call HomogenizationWriteOnFile(FileNameP, Time , HomogenizedPressure)
-        call HomogenizationWriteOnFile(FileNameGP, Time , HomogenizedPressureGradient)
-        call HomogenizationWriteOnFile(FileNamewX, Time , HomogenizedwX)
-        call HomogenizationWriteOnFile(FileNameJdivV, Time , HomogenizedJdivV)
-        call HomogenizationWriteOnFile(FileNameStress, Time , HomogenizedTotalStress)
-    end subroutine
-    !==========================================================================================
-   
-    !==========================================================================================
-    subroutine HomogenizationWriteOnFile(FileName, Time , Values )
-        ! Input variables
-        ! -----------------------------------------------------------------------------------
-        real(8)::Time
-        real(8) , dimension(:) :: Values
-        character(len=255)     :: FileName
-        
-        ! Internal variables
-        ! -----------------------------------------------------------------------------------
-        character(len=20) :: CharFormat
-        integer::FileNumber , i
-            
-        CharFormat=''
-        write(CharFormat , '(A,I2,A)') '(' , size(Values) + 1 , '(E23.15,1x))'
-        FileNumber = 33
-        open( FileNumber, file=FileName, Access='append', status='unknown')      !Create the string format
-            write(FileNumber , CharFormat) Time , (Values(i),i=1,size(Values))   !Export the result
-        close(FileNumber)
-    end subroutine
-    !==========================================================================================
-    !==========================================================================================
-    subroutine InitializeHomogenizationFile(FileName)
-
-        ! Input variables
-        ! -----------------------------------------------------------------------------------
-        character(len=255)     :: FileName
-
-        ! Internal variables
-        ! -----------------------------------------------------------------------------------
-        logical :: FileExists
-
-        !************************************************************************************
-
-        inquire(file=FileName,exist=FileExists)
-
-        if ( FileExists ) then
-            open (1234, file=FileName, status='unknown')
-            close(1234, status='delete')
-        endif
-
-        ! Writing a header
-        open (1234, file=FileName, status='unknown')
-        write(1234,*) ' Time                    Value'
-        close(1234)
-
-    end subroutine
-     !==========================================================================================
 end module

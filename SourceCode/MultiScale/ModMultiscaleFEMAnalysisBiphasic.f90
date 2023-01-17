@@ -60,6 +60,10 @@ module ModMultiscaleFEMAnalysisBiphasic
                                 call AllocateKgSparseUpperTriangular(this)
                             case (MultiscaleModels%Linear)
                                 call AllocateKgSparseUpperTriangular(this)
+                            case (MultiscaleModels%Periodic)
+                                call AllocateGlobalSparseStiffnessMatrix(this)
+                                !call AllocateKgSparseUpperTriangular
+                                allocate(this%KgRed)
                             case (MultiscaleModels%Minimal)
                                 call AllocateKgSparseMinimalUpperTriangular(this)                
                             case (MultiscaleModels%MinimalLinearD1)  

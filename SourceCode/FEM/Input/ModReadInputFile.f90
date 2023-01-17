@@ -304,6 +304,8 @@ module ModReadInputFile
                 AnalysisSettings%MultiscaleModel = MultiscaleModels%Taylor
             elseif (DataFile%CompareStrings(ListOfValues(8),"Linear")) then
                 AnalysisSettings%MultiscaleModel = MultiscaleModels%Linear
+            elseif (DataFile%CompareStrings(ListOfValues(8),"Periodic")) then
+                AnalysisSettings%MultiscaleModel = MultiscaleModels%Periodic
             elseif (DataFile%CompareStrings(ListOfValues(8),"Minimal")) then
                 AnalysisSettings%MultiscaleModel = MultiscaleModels%Minimal
             elseif (DataFile%CompareStrings(ListOfValues(8),"MinimalLinearD1")) then
@@ -485,6 +487,8 @@ module ModReadInputFile
                     allocate(ClassMultiscaleBoundaryConditionsTaylorAndLinear:: BC)
                 elseif (AnalysisSettings%MultiscaleModel == MultiscaleModels%Linear) then
                     allocate(ClassMultiscaleBoundaryConditionsTaylorAndLinear:: BC)
+                elseif (AnalysisSettings%MultiscaleModel == MultiscaleModels%Periodic) then
+                    allocate(ClassMultiscaleBoundaryConditionsPeriodic:: BC)
                 elseif (AnalysisSettings%MultiscaleModel == MultiscaleModels%Minimal) then
                     allocate(ClassMultiscaleBoundaryConditionsMinimal:: BC)
                 elseif (AnalysisSettings%MultiscaleModel == MultiscaleModels%MinimalLinearD1) then
@@ -628,6 +632,8 @@ module ModReadInputFile
                             BC%TypeOfBC = MultiscaleBCType%Taylor
                         elseif (AnalysisSettings%MultiscaleModel == MultiscaleModels%Linear) then
                             BC%TypeOfBC = MultiscaleBCType%Linear
+                        elseif (AnalysisSettings%MultiscaleModel == MultiscaleBCType%Periodic) then
+                            BC%TypeOfBC = MultiscaleBCType%Periodic
                         elseif (AnalysisSettings%MultiscaleModel == MultiscaleBCType%Minimal) then
                             BC%TypeOfBC = MultiscaleBCType%Minimal
                         elseif (AnalysisSettings%MultiscaleModel == MultiscaleBCType%MinimalLinearD1) then
@@ -750,7 +756,7 @@ module ModReadInputFile
                 !Nothing to do
 
 
-            elseif (TypeOfBC == MultiscaleBCType%Linear .or. TypeOfBC == MultiscaleBCType%MinimalLinearD1 .or. TypeOfBC == MultiscaleBCType%MinimalLinearD3 ) then
+            elseif (TypeOfBC == MultiscaleBCType%Linear .or. TypeOfBC == MultiscaleBCType%Periodic .or. TypeOfBC == MultiscaleBCType%MinimalLinearD1 .or. TypeOfBC == MultiscaleBCType%MinimalLinearD3 ) then
 
                 ! Adding all the nodes of the boundary
                 cont = 0
@@ -877,9 +883,9 @@ module ModReadInputFile
             ! Reading the macroscopic pressure gradient components
             do k=1,3
                 call MacroscopicPresGrad(k)%ReadTimeDiscretization(TimeFileName)
-                    if (DataFile%CompareStrings(ListOfValues(k),"Zero")) then
+                    if (DataFile%CompareStrings(ListOfValues(k+1),"Zero")) then
                         call MacroscopicPresGrad(k)%CreateConstantLoadHistory(0.0d0)
-                    elseif (DataFile%CompareStrings(ListOfValues(k),"One")) then
+                    elseif (DataFile%CompareStrings(ListOfValues(k+1),"One")) then
                         call MacroscopicPresGrad(k)%CreateConstantLoadHistory(1.0d0)
                     else
                         call MacroscopicPresGrad(k)%ReadValueDiscretization(ListOfValues(k+1))
@@ -1104,6 +1110,7 @@ module ModReadInputFile
 
             integer :: NumberOfMaterials , i , MaterialID, ModelEnumerator
             character(len=100):: ModelName, string , OptionName , OptionValue
+            logical :: Fiber_info_exists
 
 
             call DataFile%GetNextOption(OptionName , OptionValue)
@@ -1140,6 +1147,22 @@ module ModReadInputFile
                 call ConstitutiveModelIdentifier( ModelName, AnalysisSettings, ModelEnumerator )
 
                 MaterialList(i)%ModelEnumerator= ModelEnumerator
+                
+                if (ModelEnumerator==18 .OR. ModelEnumerator==19) then !Check if simulation with embedded elements
+                    inquire(file='Fiber_info.dat',exist=Fiber_info_exists)                 
+                    if (Fiber_info_exists) then
+                        write(*,*) ''
+                        write(*,*) '** Simulation with embedded elements! **'
+                        AnalysisSettings%EmbeddedElements = .TRUE.
+                    else
+                        write(*,*) ''
+                        write(*,*) '** ERROR: no Fiber_info.dat found! **'
+                        write(*,*) ''
+                        STOP
+                    endif
+                else
+                    AnalysisSettings%EmbeddedElements = .FALSE.
+                endif
 
                 call AllocateConstitutiveModel( ModelEnumerator , AnalysisSettings , 1 , MaterialList(i)%Mat )
 
@@ -1593,7 +1616,7 @@ module ModReadInputFile
                 ElementList(i)%El%Material = ElementMaterialID(i)
                 
                 ! Creating the constitutive models in elements ( Creating the gauss points)
-                call MaterialConstructor( ElementList(i)%El, ElementList, GlobalNodesList, Material, AnalysisSettings )
+                call MaterialConstructor( ElementList(i)%El, ElementList, GlobalNodesList, Material, AnalysisSettings, i )
                 if (AnalysisSettings%ProblemType .eq. ProblemTypes%Biphasic) then
                     call ConvertElementToElementBiphasic(ElementList(i)%El, ElementBiphasic)
                     ! Creating the constitutive models in elements ( Creating the fluid gauss points - used on the quadratures)
@@ -2069,7 +2092,7 @@ module ModReadInputFile
                     call DataFile%RaiseError("Element's Material was not found")
                 endif
 
-                call MaterialConstructor( ElementList(i)%El, ElementList, GlobalNodesList, Material, AnalysisSettings )
+                call MaterialConstructor( ElementList(i)%El, ElementList, GlobalNodesList, Material, AnalysisSettings, i )
 
             enddo
 

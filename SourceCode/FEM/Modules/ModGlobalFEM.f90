@@ -59,6 +59,7 @@ module ModGlobalFEM
             integer , pointer , dimension(:)   :: GM
             real(8) , pointer , dimension(:,:) :: NaturalCoord
             real(8) , pointer , dimension(:)   :: Weight
+            real(8)                            :: ExtraNaturalCoord(3)
 
             !************************************************************************************
 
@@ -96,6 +97,24 @@ module ModGlobalFEM
                     ElementList(e)%El%GaussPoints(gp)%Time = Time
                     call ElementList(e)%El%GaussPoints(gp)%UpdateStressAndStateVariables(Status)
                 enddo
+                
+                !----------------------------------------------------------------------------
+                ! Analysis with embedded elements
+                            
+                if (AnalysisSettings%EmbeddedElements) then
+                    do gp = 1 , size(ElementList(e)%El%ExtraGaussPoints)
+                        ExtraNaturalCoord = ElementList(e)%El%ExtraGaussPoints(gp)%AdditionalVariables%NaturalCoord
+                        call ElementList(e)%El%DeformationGradient( ExtraNaturalCoord , U(GM) , AnalysisSettings , F, Status )
+                        ElementList(e)%El%ExtraGaussPoints(gp)%F = F
+                        ! AdditionalVariables
+                        !----------------------------------------------------------------------------
+                        ElementList(e)%El%ExtraGaussPoints(gp)%AdditionalVariables%Jbar = Volume/VolumeX
+                        !----------------------------------------------------------------------------
+                        ElementList(e)%El%ExtraGaussPoints(gp)%Time = Time
+                        call ElementList(e)%El%ExtraGaussPoints(gp)%UpdateStressAndStateVariables(Status)
+                    enddo
+                endif
+                
             enddo
             !$OMP END DO
             !$OMP END PARALLEL

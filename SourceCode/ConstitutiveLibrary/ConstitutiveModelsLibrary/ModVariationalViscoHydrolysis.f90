@@ -300,18 +300,18 @@ module modVarViscoHydrolysis
        eps(3) = Tensor_Inner_Product(etr,Ei(:,:,3))
     endif
     
-    vdWtr = 2*G*eps
+    vdWtr = 2.0d0*G*eps
     
     dWtr(1,1:3) = [vdWtr(1),    0.0d0,    0.0d0]
     dWtr(2,1:3) = [   0.0d0, vdWtr(2),    0.0d0]
     dWtr(3,1:3) = [   0.0d0,    0.0d0, vdWtr(3)]
   
 
-    d2Wtr(1,1:3) = [2*G,    0.0d0,    0.0d0]
-    d2Wtr(2,1:3) = [   0.0d0, 2*G,    0.0d0]
-    d2Wtr(3,1:3) = [   0.0d0,    0.0d0, 2*G]
+    d2Wtr(1,1:3) = [2.0d0*G,    0.0d0,    0.0d0]
+    d2Wtr(2,1:3) = [   0.0d0, 2.0d0*G,    0.0d0]
+    d2Wtr(3,1:3) = [   0.0d0,    0.0d0, 2.0d0*G]
     
-    energye = G*(eps(1)**2 + eps(2)**2 + eps(3)**2)
+    energye = G*(eps(1)**2.0d0 + eps(2)**2.0d0 + eps(3)**2.0d0)
     
 
     !if ((size(etr,1)+size(etr,2)) .eq. 4) then
