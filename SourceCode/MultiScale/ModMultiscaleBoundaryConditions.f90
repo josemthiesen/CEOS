@@ -385,7 +385,7 @@ module ModMultiscaleBoundaryConditions
         !************************************************************************************
         ! Allocating the ActiveInitialValue and the ActiveFinalValue
         nActive = size(NodalDispDOF)
-        Allocate(ActiveInitialValue(nActive) , ActiveFinalValue(nActive))
+        allocate(ActiveInitialValue(nActive), ActiveFinalValue(nActive))
         
         ! Creating the vector of BC on the active DoF
         do k=1,size(NodalMultiscaleDispBC)
@@ -421,6 +421,10 @@ module ModMultiscaleBoundaryConditions
             U( NodalDispDOF(i) ) = ActiveInitialValue(i)
             DeltaUPresc( NodalDispDOF(i) ) =  ActiveFinalValue(i) - ActiveInitialValue(i)
         enddo
+        
+        deallocate(ActiveInitialValue, ActiveFinalValue)
+
+        
         !************************************************************************************
     end subroutine
     !=================================================================================================
@@ -546,8 +550,9 @@ module ModMultiscaleBoundaryConditions
         !************************************************************************************
         ! APPLYING BOUNDARY CONDITIONS
         !************************************************************************************
-
-        allocate( Udirichlet(size(U)), Rmod(size(U)) )
+        
+        
+        allocate(Udirichlet(size(U)), Rmod(size(U)))
         Udirichlet = 0.0d0
         Rmod = 0.0d0
 
@@ -587,7 +592,9 @@ module ModMultiscaleBoundaryConditions
             end if
 
         end if
-
+    
+        deallocate(Udirichlet, Rmod)
+        
         ! Applying homogeneous boundary conditions (fixed supports)
         if ( size(this%FixedSupport%dof) .ne. 0 ) then
 

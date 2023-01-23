@@ -39,7 +39,7 @@ module ModPardisoSolver
     ! -1         Release all internal memory for all matrices
     !----------------------------------------------------------------------------------------------
     integer, parameter :: PhaseSolve=33 , PhaseAnalysis=11 , PhaseFactorization=22
-    integer, parameter :: PhaseAnalysisFactorization=12 , PhaseAll=13 , PhaseKill=-1
+    integer, parameter :: PhaseAnalysisFactorization=12 , PhaseAll=13! , PhaseKill=-1
 
     private::ErrorDesc
 
@@ -359,6 +359,7 @@ module ModPardisoSolver
             ! Input/Output variables
             ! -----------------------------------------------------------------------------------
             real(8) , dimension(:) :: x
+            integer :: PhaseKill
 
 		    !************************************************************************************
 
@@ -377,6 +378,8 @@ module ModPardisoSolver
             !write(*,'(12x,a,i3)') 'Iparm 11: ',this%iparm(11)
             !write(*,'(12x,a,i3)') 'Iparm 13: ',this%iparm(13)
             !write(*,'(12x,a,i3)') 'Iparm 24: ',this%iparm(24)
+            
+            PhaseKill = -1
 
             call CallPardiso( this, PhaseKill, A%val, A%RowMap, A%Col, b, x )
             

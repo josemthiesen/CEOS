@@ -1496,22 +1496,22 @@ module ModFEMAnalysisBiphasic
                                     allocate(BCSolid%FixedSupport%dof(24))
                                     BCSolid%FixedSupport%dof = FEMSoESolid%verticesDOF
                                                             
-                                    !call BCSolid%AllocatePrescDispSparseMapping(FEMSoESolid%Kg, BCSolid%FixedSupport%dof, KgSolidValZERO, KgSolidValONE, contZEROSolid, contONESolid)
+                                    call BCSolid%AllocatePrescDispSparseMapping(FEMSoESolid%Kg, BCSolid%FixedSupport%dof, KgSolidValZERO, KgSolidValONE, contZEROSolid, contONESolid)
 
                                 endselect
                         else
                             call BCSolid%AllocatePrescDispSparseMapping(FEMSoESolid%Kg, FEMSoESolid%DispDOF, KgSolidValZERO, KgSolidValONE, contZEROSolid, contONESolid)
-                        endif
                             
-                        allocate( FEMSoESolid%PrescDispSparseMapZERO(contZEROSolid), FEMSoESolid%PrescDispSparseMapONE(contONESolid) )
+                            allocate( FEMSoESolid%PrescDispSparseMapZERO(contZEROSolid), FEMSoESolid%PrescDispSparseMapONE(contONESolid) )
 
-                        FEMSoESolid%PrescDispSparseMapZERO(:) = KgSolidValZERO(1:contZEROSolid)
-                        FEMSoESolid%PrescDispSparseMapONE(:)  = KgSolidValONE(1:contONESolid)
+                            FEMSoESolid%PrescDispSparseMapZERO(:) = KgSolidValZERO(1:contZEROSolid)
+                            FEMSoESolid%PrescDispSparseMapONE(:)  = KgSolidValONE(1:contONESolid)
+                        endif
 
                         call BCSolid%AllocateFixedSupportSparseMapping(FEMSoESolid%Kg, KgSolidValZERO, KgSolidValONE, contZEROSolid, contONESolid)
 
                         allocate( FEMSoESolid%FixedSupportSparseMapZERO(contZEROSolid), FEMSoESolid%FixedSupportSparseMapONE(contONESolid) )
-
+                                                
                         FEMSoESolid%FixedSupportSparseMapZERO(:) = KgSolidValZERO(1:contZEROSolid)
                         FEMSoESolid%FixedSupportSparseMapONE(:)  = KgSolidValONE(1:contONESolid)
 

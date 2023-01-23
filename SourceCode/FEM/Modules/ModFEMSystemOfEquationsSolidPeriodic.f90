@@ -88,21 +88,22 @@ module ModFEMSystemOfEquationsSolidPeriodic
         
     
          !Clean KgRed (in case number of elements changes)
-        if (associated(this%KgRed)) then
-            deallocate(this%KgRed)
-        endif
-        allocate(this%KgRed)
+        !if (associated(this%KgRed)) then
+        !    deallocate(this%KgRed)
+        !endif
+        !allocate(this%KgRed)
         
         !Clean KgRed (in case number of elements changes)
-        !if (associated(this%KgRed%RowMap)) then
-        !    deallocate(this%KgRed%RowMap)
-        !endif
-        !if (associated(this%KgRed%Val)) then
-        !    deallocate(this%KgRed%Val)
-        !endif
-        !if (associated(this%KgRed%Col)) then
-        !    deallocate(this%KgRed%Col)
-        !endif   
+        if (associated(this%KgRed%RowMap)) then
+            deallocate(this%KgRed%RowMap)
+        endif
+        if (associated(this%KgRed%Val)) then
+            deallocate(this%KgRed%Val)
+        endif
+        if (associated(this%KgRed%Col)) then
+            deallocate(this%KgRed%Col)
+        endif   
+
         
         call this%AnalysisSettings%GetTotalNumberOfDOF(this%GlobalNodesList, nDOFSolid)
 
@@ -123,7 +124,7 @@ module ModFEMSystemOfEquationsSolidPeriodic
         RFull = -RFull
         !Print for checking at first iteration
         if ((this%NewtonIteration==0) .AND. (this%PrintMats)) call OutputSparseMatrix(this%Kg,'Kg.txt',nDOFSolid,nDOFSolid)
-                
+        
         allocate(KgAux%RowMap(nDOFRed+1))
                
         nzmax = nDOFSolid*nDOFRed
@@ -182,7 +183,9 @@ module ModFEMSystemOfEquationsSolidPeriodic
         R = 0.0d0
         ! Calculate R (red) from RFull
         call mkl_dcsrmv('T', nDOFSolid, nDOFRed, 1.0d0, this%TMatDescr, this%TMat%Val, this%TMat%Col, this%TMat%RowMap(1:(size(this%TMat%RowMap)-1)), this%TMat%RowMap(2:size(this%TMat%RowMap)), RFull, 0.0d0, R)
-
+        
+        deallocate(RFull)
+        
     end subroutine
 
 !--------------------------------------------------------------------------------------------------

@@ -308,7 +308,8 @@ module ModBoundaryConditions
             !**************************************************************
 
         end if
-
+        
+        deallocate( DeltaXPresc, Rmod )
 
         ! Applying homogeneous boundary conditions (fixed supports)
         if ( size(this%FixedSupport%dof) .ne. 0 ) then
@@ -528,8 +529,8 @@ module ModBoundaryConditions
             endif
 
         enddo
-
-
+        
+        
         !************************************************************************************
 
     end subroutine
@@ -619,7 +620,9 @@ module ModBoundaryConditions
         Fext = InitialValue
 
         DeltaFext = FinalValue - InitialValue
-
+        
+        deallocate( InitialValue , FinalValue )
+        
         !************************************************************************************
 
     end subroutine

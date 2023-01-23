@@ -220,6 +220,12 @@ module ModNewtonRaphsonFull
 
             end do LOOP
             
+            if (SOE%isPeriodic) then
+                deallocate(R, RFull, DX, DXFull) 
+            else
+                deallocate(R, DX)
+            endif
+            
             this%w_atkin = w_atkin
             
         end subroutine
