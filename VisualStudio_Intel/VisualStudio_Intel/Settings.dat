@@ -14,20 +14,20 @@
 
 ANALYSIS SETTINGS
 
-	Multiscale Analysis = False !True
-	Multiscale Model = MinimalLinearD1!MinimalLinearD1 !Linear !MinimalLinearD1 !Linear !Taylor !Minimal 
-	Multiscale Model Fiber Axial Direction = X !Z Y	
-	Problem Type = Biphasic !Mechanical ! Biphasic!
-	Solution Scheme = Monolithic !Sequential
-	Multiscale Model Fluid = Linear !Linear !Taylor
+	Multiscale Analysis = True
+	Multiscale Model = MinimalLinearD1
+	Multiscale Model Fiber Axial Direction = Z
+	Problem Type = Biphasic
+	Solution Scheme = Sequential
+	Multiscale Model Fluid = Minimal
 	Fiber Reinforced Analysis = False
 	Fiber Data File = Fiber_Data.dat
 	Analysis Type = Quasi Static
-	Nonlinear Analysis = True !False !
-	Hypothesis of Analysis = 3D ! Axisymmetric ! Plane Strain !  
-	Element Technology = Full Integration !Mean Dilatation ! Reduced Integration
-	Maximum Cut Backs = 100
-	Multiscale Epsilon Parameter  = 1.0d-14
+	Nonlinear Analysis = True
+	Hypothesis of Analysis = 3D
+	Element Technology = Full Integration
+	Maximum Cut Backs = 10
+	Multiscale Epsilon Parameter = 1.0d-14
 	
 END ANALYSIS SETTINGS
 
@@ -45,15 +45,15 @@ NONLINEAR SOLVER
 
 	Newton_Raphson_Full
 	
-	Tol_Force_Mechanical = 1e-6
+	Tol_Force_Mechanical = 1e-8
 	Tol_Flux_Biphasic = 1e-8
-	MaxIter = 500
+	MaxIter = 50
 
 END NONLINEAR SOLVER
 
 LINE SEARCH ALGORITHM
 	
-	Active = True ! False
+	Active = False
 	Line_Search_Parameter = 0.9
 
 END LINE SEARCH ALGORITHM
@@ -62,8 +62,8 @@ END LINE SEARCH ALGORITHM
 
 STAGGERED SPLITTING SCHEME
 
-	Splitting Scheme 	 = Fixed Strain !Fixed Stress !Fixed Strain! Undrained! Fixed Stress
-	Stability Constant 	 = 500! Depende do modelo ! 1.0d4 rodou o k = 0.76e-3
+	Splitting Scheme 	 = Fixed Stress !Fixed Strain! Undrained! Fixed Stress
+	Stability Constant 	 = 0.5! Depende do modelo ! 1.0d4 rodou o k = 0.76e-3
 	Mechanical Staggered Tolerance    = 1.0d-3
 	Flux Staggered Tolerance 		  = 1.0d-3 ! com 1.0d-1 rodou, mas o resultado nao deu boa
 	
@@ -71,92 +71,49 @@ END STAGGERED SPLITTING SCHEME
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
+
 MATERIAL
+
+	Number of Materials = 2
 	
-	Number of Materials = 1		
+
 	
-	Material ID = 1				! Matriz estrutura externa
+	Material ID = 1		! RVE_Center_Matrix
 	Compressible_Neo_Hookean
-	Mu = 10.0E-1 !1.10e-3
-	Lambda = 15.0E-1 !110.0e-3
+	Mu = 10.0E-1 
+	Lambda = 15.0E-1 
 	
-	!Material ID = 2				! Fibra estrutura externa
-	!Compressible_Neo_Hookean
-	!Mu = 10.0 !1.10e-3
-	!Lambda = 15.0 !110.0e-3
-	!
-	!Material ID = 3				! Matriz RVE superior
-	!Compressible_Neo_Hookean
-	!Mu = 10.0E-1 !1.10e-3
-	!Lambda = 15.0E-1 !110.0e-3
-	!
-	!Material ID = 4				! Fibra RVE superior
-	!Compressible_Neo_Hookean
-	!Mu = 10.0 !1.10e-3
-	!Lambda = 15.0 !110.0e-3
+	Material ID = 2			! RVE_Center_Fiber
+	Compressible_Neo_Hookean
+	Mu = 10.0 
+	Lambda = 15.0 
 
-	 
-	!Material ID = 1
-	!Hyperelastic_fiber_GOH
-	!Fiber Volume Fraction = 0.75e0
-	!Mu Matrix= 12.50e0 
-	!Lambda Matrix = 50.0e0 
-	!Cte1 Fiber = 970.174e0 
-	!Cte2 Fiber = 2.828e0 
-	!Cte3 FiberDispersion = 0.0d0 !0.0417d0 !0.0195654d0 !0.0417d0  ! (0 a 1/3)
-	!
-	!
-	!Material ID = 2
-	!Compressible_neo_hookean
-	!Mu = 1.10e-3
-	!Lambda = 110.0e-3
-	 
-
-	
-	!Material ID = 1
-	!Matrix_Viscoelastic
-	!K_inf = 1.0e0
-	!Mu_inf = 10.0e-0       !14e0  E = 35MPa e v = 0,25
-	!Lambda_inf = 15.0e-0    !14e0
-	!K_e = 1.0e0
-	!Mu_e = 50.0e-0 
-	!Ni_v = 1500.0e-0 
-	!
-	!Material ID = 2				! Placa
-	!Compressible_Neo_Hookean
-	!Mu = 10.0e6 !1.10e-3
-	!Lambda = 15.0e6 !110.0e-3
-	 	
 END MATERIAL 
+
 
 PERMEABILITY
 
-	Number of Materials = 1
-
-	 Material ID = 1
-	 Spatial_Isotropic_Constant_Permeability
-	 k =  2.0e2
+	Number of Materials = 2
 	 
-	!Material ID = 2
-	!Spatial_Isotropic_Constant_Permeability
-	!k =  1.0e2
-	!
-	!Material ID = 3
-	!Spatial_Isotropic_Constant_Permeability
-	!k =  2.0e2
-	!
-	!Material ID = 4
-	!Spatial_Isotropic_Constant_Permeability
-	!k =  1.0e2
 
+	Material ID = 1		! RVE_Center_Matrix
+	 Spatial_Isotropic_Constant_Permeability
+	 k =  2.0e2   !um~2 mm^2/Ns  = 10^6 mm^4 / Ns
+	
+	Material ID = 2		! RVE_Center_Fiber
+	 Spatial_Isotropic_Constant_Permeability
+	 k =  1.0e2
+	
 	 
 END PERMEABILITY
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+	
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 MESH AND BOUNDARY CONDITIONS
 
-	Mesh File = Cubo_biphasic.cdb !Estrutura_Undrained.cdb  !Mesh_RVE_Poligonal_12Fibras_2Voltas_vf70_Tampos.cdb !Mesh_RVE_Poligonal_3Fibras_2Voltas_vf70_Tampos.cdb!
+	Mesh File = Estrutura_RVE_1x1_BS.cdb
 	Preprocessor = HyperMesh 
 	Time Discretization File = Time_Discretization.dat
 		
@@ -165,19 +122,19 @@ END MESH AND BOUNDARY CONDITIONS
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 MACROSCOPIC DISPLACEMENT AND DEFORMATION GRADIENT
-	
-	U1  = U1.dat !Zero 
-	U2  = U2.dat !Zero 
-	U3  = U3.dat !Zero 
-	F11 = F11_Cyclic.dat !One !
-	F12 = Zero !F12.dat !  
-	F13 = Zero 
-	F21 = Zero
-	F22 = F22_Cyclic.dat  !One !
-	F23 = Zero
-	F31 = Zero
-	F32 = Zero
-	F33 = F33_Cyclic.dat !One !One	
+
+	U1  = U_1.dat 
+	U2  = U_2.dat
+	U3  = U_3.dat
+	F11 = F_11.dat 
+	F12 = F_12.dat 
+	F13 = F_13.dat
+	F21 = F_21.dat
+	F22 = F_22.dat 
+	F23 = F_23.dat
+	F31 = F_31.dat
+	F32 = F_32.dat
+	F33 = F_33.dat
 		
 END MACROSCOPIC DISPLACEMENT AND DEFORMATION GRADIENT
 
@@ -187,11 +144,10 @@ END MACROSCOPIC DISPLACEMENT AND DEFORMATION GRADIENT
 
 MACROSCOPIC PRESSURE AND GRADIENT
 
-	P = P.dat 
-	GradP1 = GradP1.dat
-	GradP2 = GradP2.dat
-	GradP3 = GradP3.dat	
-	
+	P = P.dat
+	GradP1 = GradP_1.dat
+	GradP2 = GradP_2.dat
+	GradP3 = GradP_3.dat
 		
 END MACROSCOPIC PRESSURE AND GRADIENT
 

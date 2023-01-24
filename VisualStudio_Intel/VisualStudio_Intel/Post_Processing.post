@@ -1,11 +1,10 @@
-
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ! Post Processor Results
 !-----------------------------------------------------------------------------------------
 POST PROCESSOR 
 
-	Post Processor = HyperView 12 !HomogenizeSample !HyperView 12 !None !GiD 7 ! HomogenizeSample RVEMaterials, 3, 4
-	Results =  Displacements, Fiber_Direction, Logarithmic Strain, Cauchy Stress ! ,  Logarithmic Strain , Fiber_Direction !,Cauchy Stress Fiber_Direction !Displacements, Cauchy Stress , Pressure, Biphasic Total Cauchy Stress !, Pressure  ,  Relative Velocity !, Fiber_Direction! Logarithmic Strain !, Fiber_Direction , Fiber_Dissipation , Matrix_Dissipation !,  
+	Post Processor = HyperView 12
+	Results = Displacements , Pressure , Spatial Relative Velocity
 	File Name = hypermesh_results.hwascii
 	
 END POST PROCESSOR 
@@ -17,110 +16,43 @@ END POST PROCESSOR
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ! Defaut Probes
 !-----------------------------------------------------------------------------------------
-! Location: Node
-!
 ! Variable Name: Displacements
 ! Components: 1=X ; 2=Y ; 3=Z ; All
 !-----------------------------------------------------------------------------------------
-! Location = Gauss Point
-!
 ! Variable Name: Cauchy Stress or Logarithmic Strain
 ! Components: 1=XX ; 2=YY ; 3=ZZ ; 4=XY ; 5=YZ; 6=XZ ; All
-!
-! Variable Name: Deformation Gradient:
-! Components: 1=XX ; 2=YX ; 3=ZX ; 4=XY ; 5=YY ; 6=ZY ; 7=XZ ; 8=YZ ; 9=ZZ ; All
 !-----------------------------------------------------------------------------------------
-! Location: Micro Structure !(Homogenized Variables)! 
-!
-! Variable Name: Cauchy Stress
-! Components: 1=XX ; 2=YY ; 3=ZZ ; 4=XY ; 5=YZ; 6=XZ ; All
-!
 ! Variable Name: Deformation Gradient
 ! Components: 1=XX ; 2=YX ; 3=ZX ; 4=XY ; 5=YY ; 6=ZY ; 7=XZ ; 8=YZ ; 9=ZZ ; All
-!
-! Variable Name: First Piola Stress
-! Components: 1=XX ; 2=YX ; 3=ZX ; 4=XY ; 5=YY ; 6=ZY ; 7=XZ ; 8=YZ ; 9=ZZ ; All
-!-----------------------------------------------------------------------------------------
-! Location: Micro Structure Biphasic !(Homogenized Variables for Biphasic analysis)! 
-!
-! Variable Name: Cauchy Stress
-! Components: 1=XX ; 2=YY ; 3=ZZ ; 4=XY ; 5=YZ; 6=XZ ; All
-!
-! Variable Name: Deformation Gradient
-! Components: 1=XX ; 2=YX ; 3=ZX ; 4=XY ; 5=YY ; 6=ZY ; 7=XZ ; 8=YZ ; 9=ZZ ; All
-!
-! Variable Name: First Piola Stress
-! Components: 1=XX ; 2=YX ; 3=ZX ; 4=XY ; 5=YY ; 6=ZY ; 7=XZ ; 8=YZ ; 9=ZZ ; All
-!-----------------------------------------------------------------------------------------
-!-----------------------------------------------------------------------------------------
-! Location: Macro Structure !(Integrated on all structure variables)! 
-!
-! Variable Name: Total Volume
-! Components: All (Just one scalar)
-
-!-----------------------------------------------------------------------------------------
-! Location: Nodal Force !(Reaction Force)! 
-!
-! Load Collector: Name of an assembly of nodes defined in mesh file
-! Hypermesh file = Mesh file where was defined the load collector of reaction force nodes
-! Components: Solid; Total  ( Solid = Just Solid ; Total = Solid + Fluid)
-!
-! 
-!
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-NUMBER OF PROBES = 0
-
-!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-PROBE
-	Location = Micro Structure
-	File Name = Homogenized_F.probe
-	Variable Name = Deformation Gradient
-	Components = All !1 , 5 , 9 !
-END PROBE
-
-PROBE
-	Location = Micro Structure
-	File Name = Homogenized_Cauchy_Stress.probe
-	Variable Name = Cauchy Stress 
-	Components = All !1 !All
-END PROBE
-
-PROBE
-	Location = Micro Structure
-	File Name = Homogenized_First_Piola.probe
-	Variable Name = First Piola Stress 
-	Components = All !1 !All
-END PROBE
-
-
-PROBE
-	Location = Nodal Force
-	File Name = Reaction_Force.probe
-	Load Collector = Reaction Force
-	Components = Total  !Solid    !Total ( Solid = Just Solid ; Total = Solid + Fluid)
-	HyperMesh File = confined_3d_mesh_quarter_d2xh2_ref2_11000_Reaction_Force.cdb  !confined_3d_mesh_quarter_d2xh2_ref1_reaction_force.cdb !!confined_3d_mesh_quarter_d2xh2_ref1_reaction_force.cdb
-END PROBE 
-
-PROBE
-	Location = Macro Structure
-	File Name = Volumes.probe
-	Variable Name = Total Volume
-	Components = All 
-END PROBE
-
-PROBE
-	Location = Nodal Force
-	File Name = Reaction_Force.probe
-	Load Collector = Reaction_Force
-	Components = Total  !Solid    !Total ( Solid = Just Solid ; Total = Solid + Fluid)
-	HyperMesh File = Cell_Cilindro_Reaction_Force.cdb
-END PROBE 
+NUMBER OF PROBES = 8
 
 PROBE
 	Location = Micro Structure Biphasic
-	File Name = Homogenized_Relative_Velocity.probe
-	Variable Name = Relative Velocity
+	File Name = Homogenized_U.probe
+	Variable Name = Displacements
+	Components = All
+END PROBE
+
+PROBE
+	Location = Micro Structure Biphasic
+	File Name = Homogenized_F.probe
+	Variable Name = Deformation Gradient
+	Components = All
+END PROBE
+
+PROBE
+	Location = Micro Structure Biphasic
+	File Name = Homogenized_Cauchy_Stress.probe
+	Variable Name = Cauchy Stress 
+	Components = All
+END PROBE
+
+PROBE
+	Location = Micro Structure Biphasic
+	File Name = Homogenized_First_Piola.probe
+	Variable Name = First Piola Stress 
 	Components = All
 END PROBE
 
@@ -133,195 +65,25 @@ END PROBE
 
 PROBE
 	Location = Micro Structure Biphasic
-	File Name = Homogenized_GradientPressure.probe
+	File Name = Homogenized_Pressure_Gradient.probe
 	Variable Name = Gradient Pressure
 	Components = All
 END PROBE
 
 PROBE
 	Location = Micro Structure Biphasic
-	File Name = Homogenized_F.probe
-	Variable Name = Deformation Gradient
-	Components = All !1 , 5 , 9 !
+	File Name = Homogenized_Ref_Relative_Velocity.probe
+	Variable Name = Referential Relative Velocity
+	Components = All
 END PROBE
 
 PROBE
 	Location = Micro Structure Biphasic
-	File Name = Homogenized_Cauchy_Stress.probe
-	Variable Name = Cauchy Stress 
-	Components = All !1 !All
-END PROBE
-
-PROBE
-	Location = Micro Structure Biphasic
-	File Name = Homogenized_First_Piola.probe
-	Variable Name = First Piola Stress 
-	Components = All !1 !All
-END PROBE
-
-
-
-
-PROBE
-	Location = Node
-	File Name = Disp_Node_13981.probe
-	Variable Name = Displacements 
-	Node = 13981
-	Components = All
-END PROBE 
-
-PROBE
-	Location = Node
-	File Name = Disp_Node_12595.probe
-	Variable Name = Displacements 
-	Node = 12595
-	Components = All
-END PROBE 
-
-PROBE
-	Location = Node
-	File Name = Disp_Node_11311.probe
-	Variable Name = Displacements 
-	Node = 11311
-	Components = All
-END PROBE
-
-PROBE
-	Location = Node
-	File Name = Disp_Node_9316.probe
-	Variable Name = Displacements 
-	Node = 9316
-	Components = All
-END PROBE
-
-PROBE
-	Location = Node
-	File Name = Disp_Node_12350.probe
-	Variable Name = Displacements 
-	Node = 12350
+	File Name = Homogenized_JdivV.probe
+	Variable Name = Jacobian Solid Velocity Divergent
 	Components = All
 END PROBE
 
 
 
-
-
-
-
-
-
-PROBE
-	Location = Nodal Force
-	File Name = Reaction_Force.probe
-	Load Collector = Reaction Force
-	HyperMesh File = Malha_Fibra_Helicoidal_3_Passos.cdb
-END PROBE 
-
-PROBE
-	Location = Node
-	File Name = Displacement_X.probe
-	Variable Name = Displacements 
-	Node = 75
-	Components = 1
-END PROBE 
-
-
-
-
-
-PROBE
-	Location = Nodal Force
-	File Name = Reaction_Force.probe
-	Load Collector = Reaction Force
-	HyperMesh File = Malha_Fibra_Reta_3_Passos.cdb
-END PROBE 
-
-PROBE
-	Location = Node
-	File Name = Displacement_X.probe
-	Variable Name = Displacements 
-	Node = 682
-	Components = 1
-END PROBE 
-
-
-
-
-
-
-PROBE
-	Location = Gauss Point
-	File Name = Cauchy_Stress_33.probe
-	Variable Name = Cauchy Stress
-	Element = 1
-	Gauss Point = 1	
-	Components = 3
-END PROBE
-
-PROBE
-	Location = Gauss Point
-	File Name = Log_Strain_33.probe
-	Variable Name = Logarithmic Strain 
-	Element = 1
-	Gauss Point = 1	
-	Components = 3
-END PROBE
-
-PROBE
-	Location = Gauss Point
-	File Name = Deformation_Gradient.probe
-	Variable Name = Deformation Gradient
-	Element = 1
-	Gauss Point = 1	
-	Components = All
-END PROBE
-
-
-
-
-
-
-
-PROBE
-	Location = Micro Structure
-	File Name = Homogenized_Cauchy.probe
-	Variable Name = Cauchy Stress 
-	Components = All
-END PROBE
-
-
-PROBE
-	Location = Gauss Point
-	File Name = F11_micro.probe
-	Variable Name = Deformation Gradient
-	Element = 1
-	Gauss Point = 1	
-	Components = All
-END PROBE
-
-PROBE
-	Location = Node
-	File Name = CEOS_Disp_X.probe
-	Variable Name = Displacements 
-	Node = 6
-	Components = 1
-END PROBE 
-
-PROBE
-	Location = Gauss Point
-	File Name = CEOS_von_mises_Stress.probe
-	Variable Name = von Mises Stress 
-	Element = 81
-	Gauss Point = 1	
-	Components = 1
-END PROBE
- 
-PROBE
-	Location = Gauss Point
-	File Name = CEOS_Strain.probe
-	Variable Name = Strain 
-	Element = 81
-	Gauss Point = 1
-	Components = 3	
-END PROBE 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX

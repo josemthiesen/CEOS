@@ -1314,7 +1314,6 @@ module ModProbe
 
                     select type (FEA)
                         class is (ClassMultiscaleFEMAnalysisBiphasic)
-
                             select case (this%VariableNameID)
 
                                 ! Writing First Piola Stress
