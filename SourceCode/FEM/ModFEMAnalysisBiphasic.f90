@@ -1218,6 +1218,7 @@ module ModFEMAnalysisBiphasic
             use ModFEMSystemOfEquationsSolidMinimal
             use ModFEMSystemOfEquationsFluidMinimal
             use ModFEMSystemOfEquationsSolidPeriodic
+            use ModFEMSystemOfEquationsFluidLinearMinimalP
                 
             implicit none
 
@@ -1311,13 +1312,17 @@ module ModFEMAnalysisBiphasic
                     stop 'Error: Solid Multiscale model not defined. QuasiStaticAnalysis_Biphasic_FluidSolid'
                 endif
                     
-                if (MultiscaleModelFluid == MultiscaleModels%Minimal .or. &
-                    MultiscaleModelFluid == MultiscaleModels%MinimalLinearD1 .or. &
-                    MultiscaleModelFluid == MultiscaleModels%MinimalLinearD3) then
+                if (MultiscaleModelFluid == MultiscaleModels%Minimal) then
                     allocate( ClassFEMSystemOfEquationsFluidMinimal :: FEMSoEFluid)
                     select type(FEMSoEFluid)
                         class is(ClassFEMSystemOfEquationsFluidMinimal)
                             AdditionalMinimalDoFFluid = size(FEMSoEFluid%PMacro_current) + size(FEMSoEFluid%GradPMacro_current) 
+                        endselect
+                elseif (MultiscaleModelFluid == MultiscaleModels%LinearMinimalP) then
+                    allocate( ClassFEMSystemOfEquationsFluidLinearMinimalP :: FEMSoEFluid)
+                    select type(FEMSoEFluid)
+                        class is(ClassFEMSystemOfEquationsFluidLinearMinimalP)
+                            AdditionalMinimalDoFFluid = size(FEMSoEFluid%PMacro_current) 
                     endselect
                 elseif(MultiscaleModelFluid == MultiscaleModels%Linear .or. &
                        MultiscaleModelFluid == MultiscaleModels%Taylor) then

@@ -335,6 +335,8 @@ module ModReadInputFile
                 AnalysisSettings%MultiscaleModelFluid = MultiscaleModels%Taylor
             elseif (DataFile%CompareStrings(ListOfValues(9),"Linear")) then
                 AnalysisSettings%MultiscaleModelFluid = MultiscaleModels%Linear
+            elseif (DataFile%CompareStrings(ListOfValues(9),"LinearMinimalP")) then
+                AnalysisSettings%MultiscaleModelFluid = MultiscaleModels%LinearMinimalP
             elseif (DataFile%CompareStrings(ListOfValues(9),"Minimal")) then
                 AnalysisSettings%MultiscaleModelFluid = MultiscaleModels%Minimal        
             else
@@ -504,6 +506,8 @@ module ModReadInputFile
                     if (AnalysisSettings%MultiscaleModelFluid == MultiscaleModels%Taylor) then
                         allocate(ClassMultiscaleBCBiphasicFluidTaylorAndLinear :: BCFluid)
                     elseif (AnalysisSettings%MultiscaleModelFluid == MultiscaleModels%Linear) then
+                        allocate(ClassMultiscaleBCBiphasicFluidTaylorAndLinear :: BCFluid)
+                    elseif (AnalysisSettings%MultiscaleModelFluid == MultiscaleModels%LinearMinimalP) then
                         allocate(ClassMultiscaleBCBiphasicFluidTaylorAndLinear :: BCFluid)
                     elseif (AnalysisSettings%MultiscaleModelFluid == MultiscaleModels%Minimal) then
                         allocate(ClassMultiscaleBCBiphasicFluidMinimal :: BCFluid)
@@ -825,6 +829,8 @@ module ModReadInputFile
                         if (AnalysisSettings%MultiscaleModelFluid == MultiscaleModels%Taylor) then
                             BCFluid%TypeOfBCFluid = MultiscaleBCType%Taylor
                         elseif (AnalysisSettings%MultiscaleModelFluid == MultiscaleModels%Linear) then
+                            BCFluid%TypeOfBCFluid = MultiscaleBCType%Linear
+                        elseif (AnalysisSettings%MultiscaleModelFluid == MultiscaleModels%LinearMinimalP) then
                             BCFluid%TypeOfBCFluid = MultiscaleBCType%Linear
                         elseif (AnalysisSettings%MultiscaleModelFluid == MultiscaleModels%Minimal) then
                             BCFluid%TypeOfBCFluid = MultiscaleBCType%Minimal

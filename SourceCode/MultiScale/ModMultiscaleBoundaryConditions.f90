@@ -21,7 +21,7 @@ module ModMultiscaleBoundaryConditions
 
     !-----------------------------------------------------------------------------------
     type ClassMultiscaleBCType
-        integer :: Taylor=1, Linear=2, Periodic=3, Minimal=4, MinimalLinearD1 = 5,  MinimalLinearD3 = 6
+        integer :: Taylor=1, Linear=2, Periodic=3, Minimal=4, MinimalLinearD1 = 5,  MinimalLinearD3 = 6, LinearMinimalP = 7
     end type
     !-----------------------------------------------------------------------------------
     
