@@ -677,7 +677,7 @@ module ModElementBiphasic
                 call MatrixMatrixMultiply(transHtransT,Kftg, transHtransTKftg, 1.0d0, 0.0d0 )
                 
                 ! Computes Ke = Ke + Ke_pu_4
-                call MatrixMatrixMultiply(transHtransTKftg, B, Ke, -Weight(gp)*detJ*FactorAxi, 1.0d0 )               
+                call MatrixMatrixMultiply(transHtransTKftg, B, Ke, Weight(gp)*detJ*FactorAxi, 1.0d0 )               
             enddo                    
 		    !************************************************************************************
         end subroutine     
