@@ -28,6 +28,7 @@ module ModConstitutiveModelLibrary
     use ModNeoHookeanIsochoric
     use ModHyperelasticTransIso
     use ModHyperelasticTransIsoComp
+    use ModHyperelasticFiberGOH
     use ModViscoelasticFiber
     use ModViscoelasticMatrix
     use ModViscoelasticMatrixFiber
@@ -35,6 +36,8 @@ module ModConstitutiveModelLibrary
     use ModVVHW
     use ModVarViscoHydrolysis
     use ModHyperBiphasicSpilker
+    use ModNeoHookeanFiberRecruit
+    use ModNeoHookeanFiberReinf
    
 
     ! Constitutive Models ID registered:
@@ -56,6 +59,9 @@ module ModConstitutiveModelLibrary
         integer   :: Glassy                                         = 15
         integer   :: VarViscoHydrolysisModel                        = 16
         integer   :: HyperIsotropicBiphasicSpilkerModel             = 17
+        integer   :: NeoHookeanFiberRecruitModel                    = 18
+        integer   :: NeoHookeanFiberReinfModel                      = 19
+        integer   :: HyperelasticFiberGOHModel                      = 20
         
     end type
 
@@ -137,7 +143,12 @@ module ModConstitutiveModelLibrary
             type(ClassGlassy_AXI)  , pointer , dimension(:) :: Glassy_AXI
             
             type(ClassHyperIsotropicBiphasicSpilker_3D)          , pointer , dimension(:) :: CHISBiphasic_3D
-            type(ClassHyperIsotropicBiphasicSpilker_PlaneStrain) , pointer , dimension(:) :: CHISBiphasic_PlaneStrain          
+            type(ClassHyperIsotropicBiphasicSpilker_PlaneStrain) , pointer , dimension(:) :: CHISBiphasic_PlaneStrain     
+            
+            type(ClassNeoHookeanFiberRecruit_3D)       , pointer , dimension(:) :: NHFREC_3D
+            type(ClassNeoHookeanFiberReinf_3D)       , pointer , dimension(:)  :: NHFREF_3D
+            
+            type(ClassHyperelasticFiberGOH_3D)         , pointer , dimension(:) :: HyperFiberGOH_3D
             
 		    !************************************************************************************
 
@@ -357,7 +368,25 @@ module ModConstitutiveModelLibrary
                     endif
                 ! -------------------------------------------------------------------------------
                     
+                ! -------------------------------------------------------------------------------
+                ! Hyperelastic Fiber Gasser-Ogden-Holzapfel Model
+                ! -------------------------------------------------------------------------------
+                case (ConstitutiveModels % HyperelasticFiberGOHModel)
 
+                    if ( AnalysisSettings%Hypothesis == HypothesisOfAnalysis%ThreeDimensional ) then
+
+                            allocate( HyperFiberGOH_3D(nGP) )
+                            GaussPoints => HyperFiberGOH_3D
+
+                    else
+                            call Error("Error: Hyperelastic Transverse Isotropic Model - analysis type not available.")
+
+                    endif
+                ! -------------------------------------------------------------------------------
+                    
+                    
+                    
+                    
                 ! -------------------------------------------------------------------------------
                 ! Hyperelastic Transverse Isotropic (Compressive Transition) Model
                 ! -------------------------------------------------------------------------------
@@ -483,7 +512,38 @@ module ModConstitutiveModelLibrary
                     call Error("Error: Glassy Model analysis type not available.")
 
                 endif                    
+                
+                ! -------------------------------------------------------------------------------
+                ! Neo-Hookean matrix reinforced with fibers with recruitment stretch
+                ! -------------------------------------------------------------------------------
+                case (ConstitutiveModels % NeoHookeanFiberRecruitModel)
+
+                    if ( AnalysisSettings%Hypothesis == HypothesisOfAnalysis%ThreeDimensional ) then
+
+                            allocate( NHFREC_3D(nGP) )
+                            GaussPoints => NHFREC_3D
+
+                    else
+                            call Error("Error: Neo Hookean Fiber Recruitment Model - analysis type not available.")
+
+                    endif
+                ! -------------------------------------------------------------------------------
                     
+                    
+                ! -------------------------------------------------------------------------------
+                ! Neo-Hookean matrix reinforced with neo-Hookean fiber
+                ! -------------------------------------------------------------------------------
+                case (ConstitutiveModels % NeoHookeanFiberReinfModel)
+
+                    if ( AnalysisSettings%Hypothesis == HypothesisOfAnalysis%ThreeDimensional ) then
+
+                            allocate( NHFREF_3D(nGP) )
+                            GaussPoints => NHFREF_3D
+
+                    else
+                            call Error("Error: Neo Hookean Fiber Reinforcement Model - analysis type not available.")
+
+                    endif
                 ! -------------------------------------------------------------------------------
                 
                 case default
@@ -573,6 +633,10 @@ module ModConstitutiveModelLibrary
 
                 modelID = ConstitutiveModels%HyperelasticTransIsoModel
                 
+            elseif ( Comp%CompareStrings('hyperelastic_fiber_GOH', model) .and. (AnalysisSettings%ElementTech == ElementTechnologies%Full_Integration) ) then
+
+                modelID = ConstitutiveModels%HyperelasticFiberGOHModel
+                
             elseif ( Comp%CompareStrings('hyperelastic_transverse_isotropic_(compressive_transition)', model) .and. (AnalysisSettings%ElementTech == ElementTechnologies%Full_Integration) ) then
 
                 modelID = ConstitutiveModels%HyperelasticTransIsoCompModel
@@ -599,6 +663,14 @@ module ModConstitutiveModelLibrary
             elseif ( Comp%CompareStrings('ViscoElasticoJan', model).and. (AnalysisSettings%ElementTech == ElementTechnologies%Full_Integration) ) then
             
                 modelID = ConstitutiveModels % Glassy   
+                
+            elseif ( Comp%CompareStrings('neo_hookean_fiber_recruit', model) .and. (AnalysisSettings%ElementTech == ElementTechnologies%Full_Integration) ) then
+
+                modelID = ConstitutiveModels%NeoHookeanFiberRecruitModel
+                
+            elseif ( Comp%CompareStrings('neo_hookean_fiber_reinf', model) .and. (AnalysisSettings%ElementTech == ElementTechnologies%Full_Integration) ) then
+
+                modelID = ConstitutiveModels%NeoHookeanFiberReinfModel
                 
             ! -----------------------------------------------------------------------------------    
             else

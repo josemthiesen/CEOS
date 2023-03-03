@@ -130,9 +130,9 @@ module ModFEMSystemOfEquationsMonolithicBiphasic
         !real(8), dimension(68,68) :: KgDFCFull 
         !real(8), dimension(4624) :: normDFC
         !type (ClassGlobalSparseMatrix), pointer :: KgSparseDFC
-        !type (ClassGlobalSparseMatrix), pointer :: KgSparseAnalytic
+        type (ClassGlobalSparseMatrix), pointer :: KgSparseAnalytic
         !type(SparseMatrix) :: KgSparseDFC_Raw
-        !integer :: i ,j, k
+        integer :: i ,j, k
         
         !allocate(KgSparseDFC)
         
@@ -146,17 +146,17 @@ module ModFEMSystemOfEquationsMonolithicBiphasic
        
         ! ---------------------------------------------------------------------
         !! Difference Centrar Comparation - Use only 1 element
-        !KgSparseAnalytic => this%Kg
-        !
+        KgSparseAnalytic => this%Kg
+        
         !call TangentStiffnessDFC(this, X, R, KgDFCFull)
-        !
-        !k=0
-        !do i= 1, 68
-        !    do j = 1, 68
-        !        k=k+1
-        !        write(*,*) i, "," , j, ",", KgDFCFull(i,j), ",", KgSparseAnalytic%Val(k)
-        !    end do
-        !end do
+        
+        k=0
+        do i= 1, 68
+            do j = 1, 68
+                k=k+1
+                write(*,*) i, "," , j, ",",  KgSparseAnalytic%Val(k),"," !,  KgDFCFull(i,j)
+            end do
+        end do
         ! ---------------------------------------------------------------------
         
         ! The dirichelet BC (Fluid -> pressure) are being applied in the system Kx=R and not in Kx = -R

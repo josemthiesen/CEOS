@@ -21,7 +21,7 @@ module ModMultiscaleBoundaryConditions
 
     !-----------------------------------------------------------------------------------
     type ClassMultiscaleBCType
-        integer :: Taylor=1, Linear=2, Periodic=3, Minimal=4, MinimalLinearD1 = 5,  MinimalLinearD3 = 6
+        integer :: Taylor=1, Linear=2, Periodic=3, Minimal=4, MinimalLinearD1 = 5,  MinimalLinearD3 = 6, LinearMinimalP = 7
     end type
     !-----------------------------------------------------------------------------------
     
@@ -55,12 +55,12 @@ module ModMultiscaleBoundaryConditions
     !-----------------------------------------------------------------------------------
 
     !-----------------------------------------------------------------------------------
-    !type, extends(ClassMultiscaleBoundaryConditions) :: ClassMultiscaleBoundaryConditionsPeriodic
-    !
-    !    contains
-    !        procedure :: ApplyBoundaryConditions => ApplyBoundaryConditionsMultiscalePeriodic
-    !        procedure :: GetBoundaryConditions => GetBoundaryConditionsMultiscalePeriodic
-    !end type
+    type, extends(ClassMultiscaleBoundaryConditions) :: ClassMultiscaleBoundaryConditionsPeriodic
+    
+        contains
+            procedure :: ApplyBoundaryConditions => ApplyBoundaryConditionsMultiscalePeriodic
+            procedure :: GetBoundaryConditions => GetBoundaryConditionsMultiscalePeriodic
+    end type
     !-----------------------------------------------------------------------------------
         
     !-----------------------------------------------------------------------------------
@@ -506,6 +506,176 @@ module ModMultiscaleBoundaryConditions
             UMacro(i)      = MacroscopicU_Initial(i)
             DeltaUMacro(i) = MacroscopicU_Final(i) - UMacro(i) 
         enddo
+        !************************************************************************************
+    end subroutine
+    !=================================================================================================
+    
+    !=================================================================================================
+    subroutine ApplyBoundaryConditionsMultiscalePeriodic(this, Kg , R , Presc_Disp_DOF , Ubar , U, PrescDispSparseMapZERO, PrescDispSparseMapONE, FixedSupportSparseMapZERO, FixedSupportSparseMapONE )
+
+        !************************************************************************************
+        ! DECLARATIONS OF VARIABLES
+        !************************************************************************************
+        ! Modules and implicit declarations
+        ! -----------------------------------------------------------------------------------
+        use ModGlobalSparseMatrix
+        implicit none
+
+        ! Input variables
+        ! -----------------------------------------------------------------------------------
+        class(ClassMultiscaleBoundaryConditionsPeriodic)  :: this
+        integer , dimension(:) , intent(in) :: Presc_Disp_DOF
+        integer , dimension(:) :: PrescDispSparseMapZERO
+        integer , dimension(:) :: PrescDispSparseMapONE
+        integer , dimension(:) :: FixedSupportSparseMapZERO
+        integer , dimension(:) :: FixedSupportSparseMapONE
+
+        ! Input/Output variables
+        ! -----------------------------------------------------------------------------------
+        real(8) , dimension(:) , intent(inout) :: R , Ubar , U
+        type(ClassGlobalSparseMatrix) :: Kg
+
+        ! Internal variables
+        ! -----------------------------------------------------------------------------------
+        integer :: i , n , dof
+        real(8) :: penaliza
+        real(8) , allocatable, dimension(:) ::  Udirichlet, Rmod
+        
+        !************************************************************************************
+
+        !************************************************************************************
+        ! APPLYING BOUNDARY CONDITIONS
+        !************************************************************************************
+
+        allocate( Udirichlet(size(U)), Rmod(size(U)) )
+        Udirichlet = 0.0d0
+        Rmod = 0.0d0
+
+        ! Applying prescribed boundary conditions
+        if ( size(Presc_Disp_DOF) .ne. 0 ) then
+            
+            if (this%NewtonIteration .eq. 0 .and. this%StaggeredIteration .eq. 1) then ! Staggered iteration == 1 -> First iteration of biphasic staggered problem
+                ! Loop over the prescribed degrees of freedom
+                do n=1,size(Presc_Disp_DOF)
+                    dof=Presc_Disp_DOF(n)
+                    ! Assembly the Dirichlet displacement BC
+                    Udirichlet(dof) = ( Ubar(dof) - U(dof) )
+                enddo
+
+                ! Multiplicação esparsa - Vetor Força para montagem da condição de contorno de rearranjo
+                call mkl_dcsrgemv('N', size(U), Kg%Val, Kg%RowMap, Kg%Col, Udirichlet, Rmod)
+                !call mkl_dcsrsymv('U', size(U), Kg%Val, Kg%RowMap, Kg%Col, Udirichlet, Rmod)
+
+                !Resíduo Modificado
+                R = R - Rmod
+            
+            elseif (this%NewtonIteration .eq. 0 .and. this%StaggeredIteration .eq. 0) then ! Staggered iteration == 0 -> Not biphasic
+                ! Loop over the prescribed degrees of freedom
+                do n=1,size(Presc_Disp_DOF)
+                    dof=Presc_Disp_DOF(n)
+                    ! Assembly the Dirichlet displacement BC
+                    Udirichlet(dof) = ( Ubar(dof) - U(dof) )
+                enddo
+
+                ! Multiplicação esparsa - Vetor Força para montagem da condição de contorno de rearranjo
+                call mkl_dcsrgemv('N', size(U), Kg%Val, Kg%RowMap, Kg%Col, Udirichlet, Rmod)
+                !call mkl_dcsrsymv('U', size(U), Kg%Val, Kg%RowMap, Kg%Col, Udirichlet, Rmod)
+
+                !Resíduo Modificado
+                R = R - Rmod
+            
+            end if
+
+        end if
+
+        ! Applying homogeneous boundary conditions (fixed supports)
+        if ( size(this%FixedSupport%dof) .ne. 0 ) then
+
+            !**************************************************************
+            ! Zerando linhas e colunas
+            Kg%Val(FixedSupportSparseMapZERO) = 0.0d0
+
+            ! Adicionando 1 na diagonal principal
+            Kg%Val(FixedSupportSparseMapONE) = 1.0d0
+
+            ! Corrigindo resíduo (flutuacao nula nos vertices)
+            R(this%FixedSupport%dof) = 0.0d0
+
+            !**************************************************************
+        end if
+
+        !************************************************************************************
+
+    end subroutine
+
+    !=================================================================================================
+    
+    !=================================================================================================
+    subroutine GetBoundaryConditionsMultiscalePeriodic( this, AnalysisSettings, GlobalNodesList, LC, ST, Fext, DeltaFext, NodalDispDOF, &
+                                                               U, DeltaUPresc, FMacro , DeltaFMacro, UMacro , DeltaUMacro )
+        !************************************************************************************
+        ! DECLARATIONS OF VARIABLES
+        !************************************************************************************
+        ! Modules and implicit declarations
+        ! -----------------------------------------------------------------------------------
+
+        implicit none
+
+        ! Input variables
+        ! -----------------------------------------------------------------------------------
+        class(ClassMultiscaleBoundaryConditionsPeriodic) :: this
+        class(ClassAnalysis)                            :: AnalysisSettings
+        type (ClassNodes),   pointer, dimension(:)      :: GlobalNodesList
+        integer                                         :: LC, ST
+
+        ! Output variables
+        ! -----------------------------------------------------------------------------------
+        real(8) , dimension(:)                          :: Fext , DeltaFext
+        integer , pointer , dimension(:)                :: NodalDispDOF
+        real(8) , dimension(:)                          :: U, DeltaUPresc
+        real(8) , dimension(:)                          :: UMacro , DeltaUMacro
+        real(8) , dimension(:)                          :: FMacro , DeltaFMacro
+
+        ! Internal variables
+        ! -----------------------------------------------------------------------------------
+        integer                                         :: i,j,k, nActive
+        real(8) , dimension(3,3)                        :: MacroscopicF_Initial, MacroscopicF_Final
+        integer                                         :: NDOFTaylorandLinear
+        integer                                         :: InitialDOFMultiscaleModel ! Define de Initial DOF of prescribed U (1 is the default)
+        real(8) , dimension(3)                          :: MacroscopicU_Initial, MacroscopicU_Final
+        real(8), dimension(size(U))                     :: UDummy
+                
+        !************************************************************************************
+        Fext      = 0.0d0    ! Values of External Force       - Not used in Multiscale Analysis
+        DeltaFext = 0.0d0    ! Values of Delta External Force - Not used in Multiscale Analysis
+        !************************************************************************************
+        
+        !************************************************************************************             
+        ! Obtaining the Macroscopic Displacement U
+        UMacro = 0.0d0        !This variable represent the Macroscopic Displacement at time tn
+        DeltaUMacro = 0.0d0   !This variable represent the Delta Macroscopic Displacement at time tn+1
+        call GetMacroscopicDisplacement( this%MacroscopicDisp, LC, ST, MacroscopicU_Initial, MacroscopicU_Final, &
+                                         UMacro, DeltaUMacro)  
+        !************************************************************************************             
+        ! Obtaining the Macroscopic deformation gradient F
+        FMacro = 0.0d0        !This variable represent the Macroscopic Deformation Gradient at time tn
+        DeltaFMacro = 0.0d0   !This variable represent the Delta Macroscopic Deformation Gradient at time tn+1
+        call GetMacroscopicDeformationGradient( this%MacroscopicDefGrad, LC, ST, MacroscopicF_Initial, MacroscopicF_Final, &
+                                                FMacro, DeltaFMacro)       
+        !************************************************************************************
+        !************************************************************************************ 
+        ! Calculating the prescribed displacement for the multiscale BC model
+        NDOFTaylorandLinear = AnalysisSettings%NDOFnode ! Number of prescribed GDL/node in Taylor and Linear model
+                                                        ! Applying BC to all degrees of freedom of the nodes
+        InitialDOFMultiscaleModel = 1 ! Define de Initial DOF of prescribed U (1 is the default)
+        ! Allocating the NodalDispDOF
+        if (associated(NodalDispDOF))          deallocate(NodalDispDOF)
+        nActive = size(this%NodalMultiscaleDispBC)*NDOFTaylorandLinear 
+        Allocate( NodalDispDOF(nActive))
+        call GetNodalMultiscaleDispBCandDeltaU(AnalysisSettings, GlobalNodesList, MacroscopicF_Initial, MacroscopicF_Final, &
+                                               MacroscopicU_Initial, MacroscopicU_Final, NDOFTaylorandLinear, InitialDOFMultiscaleModel,  &
+                                               this%NodalMultiscaleDispBC, NodalDispDOF, UDummy, DeltaUPresc)    
+
         !************************************************************************************
     end subroutine
     !=================================================================================================

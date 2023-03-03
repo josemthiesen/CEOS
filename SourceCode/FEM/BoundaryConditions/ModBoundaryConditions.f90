@@ -47,6 +47,7 @@ module ModBoundaryConditions
         type (ClassFixedSupport)                              :: FixedSupport
         type (ClassNodalBC),        allocatable, dimension(:) :: NodalForceBC , NodalDispBC
         type (ClassNodalBC),        allocatable, dimension(:) :: NodalFluxBC , NodalPresBC
+        integer                                               :: NewtonIteration, StaggeredIteration 
         type (ClassBoundaryNodes),  allocatable, dimension(:) :: BoundaryNodes
 
         contains

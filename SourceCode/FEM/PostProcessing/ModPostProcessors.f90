@@ -12,6 +12,8 @@ module ModPostProcessors
         character(len=255)                            :: FileName=''
         integer, allocatable, dimension(:)            :: VariableNameID
         logical                                       :: Active = .true.
+        logical                                       :: HomogenizeSample = .false.
+        
 
     contains
         procedure (TemplateFEA), deferred    :: WritePostProcessorResult
@@ -31,8 +33,6 @@ module ModPostProcessors
 
     end interface
     !----------------------------------------------------------------------------------------------
-
-
 
 end module
 

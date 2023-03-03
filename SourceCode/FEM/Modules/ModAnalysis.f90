@@ -50,7 +50,7 @@ module ModAnalysis
     
     !Multiscale Models
     type ClassMultiscaleModels
-        integer  :: Taylor=1 , Linear=2 , Periodic=3, Minimal=4, MinimalLinearD1 = 5, MinimalLinearD3 = 6
+        integer  :: Taylor=1 , Linear=2 , Periodic=3, Minimal=4, MinimalLinearD1 = 5, MinimalLinearD3 = 6, LinearMinimalP = 7
     end type
     type (ClassMultiscaleModels), parameter :: MultiscaleModels = ClassMultiscaleModels()
     
@@ -92,6 +92,7 @@ module ModAnalysis
     real(8) , target , dimension( 9 , MaxElementNumberDOF)                      :: G_Memory
     real(8) , target , dimension( 9 , 9)                                        :: S_Memory
     real(8) , target , dimension( MaxTensorComponents , MaxTensorComponents)    :: D_Memory
+    real(8) , target , dimension( MaxTensorComponents , MaxTensorComponents)    :: DP_Memory
     real(8) , target , dimension( MaxElementNumberDOF )                         :: SF_Memory
     real(8) , target , dimension( MaxElementNumberDOF )                         :: Fe_Memory
     real(8) , target , dimension( MaxTensorComponents )                         :: Stress_Memory
@@ -113,6 +114,7 @@ module ModAnalysis
     
 
     real(8) , target , dimension( MaxTensorComponents , MaxElementNumberDOF)    :: DB_Memory
+    real(8) , target , dimension( MaxTensorComponents , MaxElementNumberDOF)    :: DPB_Memory
     real(8) , target , dimension( 9 , MaxElementNumberDOF)                      :: SG_Memory
     real(8) , target , dimension( 1, MaxElementNumberDOF )                      :: Bdiv_Memory
     
@@ -153,12 +155,14 @@ module ModAnalysis
     !$OMP THREADPRIVATE(G_Memory)
     !$OMP THREADPRIVATE(S_Memory)
     !$OMP THREADPRIVATE(D_Memory)
+    !$OMP THREADPRIVATE(DP_Memory)
     !$OMP THREADPRIVATE(SF_Memory)
     !$OMP THREADPRIVATE(Fe_Memory)
     !$OMP THREADPRIVATE(Stress_Memory)
     !$OMP THREADPRIVATE(DifSF_Memory)
     !$OMP THREADPRIVATE(GM_Memory)
     !$OMP THREADPRIVATE(DB_Memory)
+    !$OMP THREADPRIVATE(DPB_Memory)
     !$OMP THREADPRIVATE(SG_Memory)
     !$OMP THREADPRIVATE(Bdiv_Memory)
     
@@ -204,6 +208,7 @@ module ModAnalysis
         integer ::  SolutionScheme
         logical ::  NLAnalysis
         logical ::  MultiscaleAnalysis
+        logical ::  EmbeddedElements
         
         logical             :: FiberReinforcedAnalysis
         character(len=100)  :: FiberDataFileName

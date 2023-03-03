@@ -18,6 +18,8 @@ module ModMultiscaleFEMAnalysisBiphasic
 
     !-----------------------------------------------------------------------------------
     type, extends(ClassFEMAnalysisBiphasic) :: ClassMultiscaleFEMAnalysisBiphasic
+        
+        integer :: MinimalDoF
 
         contains
 
@@ -48,8 +50,12 @@ module ModMultiscaleFEMAnalysisBiphasic
                             case (MultiscaleModels%Taylor)
                                 call AllocateKgSparseUpperTriangularFluid(this)
                             case (MultiscaleModels%Linear)
-                                call AllocateKgSparseUpperTriangularFluid(this)   
+                                call AllocateKgSparseUpperTriangularFluid(this)
+                            case (MultiscaleModels%LinearMinimalP)
+                                this%MinimalDoF = 1
+                                call AllocateKgSparseMinimalUpperTriangularFluid(this) 
                             case (MultiscaleModels%Minimal)
+                                this%MinimalDoF = 4
                                 call AllocateKgSparseMinimalUpperTriangularFluid(this) 
                             case default
                                 STOP 'Error: Multiscale Model of Fluid not found - ModMultiscaleFEMAnalysisBiphasic.f90'
@@ -60,6 +66,10 @@ module ModMultiscaleFEMAnalysisBiphasic
                                 call AllocateKgSparseUpperTriangular(this)
                             case (MultiscaleModels%Linear)
                                 call AllocateKgSparseUpperTriangular(this)
+                            case (MultiscaleModels%Periodic)
+                                call AllocateGlobalSparseStiffnessMatrix(this)
+                                !call AllocateKgSparseUpperTriangular
+                                allocate(this%KgRed)
                             case (MultiscaleModels%Minimal)
                                 call AllocateKgSparseMinimalUpperTriangular(this)                
                             case (MultiscaleModels%MinimalLinearD1)  
@@ -80,7 +90,7 @@ module ModMultiscaleFEMAnalysisBiphasic
         end subroutine
         !=================================================================================================
     
-         subroutine AllocateKgSparseMinimalUpperTriangularFluid (this)
+        subroutine AllocateKgSparseMinimalUpperTriangularFluid (this)
 
             !************************************************************************************
             ! DECLARATIONS OF VARIABLES
@@ -92,7 +102,7 @@ module ModMultiscaleFEMAnalysisBiphasic
 
             ! Object
             ! -----------------------------------------------------------------------------------
-            class(ClassFEMAnalysisBiphasic) :: this
+            class(ClassMultiscaleFEMAnalysisBiphasic) :: this
 
             ! Internal variables
             ! -----------------------------------------------------------------------------------
@@ -115,7 +125,7 @@ module ModMultiscaleFEMAnalysisBiphasic
             KeF_Memory = 1.0d0   ! Fluid Element stiffness matrix
 
             !Initializing the sparse global stiffness matrix
-            call SparseMatrixInit( KgSparseFluid , nDOF_fluid + 4)
+            call SparseMatrixInit( KgSparseFluid , nDOF_fluid + this%MinimalDoF)
 
             !Loop over elements to mapping the local-global positions in the sparse stiffness matrix
             do e=1,size( this%ElementList )
@@ -123,19 +133,18 @@ module ModMultiscaleFEMAnalysisBiphasic
                 call ConvertElementToElementBiphasic(this%ElementList(e)%el,  ElBiphasic) 
                 call ElBiphasic%GetElementNumberDOF_fluid(this%AnalysisSettings , nDOFel_fluid)
 
-                KeFluid => KeF_Memory( 1:(nDOFel_fluid+4) , 1:(nDOFel_fluid+4))
-                GMFluid => GMfluid_Memory( 1:(nDOFel_fluid+4))
+                KeFluid => KeF_Memory( 1:(nDOFel_fluid+this%MinimalDoF) , 1:(nDOFel_fluid+this%MinimalDoF))
+                GMFluid => GMfluid_Memory( 1:(nDOFel_fluid+this%MinimalDoF))
 
                 call ElBiphasic%GetGlobalMapping_fluid( this%AnalysisSettings, GMFluid )
                 
-                 GMFluid(nDOFel_fluid+1 : nDOFel_fluid+1+4) = nDOF_fluid + [1:4]
+                GMFluid(nDOFel_fluid+1 : nDOFel_fluid+this%MinimalDoF) = nDOF_fluid + [1:this%MinimalDoF]
 
                 call SparseMatrixSetArray( GMFluid, GMFluid, KeFluid, KgSparseFluid, OPT_SET )
                 
             enddo
-
             !Converting the sparse matrix to coordinate format (used by Pardiso Sparse Solver)
-             call ConvertToCoordinateFormatUpperTriangular( KgSparseFluid , this%KgFluid%Row , this%KgFluid%Col , this%KgFluid%Val , this%KgFluid%RowMap) ! this%KgFluid -> Matriz de rigidez do Fluid
+            call ConvertToCoordinateFormatUpperTriangular( KgSparseFluid , this%KgFluid%Row , this%KgFluid%Col , this%KgFluid%Val , this%KgFluid%RowMap) ! this%KgFluid -> Matriz de rigidez do Fluid
 
             !Releasing memory
             call SparseMatrixKill(KgSparseFluid)
@@ -143,8 +152,8 @@ module ModMultiscaleFEMAnalysisBiphasic
             !************************************************************************************
         end subroutine
         !==========================================================================================
-                
-
+        
+    
         !=================================================================================================
         subroutine  SolveMultiscaleAnalysisBiphasic( this )
 
